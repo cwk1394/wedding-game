@@ -68,6 +68,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 데이터 흐름 (쓰기)
 0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp (사진 없이 누르면 image 없이 보내고, 서버가 `prompt/create-character-noref.txt` + 무작위 특징(성별 느낌·헤어·머리색·의상·액세서리)으로 글만 가지고 생성 — images/generations는 JSON 요청) → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기), `prone`(엎드리기 2프레임)을 **모두 동시에(병렬)** 생성.
+   - 방향: 정면(front)·걷기·점프 프롬프트 모두 "이미지 왼쪽을 바라보고 왼쪽으로 이동"을 강제(`[DIRECTION — ALWAYS LEFT]`). 게임은 왼쪽 기준 이미지를 코드로 뒤집어 오른쪽 이동을 표현하므로, 동작마다 방향이 섞이면 걷기/점프 방향이 어긋남.
    - 모든 캐릭터 프롬프트에 "소지품 금지" 섹션: 몸에 착용하는 것(액세서리·모자·안경 등)만 그리고, 손에 들거나 메는 물건(풍선·꽃다발·가방·캐리어·방망이·무기 등)은 사진에 있어도 빼게 함 — 소지품이 실루엣 밖으로 나오면 크기 계산(머리 폭·키)이 틀어져 캐릭터가 작아 보임.
    - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing,prone}.txt`.
    - 프레임 수는 동작마다 `CONFIG.sprite.motionFrames`(prone만 2), 표시 높이 비율 `motionHeight`(prone 0.5 — 엎드리면 낮고 길어서).

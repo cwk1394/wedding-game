@@ -8,7 +8,7 @@ The previously generated MapleStory player avatar sprite.
 
 [Task]
 1. Maintain the exact character design, proportions, face, hairstyle, hair color, hair volume, outfit, accessories, equipment, and gear layers from the reference image.
-2. Create a 4-frame jumping animation sprite sheet of the character performing a single natural jump.
+2. Create a 4-frame jumping animation sprite sheet of the character performing a single natural jump while moving to the LEFT (facing LEFT in every frame).
 3. The output must consist of exactly 4 sequential horizontal frames in a single row.
 4. The four frames must represent the POSE progression of one continuous jump:
    - Frame 1: Takeoff Pose
@@ -20,10 +20,20 @@ The previously generated MapleStory player avatar sprite.
    chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, and no smooth gradients.
 
 ────────────────────
+[DIRECTION — ALWAYS LEFT (VERY IMPORTANT)]
+
+The game assumes every sprite faces LEFT and flips it in code to move right.
+- The character FACES the LEFT edge of the image in EVERY frame: face, nose side, eyes, chest and toes all point LEFT.
+- The character MOVES toward the LEFT edge of the image (the leading foot / leading side is on the LEFT).
+- Keep the same left-facing three-quarter view as a left-facing reference; if the reference faces another way, turn the character to face LEFT.
+- NEVER face right. NEVER mirror some frames. NEVER mix left- and right-facing frames.
+- All frames use exactly the same facing direction.
+
+────────────────────
 [JUMPING ANIMATION SPEC]
 ────────────────────
 
-* Direction: Left-facing profile / three-quarter view
+* Direction: Facing LEFT (left-facing profile / three-quarter view); the jump moves toward the LEFT
 * Total Frames: Exactly 4 frames arranged horizontally side-by-side
 * Action: Four sequential POSES representing one jump
 * Character Orientation: The character must face LEFT consistently in all 4 frames.

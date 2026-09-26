@@ -10,8 +10,18 @@ Reference Image (The previously generated MapleStory player avatar sprite)
 4. The style must strictly match the original MapleStory player sprite specifications (Chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, no smooth gradients).
 
 ────────────────────
+[DIRECTION — ALWAYS LEFT (VERY IMPORTANT)]
+
+The game assumes every sprite faces LEFT and flips it in code to move right.
+- The character FACES the LEFT edge of the image in EVERY frame: face, nose side, eyes, chest and toes all point LEFT.
+- The character MOVES toward the LEFT edge of the image (the leading foot / leading side is on the LEFT).
+- Keep the same left-facing three-quarter view as a left-facing reference; if the reference faces another way, turn the character to face LEFT.
+- NEVER face right. NEVER mirror some frames. NEVER mix left- and right-facing frames.
+- All frames use exactly the same facing direction.
+
+────────────────────
 [WALKING ANIMATION SPEC]
-* Direction: Walking towards the left profile/three-quarter view
+* Direction: Facing LEFT and walking toward the LEFT edge of the image (left-facing profile / three-quarter view) in all 4 frames
 * Total Frames: Exactly 4 frames arranged horizontally side-by-side
 * Pose Cycle: 4-frame walk cycle (Left step forward, neutral, right step forward, passing)
 * Proportions & Style: Keep the exact 2.0-2.3 chibi proportions, giant hair volume, small cylindrical limbs from the original sprite.
