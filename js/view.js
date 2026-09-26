@@ -121,7 +121,7 @@ class MapView {
       this.startPinch(down);
     } else {
       this.dragMoved = false;
-      this.startDrag(pointer);
+      if (!this.scene.dev?.editing) this.startDrag(pointer); // 개발자 모드 편집 중엔 드래그 = 편집
     }
   }
 
@@ -156,7 +156,7 @@ class MapView {
     const down = this.downPointers();
     this.pinch = null;
     // 핀치하다 한 손가락만 떼면 남은 손가락으로 계속 드래그
-    if (down.length === 1) this.startDrag(down[0]);
+    if (down.length === 1 && !this.scene.dev?.editing) this.startDrag(down[0]);
     else this.drag = null;
   }
 }

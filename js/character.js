@@ -30,6 +30,7 @@ class Character extends Phaser.GameObjects.Container {
       target.setInteractive({ useHandCursor: true });
       target.on('pointerup', (pointer) => {
         if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
+        if (scene.dev?.editing) return; // 개발자 모드 편집 중
         if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
         onSelect?.(this);
       });
@@ -234,6 +235,24 @@ class GuestCharacter extends Character {
       this.sprite.setTexture(`${key}_0`);
       if (this.facesLeft) this.sprite.setFlipX(false); // 정면 이미지는 뒤집지 않음
     }
+  }
+
+  /** 발판/사다리가 바뀌었을 때 (개발자 모드): 내 층이 없어졌으면 다른 층으로 옮기고 범위를 다시 잡는다 */
+  onMapChanged() {
+    this.climb = null;
+    this.jump = null;
+    if (this.state === 'climb') this.state = 'idle';
+    let name = this.floorName;
+    if (!CONFIG.floors[name] || name === 'stage') {
+      const floor = pickGuestFloor();
+      name = Object.keys(CONFIG.floors).find((n) => CONFIG.floors[n] === floor);
+      const { x1, x2 } = floorSpan(floor);
+      this.x = Phaser.Math.Between(x1, x2);
+    }
+    this.setFloor(name);
+    this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
+    this.y = floorY(this.floor, this.x);
+    this.updatePose();
   }
 
   startJump() {

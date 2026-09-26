@@ -22,8 +22,10 @@ class MapScene extends Phaser.Scene {
 
     this.view = new MapView(this);
 
-    // ?debug 로 열면 발판 위치를 선으로 표시 (배경 이미지에 맞춰 floors 좌표 조정할 때 사용)
-    if (new URLSearchParams(location.search).has('debug')) this.drawFloorGuides();
+    // ?dev = 이동 가능 영역 편집기, ?debug = 발판 위치만 선으로 표시
+    const params = new URLSearchParams(location.search);
+    if (params.has('dev')) this.dev = new DevMode(this);
+    else if (params.has('debug')) this.drawFloorGuides();
 
     this.onSelect = (character) =>
       UI.openGuestbook({ ...character.info, avatarUrl: character.getAvatarUrl() });
@@ -75,6 +77,11 @@ class MapScene extends Phaser.Scene {
     const guest = new GuestCharacter(this, pickGuestFloor(), info, { onSelect: this.onSelect });
     this.guests.push(guest);
     return guest;
+  }
+
+  /** 개발자 모드에서 발판/사다리를 바꾸면 하객들을 새 지도에 맞춘다 */
+  refreshMap() {
+    for (const guest of this.guests) guest.onMapChanged();
   }
 
   update(_time, delta) {
@@ -186,9 +193,12 @@ class MapScene extends Phaser.Scene {
   }
 }
 
-/** 하객 층을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
+/** 하객 층(stage 제외)을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
 function pickGuestFloor() {
-  const floors = CONFIG.guestFloors.map((name) => CONFIG.floors[name]);
+  const floors = Object.entries(CONFIG.floors)
+    .filter(([name]) => name !== 'stage')
+    .map(([, f]) => f);
+  if (!floors.length) return CONFIG.floors.stage; // 발판을 다 지운 경우 (개발자 모드)
   const length = (f) => floorSpan(f).x2 - floorSpan(f).x1;
   let r = Math.random() * floors.reduce((sum, f) => sum + length(f), 0);
   for (const f of floors) {

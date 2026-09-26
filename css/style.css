@@ -508,3 +508,45 @@ html, body {
 .gallery-nav.next { right: 8px; }
 .gallery-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .gallery-count { color: var(--ink-soft); font-size: 14px; }
+
+/* ---------- 개발자 모드 (?dev) ---------- */
+.dev-bar {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(34, 24, 30, .88);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+}
+.dev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dev-badge { padding: 2px 7px; border-radius: 6px; background: #ffc107; color: #222; font-size: 11px; }
+.dev-seg { display: flex; border-radius: 9px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .25); }
+.dev-seg button, .dev-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.dev-seg button + button { border-left: 1px solid rgba(255, 255, 255, .25); }
+.dev-seg button.on { background: rgba(255, 255, 255, .92); color: #222; font-weight: bold; }
+.dev-seg i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dev-btn { border: 1px solid rgba(255, 255, 255, .25); border-radius: 9px; }
+.dev-btn:disabled { opacity: .4; cursor: default; }
+.dev-save.dirty { background: var(--coral-deep); border-color: var(--coral-deep); font-weight: bold; }
+.dev-check { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.dev-hint { color: rgba(255, 255, 255, .75); font-size: 12px; }

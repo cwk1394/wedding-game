@@ -12,11 +12,12 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 
 ## 기술 스택 / 구조
 - 순수 HTML/JS + Phaser 3.80.1 (jsDelivr CDN). 빌드 도구·번들러 없음, 스크립트는 전역 변수로 연결.
-- `index.html`에서 스크립트 로드 순서가 의존성 순서: `config → data → textures → character → api → ui → view → scene → main`.
+- `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → textures → character → api → ui → view → scene → dev → main`.
 
 ```
 index.html              오른쪽 아래 메뉴(캐릭터 생성·방명록 목록·웨딩 갤러리), 모달 DOM + 스크립트 로드
 css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
+js/map-data.js          MAP_DATA: 이동 가능 영역(floors 꺾은선, climbs 사다리/로프). 개발자 모드 저장 시 API가 통째로 다시 씀
 js/config.js            CONFIG: 월드 크기(=배경 이미지 1122x1402, 세로형), 배경 이미지, 층(floors) 꺾은선 좌표 + floorSpan()/floorY(), 속도, 말풍선, API 주소, AI/스프라이트 설정
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
@@ -25,6 +26,7 @@ js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSp
 js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
+js/dev.js               DevMode: 개발자 모드(?dev) 이동 가능 영역 편집기 (추가/지우기/되돌리기/저장)
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
@@ -35,9 +37,11 @@ img/guests/<uuid>/ 폴더 git rm
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope.png(투명 배경, 4프레임, 높이 128, 모두 선택)
+api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion 작성)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
 api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
+api/map.js              Vercel 함수: POST {password, map} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
@@ -84,6 +88,17 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 신랑신부 스프라이트 원본(`img/npc/*/walk.png` 등): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 
+## 개발자 모드 (`?dev`)
+- 페이지를 `?dev`로 열면 위쪽에 편집 툴바. 발판(빨강)·사다리(초록)·로프(파랑)·stage(노랑)를 불투명 선으로 표시.
+- 종류(걷기/사다리/로프) + 도구(이동/추가/지우기) 선택 후 지도 위를 드래그:
+  - 걷기 추가: 길을 따라 옆으로 드래그 → x 오름차순만 남기고 꺾은선 단순화(RDP)해서 새 발판(`f1`, `f2`…).
+  - 사다리/로프 추가: 아래 발판 → 위 발판으로 세로 드래그. 양 끝이 서로 다른 발판 근처(세로 24px)여야 함.
+  - 지우기: 선택한 종류만 지움. 발판 중간을 지우면 조각으로 나뉘고, 걸려 있던 사다리/로프는 x를 덮는 조각에 다시 연결(없으면 삭제). stage는 안 지워짐.
+  - 편집 도구가 켜져 있으면 한 손가락 드래그는 편집, 두 손가락/휠은 확대. 이동 도구로 바꾸면 드래그로 지도 이동.
+- 편집은 CONFIG.floors/climbs를 바로 바꾸고 `scene.refreshMap()`으로 하객에게 즉시 적용. 되돌리기 최대 50단계.
+- 저장: 비밀번호(처음 한 번 입력, 탭 닫을 때까지 sessionStorage) → `POST /api/map` → `js/map-data.js` 커밋 → Pages 재배포(1~2분). Vercel은 이 파일만 바뀐 커밋은 재배포 생략.
+  - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
+
 ## 메뉴 / 팝업
 - 오른쪽 아래 메뉴 버튼 → 위로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
 - 방명록 목록은 `UI.getGuests()`(main.js에서 scene.guests 연결)로 맵 위 하객을 그대로 사용 → 방금 등록한 하객도 바로 보임.
@@ -117,7 +132,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 사이트: https://kobe-kang.github.io/guestbook/
 - API: https://guestbook-nine-drab.vercel.app/api/guestbook (Vercel, GET = 상태 확인)
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
-- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`(4단계에 `OPENAI_API_KEY`) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
 - API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.
