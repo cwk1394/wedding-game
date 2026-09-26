@@ -31,7 +31,7 @@ scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실�
 scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
-img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부). *_move = 걷기 4프레임. 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
+img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 front/walk.webp(q0.9, 44~146KB) 사용
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope.png(투명 배경, 4프레임, 높이 128, 모두 선택)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
@@ -80,7 +80,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 첫 로딩 화면(`#loading`): 배경 이미지 + 처음 스폰한 모든 캐릭터의 이미지 적용(`Character.ready`)이 끝나면 사라짐 → 임시 캐릭터가 먼저 보이는 문제 방지.
   - 진행률 = 배경 1칸 + 캐릭터 1명당 1칸. 20초가 지나면 로딩이 덜 끝나도 메인 화면을 보여준다. 이후 재조회로 추가되는 하객은 기다리지 않음.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
-- 4단계 스프라이트 예시(`img/characters/*_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
+- 신랑신부 스프라이트 원본(`img/npc/*/walk.png` 등): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 
 ## 하객 움직임 (`GuestCharacter`, `CONFIG.motion`, `CONFIG.climbs`)
 - 상태: idle / walk / climb. 걷는 중 1초당 `jumpChance` 확률로 점프 (포물선 높이 `jumpHeight`, 이동은 계속). 점프 스트립은 포즈만 있고 높이는 코드가 준다.
