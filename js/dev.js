@@ -93,7 +93,7 @@ class DevMode {
       move: '드래그로 지도 이동 · 두 손가락/휠로 확대',
       add:
         this.type === 'walk'
-          ? '길을 따라 옆으로 드래그해서 발판 추가 (계단은 비스듬히)'
+          ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
           : `아래 발판에서 위 발판까지 세로로 드래그해서 ${label} 추가`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
     };
@@ -130,7 +130,8 @@ class DevMode {
       const last = pts[pts.length - 1];
       g.strokeCircle(last.x, last.y, r);
     } else if (this.type === 'walk') {
-      g.lineStyle(5, color, 0.6).strokePoints(pts);
+      const last = pts[pts.length - 1];
+      g.lineStyle(5, color, 0.6).lineBetween(pts[0].x, pts[0].y, last.x, last.y);
     } else {
       const last = pts[pts.length - 1];
       g.lineStyle(5, color, 0.6).lineBetween(pts[0].x, pts[0].y, pts[0].x, last.y);
@@ -208,18 +209,13 @@ class DevMode {
     this.changed();
   }
 
+  /** 누른 점과 뗀 점을 직선으로 잇는 발판 (계단처럼 기울어져도 됨) */
   addFloor(points) {
-    let pts = points.slice();
-    if (pts[pts.length - 1].x < pts[0].x) pts.reverse();
-    // x 오름차순만 남긴다 (뒤로 되돌아간 부분은 버림)
-    const mono = [];
-    for (const p of pts) if (!mono.length || p.x > mono[mono.length - 1].x + 1) mono.push(p);
-    if (mono.length < 2 || mono[mono.length - 1].x - mono[0].x < 20) {
-      return UI.showToast('조금 더 길게 옆으로 드래그해 주세요');
-    }
+    const [a, b] = [points[0], points[points.length - 1]].sort((p, q) => p.x - q.x);
+    if (b.x - a.x < 20) return UI.showToast('조금 더 길게 옆으로 드래그해 주세요');
     this.checkpoint();
     CONFIG.floors[uniqueFloorName('f')] = {
-      path: simplifyPath(mono, 2.5).map((p) => [Math.round(p.x), Math.round(p.y)]),
+      path: [a, b].map((p) => [Math.round(p.x), Math.round(p.y)]),
     };
     this.changed();
   }
