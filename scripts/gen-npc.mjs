@@ -82,6 +82,17 @@ full body, chibi and round. Ignore the photo background and people.`,
       scratch: strip(4, 'Sitting on the ground and scratching behind its ear/head with one hind leg, like a real dog: the hind leg moves up and down in a quick scratching loop, head tilted, eyes squinted happily.'),
     },
   },
+  mongsil: {
+    origin: true,
+    front: `Turn the real dog in this photo into a cute MapleStory-style NPC named Mongsil. Keep its real look: a small white Pekingese with long soft white fur,
+a short flat face with a dark muzzle and black nose, big round dark shiny eyes, fluffy ears. Standing on four legs, three-quarter side view facing LEFT,
+full body, chibi and round. Ignore the photo background.`,
+    motions: {
+      idle: strip(4, 'Standing in place and looking UP with big round shiny eyes, head tilted upward exactly like the reference photo, a gentle curious look; tiny head tilt and blink between frames.'),
+      walk: strip(4, 'Walking SLOWLY and calmly to the LEFT with short little steps, fluffy fur swaying — a relaxed, leisurely small-dog walk cycle.'),
+      sit: strip(4, 'Sitting on the ground holding a pink squeaky dumbbell-shaped chew toy in its mouth, happily chewing it: the toy squishes a little between frames, tail wagging.'),
+    },
+  },
   taxi: {
     front: `A cute yellow taxi car in MapleStory style, side view facing LEFT, rounded chibi cartoon car with a small "TAXI" roof sign (just the shape, no readable text needed),
 a small pink ribbon on the side for a wedding, full vehicle visible. ${STYLE}`,

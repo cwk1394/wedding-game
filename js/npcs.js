@@ -57,6 +57,16 @@ const NPCS = [
     popup: { shortMsg: '', longMsg: NPC_POPUP_TBD },
   },
   {
+    id: 'mongsil',
+    name: '몽실이',
+    floor: 'upperRoute',
+    height: 32,
+    speed: [14, 22], // 천천히
+    motions: ['idle', 'walk', 'sit'], // idle = 올려다보기, sit = 핑크 삑삑이 덤벨 물고 앉기
+    states: { walk: 0.35, sit: 0.3, idle: 0.35, walkTime: [3000, 6000], idleTime: [2500, 5000], sitTime: [4000, 8000] },
+    popup: { shortMsg: '', longMsg: NPC_POPUP_TBD },
+  },
+  {
     id: 'taxi',
     name: '택시',
     floor: 'f7', // 오른쪽 아래 광장
