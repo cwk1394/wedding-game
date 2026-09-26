@@ -62,7 +62,7 @@ const UI = (() => {
     document.getElementById('modal-short').textContent = shortMsg ? `“${shortMsg}”` : '';
     document.getElementById('modal-long').textContent = longMsg || '';
     const avatar = document.getElementById('modal-avatar');
-    avatar.hidden = !avatarUrl;
+    avatar.parentElement.hidden = !avatarUrl;
     if (avatarUrl) avatar.src = avatarUrl;
     viewModal.open();
   }

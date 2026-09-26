@@ -201,17 +201,25 @@ html, body {
   margin-bottom: 14px;
 }
 
+/* 원은 바깥 틀(div)에만 — img에 border-radius를 주면 이미지 영역까지 둥글게 잘려서 가장자리가 안 보인다 */
 .modal-avatar {
   width: 88px;
   height: 88px;
   flex: none;
-  padding: 13px; /* 원 안쪽 정사각형에 들어가게 — 넓은 이미지(택시 등)도 모서리가 원 밖으로 안 잘림 */
-  object-fit: contain;
-  image-rendering: pixelated;
+  display: grid;
+  place-items: center;
+  padding: 12px;
   border: 2px solid var(--line);
   border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #fff, #ffe0d8);
   box-shadow: 0 3px 10px rgba(216, 88, 74, .2);
+}
+.modal-avatar img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .modal-name { font-size: 18px; font-weight: bold; color: var(--ink); }
