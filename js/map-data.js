@@ -20,7 +20,6 @@ const MAP_DATA = {
     "f5": { "path": [[468,1215],[495,1208]] },
     "f6": { "path": [[496,1208],[649,1231]] },
     "f8": { "path": [[722,676],[889,677]] },
-    "f9": { "path": [[575,324],[1065,331]] },
     "f10": { "path": [[611,377],[645,345]] },
     "f11": { "path": [[551,387],[610,377]] },
     "f12": { "path": [[498,374],[551,385]] },
@@ -56,7 +55,6 @@ const MAP_DATA = {
     {"type":"rope","x":280,"floors":["cherry","middleRoute"]},
     {"type":"ladder","x":616,"floors":["f6","heartBridge"]},
     {"type":"ladder","x":396,"floors":["f14","f15"]},
-    {"type":"ladder","x":766,"floors":["upperRoute_1","f9"]},
     {"type":"ladder","x":725,"floors":["f8"],"end":746},
     {"type":"rope","x":964,"floors":["rightStairs"],"end":756},
     {"type":"rope","x":902,"floors":["f16"],"end":741},
@@ -66,15 +64,15 @@ const MAP_DATA = {
     {"type":"rope","x":308,"floors":["lowerRoute"],"end":1039},
     {"type":"rope","x":382,"floors":["f18"],"end":582},
     {"type":"rope","x":359,"floors":["f18"],"end":568},
-    {"type":"rope","x":865,"floors":["f9","f19"]},
-    {"type":"rope","x":1038,"floors":["f9"],"end":433},
-    {"type":"rope","x":673,"floors":["f9"],"end":428},
     {"type":"rope","x":305,"floors":["cherry"],"end":631},
     {"type":"rope","x":672,"floors":["upperRoute_1"],"end":558},
     {"type":"rope","x":125,"floors":["f25"],"end":1118},
     {"type":"rope","x":789,"floors":["f28"],"end":1020},
     {"type":"rope","x":674,"floors":["f31"],"end":978},
+    {"type":"rope","x":1035,"floors":["stage"],"end":429},
+    {"type":"ladder","x":765,"floors":["stage","upperRoute_1"]},
+    {"type":"rope","x":673,"floors":["stage"],"end":430},
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
-  couple: {"groom":{"floor":"f9","x":635},"bride":{"floor":"f9","x":697}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 무대 가운데)
+  couple: {"groom":{"floor":"stage","x":635},"bride":{"floor":"stage","x":697}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
 };
