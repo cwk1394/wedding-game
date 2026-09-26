@@ -39,8 +39,17 @@ jobs:
           mkdir -p _site
           cp -r index.html css js img _site/
 
-      - name: Build gallery list
-        run: node scripts/build-gallery.mjs _site/data/gallery.json
+      # 갤러리 사진 → 썸네일/보기용 webp (변환 결과는 캐시해서 새 사진만 변환)
+      - uses: actions/cache@v4
+        with:
+          path: .cache/gallery
+          key: gallery-${{ hashFiles('img/gallery/**') }}
+          restore-keys: gallery-
+
+      - name: Build gallery
+        run: |
+          npm install --no-save --no-package-lock sharp@0.33
+          node scripts/build-gallery.mjs _site
 
       - name: Fetch guestbook from Discussions
         env:

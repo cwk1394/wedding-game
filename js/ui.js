@@ -318,7 +318,9 @@ const UI = (() => {
     if (photos) return photos;
     try {
       const res = await fetch(`data/gallery.json?t=${Date.now()}`);
-      photos = res.ok ? (await res.json()).photos ?? [] : [];
+      // 항목: { thumb: 목록용 썸네일, src: 크게 보기용 } (예전 형식인 문자열도 허용)
+      const list = res.ok ? (await res.json()).photos ?? [] : [];
+      photos = list.map((p) => (typeof p === 'string' ? { thumb: p, src: p } : p));
     } catch {
       photos = [];
     }
@@ -327,7 +329,9 @@ const UI = (() => {
 
   function showPhoto(i) {
     photoIndex = (i + photos.length) % photos.length;
-    photo.src = photos[photoIndex];
+    photo.src = photos[photoIndex].src;
+    // 좌우 사진은 미리 받아 두어 넘길 때 바로 보이게
+    for (const d of [-1, 1]) new Image().src = photos[(photoIndex + d + photos.length) % photos.length].src;
     galleryEl.querySelector('.gallery-count').textContent = `${photoIndex + 1} / ${photos.length}`;
     grid.hidden = true;
     viewer.hidden = false;
@@ -344,11 +348,12 @@ const UI = (() => {
     galleryEl.querySelector('.empty-note').hidden = photos.length > 0;
     if (!grid.childElementCount) {
       grid.append(
-        ...photos.map((src, i) => {
+        ...photos.map(({ thumb }, i) => {
           const btn = document.createElement('button');
           btn.type = 'button';
           const img = document.createElement('img');
-          img.src = src;
+          img.src = thumb;
+          img.decoding = 'async';
           img.alt = `웨딩 사진 ${i + 1}`;
           img.loading = 'lazy';
           btn.append(img);

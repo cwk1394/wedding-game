@@ -30,7 +30,7 @@ js/dev.js               DevMode: 개발자 모드(?dev) 이동 가능 영역 편
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
-scripts/build-gallery.mjs  img/gallery/ 사진 목록 → gallery.json (Actions에서 실행)
+scripts/build-gallery.mjs  img/gallery/ 사진 → 썸네일(400px)·보기용(1600px) webp + gallery.json (Actions, sharp)
 scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/gallery/            웨딩 갤러리 사진. 파일 이름 순으로 보임(01.jpg, 02.jpg…). 폰에서 보므로 긴 변 1600px 안팎 권장
 img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
@@ -102,7 +102,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 ## 메뉴 / 팝업
 - 오른쪽 아래 메뉴 버튼 → 위로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
 - 방명록 목록은 `UI.getGuests()`(main.js에서 scene.guests 연결)로 맵 위 하객을 그대로 사용 → 방금 등록한 하객도 바로 보임.
-- 갤러리 목록 `data/gallery.json`은 guests.json처럼 배포 때 생성(`build-gallery.mjs`). 사진이 없으면 "준비하고 있어요" 문구.
+- 갤러리: 배포 때 `build-gallery.mjs`가 sharp로 `img/gallery/thumb/*.webp`(목록)·`view/*.webp`(크게 보기)를 만들고 `data/gallery.json`(`{thumb, src}` 목록) 생성. 사진이 없으면 "준비하고 있어요" 문구.
+  - 원본(장당 수 MB)은 저장소에만 두고 사이트에는 올리지 않음. 변환 결과는 Actions cache(`.cache/gallery`, 이름+파일 크기 기준)라 새 사진만 변환.
 - 메뉴·팝업이 떠 있는 동안 맵 입력 off(`UI.onModalChange`). 팝업이 겹치면 ESC는 맨 위 하나만 닫음.
 
 ## 하객 움직임 (`GuestCharacter`, `CONFIG.motion`, `CONFIG.climbs`)
