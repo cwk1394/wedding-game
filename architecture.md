@@ -43,7 +43,7 @@
    - 브라우저에서 사진을 긴 변 1024px 정도로 줄여서 보낸다. (Vercel 요청 본문 4.5MB 제한)
 3) Vercel 함수가 OpenAI 이미지 API를 호출해 메이플 스타일 캐릭터를 만든다. 실행 시간 제한 때문에 두 번에 나눠 호출한다.
    - `POST /api/character/front`: 사진 + `prompt/create-character.txt` → 정면 이미지
-   - `POST /api/character/walk`: 정면 이미지 + `prompt/create-character-move.txt` → 왼쪽으로 걷는 4프레임 가로 스트립
+   - `POST /api/character/walk`: 정면 이미지 + `prompt/create-character-walk.txt` → 왼쪽으로 걷는 4프레임 가로 스트립
 4) 브라우저가 받은 이미지를 후처리(흰 배경 제거, 크롭, 높이 128px 축소)해서 미리보기로 보여준다. 마음에 안 들면 다시 생성.
 5) 하객이 이름, 한줄 멘트, 방명록 내용을 입력 후 등록 버튼을 누른다.
 6) 프론트엔드가 텍스트 + 후처리된 PNG(각 수십 KB)를 `POST /api/guestbook`으로 보낸다.

@@ -27,7 +27,7 @@
 2) Vercel 환경변수에 `OPENAI_API_KEY` 넣어.
 3) 함수를 두 개로 쪼개. 한 방에 다 하면 실행 시간 제한에 걸린다. (함수별 `maxDuration` 설정 확인)
    - `api/character/front.js`: 사진 + `prompt/create-character.txt` → OpenAI 이미지 API → 정면 이미지
-   - `api/character/walk.js`: 정면 이미지 + `prompt/create-character-move.txt` → 왼쪽으로 걷는 4프레임 가로 스트립
+   - `api/character/walk.js`: 정면 이미지 + `prompt/create-character-walk.txt` → 왼쪽으로 걷는 4프레임 가로 스트립
 4) 받은 이미지는 브라우저에서 이미 만들어 둔 후처리(흰 배경 제거, 크롭, 128px 축소) 태워서 미리보기로 보여줘. 마음에 안 들면 '다시 생성' 버튼.
    - 진행 상황 꼭 보여줘. "캐릭터 도트 찍는 중... (1/2)" → "걷는 모션 만드는 중... (2/2)"
 5) 확정하면 3단계에서 만든 `/api/guestbook`으로 텍스트 + 후처리된 PNG 보내서 최종 저장. (UUID 발급, 저장소 커밋, Discussion 작성은 3단계 그대로)
