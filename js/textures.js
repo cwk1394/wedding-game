@@ -1,10 +1,9 @@
-// 임시 캐릭터 텍스처를 코드로 그려서 생성한다. (4단계에서 AI 스프라이트로 교체 예정)
+// 임시 캐릭터 텍스처를 코드로 그려서 생성한다. (이미지 로드 전·이미지 없는 하객용)
 // 프레임 0 = 서있기, 프레임 1 = 걷기(다리 벌림). 오른쪽을 바라보는 모습으로 그린다.
 
 const CHAR_W = 40;
 const CHAR_H = 60;
 const SKIN = 0xffe0bd;
-const OUTLINE = 0x3b2410;
 
 function drawHead(g, hair) {
   g.fillStyle(hair);

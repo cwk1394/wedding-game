@@ -88,11 +88,6 @@ class MapView {
     this.apply();
   }
 
-  zoomBy(factor) {
-    this.touched = true;
-    this.zoomAt(this.cam.width / 2, this.cam.height / 2, factor);
-  }
-
   // ---------- 터치 / 마우스 ----------
 
   downPointers() {

@@ -38,6 +38,8 @@ jobs:
         run: |
           mkdir -p _site
           cp -r index.html css js img _site/
+          # 보관용 원본 png(페이지는 webp만 씀)는 사이트에 올리지 않음
+          rm -f _site/img/background/*.png _site/img/etc/*.png _site/img/npc/*/*.png
           if [ -d audio ]; then cp -r audio _site/; fi
 
       # 갤러리 사진 → 썸네일/보기용 webp (변환 결과는 캐시해서 새 사진만 변환)
