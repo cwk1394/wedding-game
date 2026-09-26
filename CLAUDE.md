@@ -105,7 +105,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 캐릭터 조종 (일반 방문자)
 - 신랑·신부는 개발자 모드에서만 조종 가능(일반 방문자 팝업엔 조종 버튼 없음), NPC는 불가.
-- 캐릭터를 누르면 방명록 팝업 오른쪽 아래에 "조종하기" 버튼(조종 중인 캐릭터면 "조종 끝내기"). 누르면 `scene.control.take(캐릭터, {zoom})` → 1.4배(`CONFIG.view.controlZoom`) 이상 확대 + 카메라 따라감.
+- 캐릭터를 누르면 방명록 팝업 오른쪽 아래에 "조종하기" 버튼(조종 중인 캐릭터면 "조종 끝내기"). 누르면 `scene.control.take(캐릭터, {zoom})` → 1.2배(`CONFIG.view.controlZoom`) 이상 확대 + 카메라 따라감.
 - 방명록 등록 직후: 새 캐릭터를 시작점(`CONFIG.spawn` = `MAP_DATA.spawn {floor, x}`, 없으면 랜덤 층)에 만들고 바로 조종 + 확대.
 - PC는 방향키/Space, 터치 기기는 화면 스틱 + 점프 버튼(조종 중에만 표시). 조작 규칙은 아래 개발자 모드 조종과 같음(`GuestCharacter.tickControlled`).
 
