@@ -208,3 +208,29 @@ html, body {
 
 .manual summary { cursor: pointer; font-size: 13px; color: #8b5a2b; }
 .manual .field { margin-top: 8px; }
+
+/* ---------- 지도 확대/축소 ---------- */
+#game { touch-action: none; }
+#game canvas { display: block; }
+
+.zoom-controls {
+  position: fixed;
+  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.zoom-controls button {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #7a4a12;
+  border-radius: 8px;
+  background: rgba(255, 250, 240, .92);
+  color: #5b3a1a;
+  font: bold 20px/1 sans-serif;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #7a4a12;
+}
+.zoom-controls button:active { transform: translateY(2px); box-shadow: none; }

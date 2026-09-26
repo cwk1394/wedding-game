@@ -27,6 +27,13 @@ const CONFIG = {
   // 하객이 스폰될 수 있는 층 (층 길이에 비례해서 랜덤 배치)
   guestFloors: ['topLeft', 'topRight', 'upperLeft', 'upperRight', 'midLeft', 'midRight', 'mainLeft', 'mainRight', 'bottomLeft', 'bottomRight'],
 
+  // 화면 확대/축소
+  view: {
+    focus: { x: 887, y: 500 }, // 처음 화면 가운데에 올 지점 (제단)
+    maxZoom: 2.5, // 최대 확대: 맵 1px = 화면 2.5px (CSS 픽셀 기준)
+    dragThreshold: 8, // 이만큼(CSS px) 움직여야 드래그로 인식 (그보다 작으면 탭)
+  },
+
   // 방명록 API (Vercel Serverless Functions) 주소
   // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
   apiUrl: new URLSearchParams(location.search).get('api') || 'https://guestbook-nine-drab.vercel.app',
@@ -40,6 +47,7 @@ const CONFIG = {
   // 이미지 스프라이트 처리
   sprite: {
     height: 72, // 화면에 표시할 캐릭터 높이 (월드 px)
+    textureScale: 2, // 확대해도 선명하도록 텍스처는 표시 크기의 2배로 만들어 축소 표시
     uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
     walkFrames: 4, // walkUrl 이미지의 가로 프레임 수
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주

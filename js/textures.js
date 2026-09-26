@@ -303,7 +303,11 @@ async function loadSpriteTextures(scene, info) {
       loadImage(info.spriteUrl),
       info.walkUrl ? loadImage(info.walkUrl) : null,
     ]);
-    const { front, walkFrames } = buildSpriteCanvases(frontImg, walkImg, CONFIG.sprite.height);
+    const { front, walkFrames } = buildSpriteCanvases(
+      frontImg,
+      walkImg,
+      CONFIG.sprite.height * CONFIG.sprite.textureScale
+    );
 
     scene.textures.addCanvas(`${key}_0`, front);
     const frameKeys = walkFrames.map((canvas, i) => {

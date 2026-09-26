@@ -1,7 +1,8 @@
 // 캐릭터 = 스프라이트 + 네임태그 + (가끔) 말풍선을 묶은 컨테이너.
 // 컨테이너 원점(0,0)은 캐릭터 발 위치.
 
-const TEXT_RESOLUTION = 2;
+// 확대해도 글자가 선명하도록 기기 해상도에 맞춰 크게 렌더링
+const TEXT_RESOLUTION = Math.min(5, Math.ceil((window.devicePixelRatio || 1) * 2));
 
 class Character extends Phaser.GameObjects.Container {
   constructor(scene, x, y, info, { tagColor = '#ffffff', onSelect } = {}) {
@@ -27,7 +28,10 @@ class Character extends Phaser.GameObjects.Container {
 
     for (const target of [this.sprite, this.tag]) {
       target.setInteractive({ useHandCursor: true });
-      target.on('pointerup', () => onSelect && onSelect(this));
+      target.on('pointerup', () => {
+        if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
+        onSelect?.(this);
+      });
     }
 
     this.facesLeft = false; // 원본 이미지가 왼쪽을 바라보는지 (걷기 방향 뒤집기용)
@@ -45,7 +49,7 @@ class Character extends Phaser.GameObjects.Container {
   applySprite({ key, facesLeft }) {
     this.texKey = key;
     this.facesLeft = facesLeft;
-    this.sprite.setTexture(`${key}_0`);
+    this.sprite.setTexture(`${key}_0`).setScale(1 / CONFIG.sprite.textureScale);
     this.sprite.input.hitArea.setTo(0, 0, this.sprite.width, this.sprite.height);
   }
 
@@ -79,7 +83,7 @@ class Character extends Phaser.GameObjects.Container {
 
     const w = text.width + 18;
     const h = text.height + 10;
-    const cy = -this.sprite.height - 14 - h / 2; // 말풍선 중심 y
+    const cy = -this.sprite.displayHeight - 14 - h / 2; // 말풍선 중심 y
     const bottom = cy + h / 2;
     text.setY(cy);
 

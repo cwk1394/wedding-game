@@ -12,7 +12,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 
 ## 기술 스택 / 구조
 - 순수 HTML/JS + Phaser 3.80.1 (jsDelivr CDN). 빌드 도구·번들러 없음, 스크립트는 전역 변수로 연결.
-- `index.html`에서 스크립트 로드 순서가 의존성 순서: `config → data → textures → character → api → ui → scene → main`.
+- `index.html`에서 스크립트 로드 순서가 의존성 순서: `config → data → textures → character → api → ui → view → scene → main`.
 
 ```
 index.html              모달/버튼 DOM + 스크립트 로드
@@ -23,6 +23,7 @@ js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스�
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
 js/ui.js                방명록 팝업, 작성 폼, 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/view.js              MapView: 카메라 확대/축소(핀치·휠·버튼)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
@@ -71,6 +72,15 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 배경 이미지 로드 실패 시에만 코드로 그린 임시 맵(하늘/발판/꽃 아치) 사용.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 4단계 스프라이트 예시(`img/characters/*_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
+
+## 화면 / 확대·축소
+- 캔버스 = 화면 전체 × 기기 픽셀 비율(DPR, 최대 3). `Scale.NONE` + `zoom: 1/DPR`로 CSS 축소 표시 → 고해상도 폰에서도 선명. 창 크기 바뀌면 `game.scale.resize`.
+- 카메라 줌/중심은 `MapView`가 관리. 최소 = 맵 전체가 보이는 줌, 최대 = 맵 1px당 CSS 2.5px(`CONFIG.view.maxZoom`).
+  - 기본 보기: 세로 화면은 맵 높이를 꽉 채우고 제단(`CONFIG.view.focus`) 중심, 가로 화면은 맵 전체.
+  - 맵이 화면보다 작은 방향은 가운데 정렬 (Phaser 카메라 bounds 대신 직접 clamp).
+- 드래그가 끝나고 손을 뗀 위치의 캐릭터는 클릭으로 처리하지 않음(`view.dragMoved`).
+- Phaser `input.activePointers`는 마우스 포인터 포함 개수라 **3**이어야 두 손가락 핀치가 된다.
+- 확대해도 선명하도록 텍스트는 `TEXT_RESOLUTION`(DPR×2), 이미지 스프라이트는 표시 크기의 2배(`CONFIG.sprite.textureScale`)로 만들어 축소 표시.
 
 ## 로컬 실행 / 테스트
 - `index.html`을 파일로 열면 fetch 실패 → 더미 데이터로 동작.

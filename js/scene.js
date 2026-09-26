@@ -17,6 +17,8 @@ class MapScene extends Phaser.Scene {
       this.drawWeddingArch();
     }
 
+    this.view = new MapView(this);
+
     // ?debug 로 열면 발판 위치를 선으로 표시 (배경 이미지에 맞춰 floors 좌표 조정할 때 사용)
     if (new URLSearchParams(location.search).has('debug')) this.drawFloorGuides();
 

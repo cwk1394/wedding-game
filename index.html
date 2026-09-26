@@ -9,6 +9,12 @@
 <body>
   <div id="game"></div>
 
+  <div class="zoom-controls" role="group" aria-label="지도 확대/축소">
+    <button type="button" data-zoom="in" aria-label="확대">+</button>
+    <button type="button" data-zoom="out" aria-label="축소">−</button>
+    <button type="button" data-zoom="reset" aria-label="처음 화면으로">⟲</button>
+  </div>
+
   <button id="write-btn" class="btn btn-primary write-btn">방명록 작성</button>
 
   <!-- 방명록 팝업 -->
@@ -93,6 +99,7 @@
   <script src="js/character.js"></script>
   <script src="js/api.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/view.js"></script>
   <script src="js/scene.js"></script>
   <script src="js/main.js"></script>
 </body>
