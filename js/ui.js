@@ -485,8 +485,13 @@ const UI = (() => {
     showGrid();
   }
 
-  galleryEl.querySelector('.prev').addEventListener('click', () => showPhoto(photoIndex - 1));
-  galleryEl.querySelector('.next').addEventListener('click', () => showPhoto(photoIndex + 1));
+  // 사진 좌우 가장자리 누르기 (방금 밀어서 넘겼으면 그 뒤에 따라오는 click은 무시)
+  let lastSwipe = 0;
+  const edgeTap = (d) => () => {
+    if (Date.now() - lastSwipe > 350) showPhoto(photoIndex + d);
+  };
+  galleryEl.querySelector('.prev').addEventListener('click', edgeTap(-1));
+  galleryEl.querySelector('.next').addEventListener('click', edgeTap(1));
   galleryEl.querySelector('.gallery-back').addEventListener('click', showGrid);
   // 사진을 좌우로 밀어서 넘기기
   let swipeX = null;
@@ -495,7 +500,10 @@ const UI = (() => {
     if (swipeX === null) return;
     const dx = e.clientX - swipeX;
     swipeX = null;
-    if (Math.abs(dx) > 40) showPhoto(photoIndex + (dx < 0 ? 1 : -1));
+    if (Math.abs(dx) > 40) {
+      lastSwipe = Date.now();
+      showPhoto(photoIndex + (dx < 0 ? 1 : -1));
+    }
   });
   document.addEventListener('keydown', (e) => {
     if (galleryEl.hidden || viewer.hidden) return;
