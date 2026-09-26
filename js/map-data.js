@@ -1,6 +1,6 @@
 // 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.
 // floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage = 신랑/신부 자리
-// climbs: [{ type: ladder|rope, x, floors: [층A, 층B] }]
+// climbs: [{ type: ladder|rope, x, floors: [층A, 층B] }] — floors가 하나면 위쪽만 걸리고 end(아래 끝 y)까지 매달림
 const MAP_DATA = {
   floors: {
     "balloon": { "path": [[118,276],[294,276]] },
@@ -29,6 +29,18 @@ const MAP_DATA = {
     "f13": { "path": [[439,349],[498,374]] },
     "f14": { "path": [[366,391],[416,391]] },
     "f15": { "path": [[392,435],[439,462]] },
+    "f16": { "path": [[888,677],[910,677]] },
+    "f17": { "path": [[879,799],[1003,798]] },
+    "f18": { "path": [[359,464],[440,461]] },
+    "f19": { "path": [[856,399],[920,400]] },
+    "f20": { "path": [[754,740],[826,740]] },
+    "f21": { "path": [[991,728],[1119,729]] },
+    "f22": { "path": [[826,800],[878,800]] },
+    "f23": { "path": [[199,1048],[288,1054]] },
+    "f24": { "path": [[173,1033],[197,1047]] },
+    "f25": { "path": [[46,1028],[172,1032]] },
+    "f26": { "path": [[345,933],[399,949]] },
+    "f27": { "path": [[401,968],[468,987]] },
   },
   climbs: [
     {"type":"ladder","x":767,"floors":["upperRoute_1","middleRoute"]},
@@ -41,5 +53,21 @@ const MAP_DATA = {
     {"type":"ladder","x":616,"floors":["f6","heartBridge"]},
     {"type":"ladder","x":396,"floors":["f14","f15"]},
     {"type":"ladder","x":766,"floors":["upperRoute_1","f9"]},
+    {"type":"ladder","x":725,"floors":["f8"],"end":746},
+    {"type":"rope","x":964,"floors":["rightStairs"],"end":756},
+    {"type":"rope","x":902,"floors":["f16"],"end":741},
+    {"type":"rope","x":790,"floors":["lowerRoute_1"],"end":997},
+    {"type":"rope","x":590,"floors":["lowerRoute"],"end":1054},
+    {"type":"rope","x":361,"floors":["middleRoute"],"end":782},
+    {"type":"rope","x":284,"floors":["middleRoute"],"end":811},
+    {"type":"rope","x":308,"floors":["lowerRoute"],"end":1039},
+    {"type":"rope","x":382,"floors":["f18"],"end":582},
+    {"type":"rope","x":359,"floors":["f18"],"end":568},
+    {"type":"rope","x":865,"floors":["f9","f19"]},
+    {"type":"rope","x":1038,"floors":["f9"],"end":433},
+    {"type":"rope","x":673,"floors":["f9"],"end":428},
+    {"type":"rope","x":305,"floors":["cherry"],"end":631},
+    {"type":"rope","x":672,"floors":["upperRoute_1"],"end":558},
+    {"type":"rope","x":125,"floors":["f25"],"end":1118},
   ],
 };
