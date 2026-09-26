@@ -78,6 +78,17 @@ const CONFIG = {
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
   },
 
+  // 시작점(spawn)에 띄우는 워프게이트: 가로 4프레임 스트립 (원본 img/etc/warpgate.png → 절반 크기 webp)
+  warpgate: {
+    image: 'img/etc/warpgate.webp',
+    frameWidth: 271,
+    frameHeight: 362,
+    frames: 4,
+    height: 130, // 표시 높이 (월드 px, 프레임 전체 기준)
+    originY: 0.8, // 발판에 닿는 바닥 고리 위치 (프레임 높이 대비)
+    fps: 8,
+  },
+
   refreshInterval: 60000, // guests.json 재조회 주기 (ms)
 
   // 꽃잎 날리기 효과 (맵 전체에 천천히 떨어지며 흔들림)

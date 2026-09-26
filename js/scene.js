@@ -8,6 +8,8 @@ class MapScene extends Phaser.Scene {
     const { onProgress } = this.sys.settings.data ?? {};
     this.load.on('progress', (value) => onProgress?.(value));
     if (CONFIG.mapImage) this.load.image('map', CONFIG.mapImage);
+    const wg = CONFIG.warpgate;
+    if (wg) this.load.spritesheet('warpgate', wg.image, { frameWidth: wg.frameWidth, frameHeight: wg.frameHeight });
   }
 
   create({ guests = [], live = false, onProgress, onReady } = {}) {
@@ -22,6 +24,7 @@ class MapScene extends Phaser.Scene {
 
     this.view = new MapView(this);
     this.addPetals();
+    this.addWarpgate();
 
     // ?dev = 이동 가능 영역 편집기, ?debug = 발판 위치만 선으로 표시
     this.control = new Controller(this); // 캐릭터 직접 조종 (방명록 팝업 "조종하기", 등록 직후, 개발자 모드)
@@ -158,6 +161,31 @@ class MapScene extends Phaser.Scene {
   refreshMap() {
     for (const guest of this.guests) guest.onMapChanged();
     for (const n of this.npcs) n.onMapChanged();
+    this.placeWarpgate();
+  }
+
+  /** 시작점(CONFIG.spawn)에 워프게이트 애니메이션 (이미지 로드 실패 시 생략) */
+  addWarpgate() {
+    const wg = CONFIG.warpgate;
+    if (!wg || !this.textures.exists('warpgate')) return;
+    this.anims.create({
+      key: 'warpgate',
+      frames: this.anims.generateFrameNumbers('warpgate', { start: 0, end: wg.frames - 1 }),
+      frameRate: wg.fps,
+      repeat: -1,
+    });
+    const scale = wg.height / wg.frameHeight;
+    this.warpgate = this.add.sprite(0, 0, 'warpgate').setOrigin(0.5, wg.originY).setScale(scale).play('warpgate');
+    this.placeWarpgate();
+  }
+
+  /** 시작점이 바뀌면(개발자 모드 편집·되돌리기) 따라 옮기고, 시작점이 없으면 숨김 */
+  placeWarpgate() {
+    if (!this.warpgate) return;
+    const spawn = spawnPoint();
+    this.warpgate.setVisible(!!spawn);
+    // depth는 발 높이 바로 아래 → 시작점에 선 캐릭터가 게이트 앞에 보임
+    if (spawn) this.warpgate.setPosition(spawn.x, spawn.y).setDepth(spawn.y - 1);
   }
 
   update(_time, delta) {

@@ -139,6 +139,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).
+- 워프게이트(`scene.addWarpgate`, `CONFIG.warpgate`): 시작점(spawn)에 4프레임 애니메이션. 원본 `img/etc/warpgate.png`(2172x724) → 절반 크기 `warpgate.webp`(프레임 271x362) 사용. depth = 발 높이 - 1(캐릭터 뒤). 개발자 모드에서 시작점을 바꾸면 `refreshMap()`에서 따라 옮김, 시작점이 없으면 숨김.
 - 배경음악(`ui.js`, `CONFIG.bgm`): 자동 재생 시도 → 브라우저가 막으면 첫 터치/클릭/키 입력 때 재생. 켜고 끔은 localStorage(`bgm`)에 기억(끄면 다음 방문에도 꺼짐). 파일 로드 실패면 버튼 숨김.
 
 ## 메뉴 / 팝업
