@@ -3,7 +3,7 @@
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
-const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107 };
+const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
 const DEV_TYPES = { walk: '걷기', ladder: '사다리', rope: '로프' };
 
 class DevMode {
@@ -90,7 +90,7 @@ class DevMode {
     this.bar.querySelector('.dev-save').classList.toggle('dirty', this.dirty);
     const label = DEV_TYPES[this.type];
     const hints = {
-      move: '드래그로 지도 이동 · 두 손가락/휠로 확대',
+      move: '드래그로 지도 이동 · 두 손가락/휠로 확대 · 보라 곡선 = 점프로 건너가는 곳(자동)',
       add:
         this.type === 'walk'
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
@@ -115,6 +115,26 @@ class DevMode {
       if (a === null || b === null) continue;
       g.lineStyle(6, DEV_COLORS[c.type], 0.9).lineBetween(c.x, a, c.x, b);
       g.fillStyle(0xffffff, 1).fillCircle(c.x, a, 3.5).fillCircle(c.x, b, 3.5);
+    }
+    // 점프로 건너갈 수 있는 곳 (보라 곡선, 발판 양 끝에서) — CONFIG.motion.gapJump 기준 자동 계산
+    g.lineStyle(2.5, DEV_COLORS.gapJump, 0.95);
+    for (const [name, f] of Object.entries(CONFIG.floors)) {
+      if (name === 'stage') continue;
+      const { x1, x2 } = floorSpan(f);
+      const m = Math.min(CHAR_W / 2, (x2 - x1) / 4);
+      for (const [dir, x] of [[-1, x1 + m], [1, x2 - m]]) {
+        const y = floorY(f, x);
+        for (const t of gapJumpTargets(name, x, dir)) {
+          const h = CONFIG.motion.jumpHeight + Math.max(0, y - t.y) * 0.6;
+          const pts = [];
+          for (let i = 0; i <= 12; i++) {
+            const p = i / 12;
+            pts.push({ x: x + (t.x - x) * p, y: y + (t.y - y) * p - h * 4 * p * (1 - p) });
+          }
+          g.strokePoints(pts);
+          g.fillStyle(DEV_COLORS.gapJump, 1).fillCircle(t.x, t.y, 3);
+        }
+      }
     }
   }
 
