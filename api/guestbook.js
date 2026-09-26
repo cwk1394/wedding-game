@@ -20,7 +20,7 @@ const ENV = {
 };
 
 const LIMITS = {
-  name: 10,
+  name: 15,
   shortMsg: 10,
   longMsg: 500,
   imageBytes: 512 * 1024, // 브라우저에서 축소해서 보내므로 넉넉한 상한

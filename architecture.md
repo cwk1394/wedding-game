@@ -48,7 +48,7 @@
 5) 하객이 이름, 한줄 멘트, 방명록 내용을 입력 후 등록 버튼을 누른다.
 6) 프론트엔드가 텍스트 + 후처리된 PNG(각 수십 KB)를 `POST /api/guestbook`으로 보낸다.
 7) Vercel 함수가 처리한다.
-   - 입력 검증 (이름·한줄 멘트 10자, 방명록 500자, PNG 여부, 크기 상한, 허용 출처)
+   - 입력 검증 (이름 15자, 한줄 멘트 10자, 방명록 500자, PNG 여부, 크기 상한, 허용 출처)
    - `crypto.randomUUID()`로 하객 UUID 발급 (클라이언트가 보낸 값은 쓰지 않음)
    - GitHub Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/front.png`, `walk.png`에 저장
    - GitHub Discussions API로 새 Discussion 작성

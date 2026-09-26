@@ -47,45 +47,53 @@
         <span id="write-title" class="modal-title">방명록 작성</span>
         <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
       </div>
+      <ol class="steps" aria-label="작성 단계">
+        <li class="active" data-step-dot="1"><b>1</b> 방명록 쓰기</li>
+        <li data-step-dot="2"><b>2</b> 캐릭터 만들기</li>
+      </ol>
       <div class="modal-body form-body">
-        <label class="field">
-          <span>이름</span>
-          <input name="name" maxlength="10" required autocomplete="name" />
-        </label>
-        <label class="field">
-          <span>한줄 멘트 <small>(10자 이하, 말풍선으로 보여요)</small></span>
-          <input name="shortMsg" maxlength="10" required />
-        </label>
-        <label class="field">
-          <span>방명록</span>
-          <textarea name="longMsg" maxlength="500" rows="4" required></textarea>
-        </label>
-        <div class="field">
-          <span>내 캐릭터 만들기 <small>(선택, 사진을 메이플 캐릭터로 바꿔드려요)</small></span>
-          <input name="photo" type="file" accept="image/*" />
+        <!-- 1단계: 방명록 -->
+        <div class="step" data-step="1">
+          <label class="field">
+            <span>이름 <small>(15자 이하)</small></span>
+            <input name="name" maxlength="15" required autocomplete="name" />
+          </label>
+          <label class="field">
+            <span>한줄 멘트 <small>(10자 이하, 말풍선으로 보여요)</small></span>
+            <input name="shortMsg" maxlength="10" required />
+          </label>
+          <label class="field">
+            <span>방명록</span>
+            <textarea name="longMsg" maxlength="500" rows="5" required></textarea>
+          </label>
+        </div>
+
+        <!-- 2단계: 캐릭터 -->
+        <div class="step" data-step="2" hidden>
+          <p class="step-intro">사진을 올리면 메이플 캐릭터로 바꿔드려요. <small>(선택)</small></p>
+          <div class="char-maker">
+            <label class="photo-pick">
+              <input name="photo" type="file" accept="image/*" />
+              <img class="photo-preview" alt="내 사진 미리보기" hidden />
+              <span class="photo-empty"><b>＋</b>사진 선택</span>
+            </label>
+            <span class="char-arrow" aria-hidden="true">→</span>
+            <div class="preview">
+              <img class="preview-front" alt="캐릭터 미리보기" hidden />
+              <img class="preview-walk" alt="걷기 미리보기" hidden />
+              <span class="preview-empty">캐릭터</span>
+            </div>
+          </div>
           <button type="button" class="btn btn-secondary generate-btn">캐릭터 생성</button>
           <p class="gen-status" hidden><span class="spinner" aria-hidden="true"></span><span class="gen-text"></span></p>
-          <small class="note">사진은 캐릭터를 만드는 데만 쓰이고 저장되지 않아요. 생성에 1~3분 정도 걸려요.</small>
+          <small class="note">사진은 캐릭터를 만드는 데만 쓰이고 저장되지 않아요. 생성에 1~3분 정도 걸려요.<br />캐릭터 없이 등록해도 괜찮아요.</small>
         </div>
-        <div class="preview" hidden>
-          <img class="preview-front" alt="정면 미리보기" />
-          <img class="preview-walk" alt="걷기 미리보기" />
-        </div>
-        <details class="manual">
-          <summary>캐릭터 이미지 직접 올리기</summary>
-          <label class="field">
-            <span>정면 이미지</span>
-            <input name="front" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-          <label class="field">
-            <span>걷기 이미지 <small>(가로 4프레임, 왼쪽을 바라보게)</small></span>
-            <input name="walk" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </details>
         <p class="form-error" role="alert" hidden></p>
       </div>
       <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">등록하기</button>
+        <button type="button" class="btn btn-ghost prev-btn" hidden>이전</button>
+        <button type="button" class="btn btn-primary next-btn">다음</button>
+        <button type="submit" class="btn btn-primary submit-btn" hidden>등록하기</button>
       </div>
     </form>
   </div>

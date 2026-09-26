@@ -39,30 +39,83 @@ const UI = (() => {
     viewModal.open();
   }
 
-  // ---------- 방명록 작성 ----------
+  // ---------- 방명록 작성 (1단계: 방명록 → 2단계: 캐릭터) ----------
   const writeModal = setupModal(document.getElementById('write-modal'));
   const form = document.getElementById('write-form');
   const fields = form.elements;
-  const preview = form.querySelector('.preview');
   const errorBox = form.querySelector('.form-error');
-  const submitBtn = form.querySelector('[type="submit"]');
+  const prevBtn = form.querySelector('.prev-btn');
+  const nextBtn = form.querySelector('.next-btn');
+  const submitBtn = form.querySelector('.submit-btn');
   const generateBtn = form.querySelector('.generate-btn');
   const genStatus = form.querySelector('.gen-status');
+  const photoPreview = form.querySelector('.photo-preview');
+  const photoEmpty = form.querySelector('.photo-empty');
+  const [frontPreview, walkPreview] = form.querySelectorAll('.preview img');
+  const previewEmpty = form.querySelector('.preview-empty');
 
-  let sources = { front: null, walk: null }; // 캐릭터 원본 (File 또는 data URL)
+  let step = 1;
   let preparing = null; // 업로드용 이미지 처리 Promise → { front, walk } | null
   let generating = false;
   let generationCount = 0;
+  let photoUrl = null;
 
   function showError(message) {
     errorBox.textContent = message || '';
     errorBox.hidden = !message;
   }
 
-  /** sources가 바뀌면 배경 제거·축소를 다시 하고 미리보기를 갱신 */
-  async function setSources(next) {
-    sources = next;
-    const current = (preparing = prepareSpriteImages(sources.front, sources.walk));
+  function showStep(n) {
+    step = n;
+    showError('');
+    form.querySelectorAll('[data-step]').forEach((el) => (el.hidden = Number(el.dataset.step) !== n));
+    form.querySelectorAll('[data-step-dot]').forEach((el) =>
+      el.classList.toggle('active', Number(el.dataset.stepDot) <= n)
+    );
+    prevBtn.hidden = n === 1;
+    nextBtn.hidden = n !== 1;
+    submitBtn.hidden = n !== 2;
+    form.querySelector('.modal-body').scrollTop = 0;
+  }
+
+  function readTexts() {
+    return {
+      name: fields.name.value.trim(),
+      shortMsg: fields.shortMsg.value.trim(),
+      longMsg: fields.longMsg.value.trim(),
+    };
+  }
+
+  function goNext() {
+    const { name, shortMsg, longMsg } = readTexts();
+    if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    showStep(2);
+  }
+
+  nextBtn.addEventListener('click', goNext);
+  prevBtn.addEventListener('click', () => showStep(1));
+
+  function setImg(img, src) {
+    img.hidden = !src;
+    if (src) img.src = src;
+    else img.removeAttribute('src');
+  }
+
+  // 사진 선택 → 미리보기
+  function setPhoto(file) {
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = file ? URL.createObjectURL(file) : null;
+    setImg(photoPreview, photoUrl);
+    photoEmpty.hidden = Boolean(file);
+  }
+  fields.photo.addEventListener('change', () => {
+    showError('');
+    setPhoto(fields.photo.files[0] || null);
+  });
+
+  /** 캐릭터 원본이 바뀌면 배경 제거·축소를 다시 하고 미리보기를 갱신 */
+  async function setSources(front, walk) {
+    const current = (preparing = prepareSpriteImages(front, walk));
     let prepared = null;
     try {
       prepared = await current;
@@ -70,27 +123,16 @@ const UI = (() => {
       showError(err.message);
     }
     if (current !== preparing) return; // 그 사이 다른 이미지로 바뀜
-    preview.hidden = !prepared;
-    const [frontImg, walkImg] = preview.querySelectorAll('img');
-    frontImg.toggleAttribute('src', Boolean(prepared?.front));
-    walkImg.toggleAttribute('src', Boolean(prepared?.walk));
-    if (prepared?.front) frontImg.src = prepared.front;
-    if (prepared?.walk) walkImg.src = prepared.walk;
+    setImg(frontPreview, prepared?.front);
+    setImg(walkPreview, prepared?.walk);
+    previewEmpty.hidden = Boolean(prepared);
   }
 
-  // 직접 올리기
-  const onManualChange = () => {
-    showError('');
-    setSources({ front: fields.front.files[0] || null, walk: fields.walk.files[0] || null });
-  };
-  fields.front.addEventListener('change', onManualChange);
-  fields.walk.addEventListener('change', onManualChange);
-
-  // AI 생성
   function setBusy(busy, text = '') {
     generating = busy;
     generateBtn.disabled = busy;
     submitBtn.disabled = busy;
+    prevBtn.disabled = busy;
     genStatus.hidden = !busy;
     genStatus.querySelector('.gen-text').textContent = text;
   }
@@ -125,10 +167,10 @@ const UI = (() => {
       const front = await withProgress('캐릭터 도트 찍는 중... (1/2)', async () =>
         generateCharacter('front', await resizePhoto(photo))
       );
-      await setSources({ front, walk: null });
+      await setSources(front, null);
       try {
         const walk = await withProgress('걷는 모션 만드는 중... (2/2)', () => generateCharacter('walk', front));
-        await setSources({ front, walk });
+        await setSources(front, walk);
       } catch (err) {
         showError(`걷는 모션은 만들지 못했어요. 이대로 등록하거나 다시 만들어 주세요. (${err.message})`);
       }
@@ -140,16 +182,29 @@ const UI = (() => {
     }
   });
 
+  function resetForm() {
+    form.reset();
+    setPhoto(null);
+    preparing = null;
+    setImg(frontPreview, null);
+    setImg(walkPreview, null);
+    previewEmpty.hidden = false;
+    showStep(1);
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (step === 1) return goNext(); // 1단계에서 엔터
     if (generating) return;
     showError('');
-    const name = fields.name.value.trim();
-    const shortMsg = fields.shortMsg.value.trim();
-    const longMsg = fields.longMsg.value.trim();
-    if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    const { name, shortMsg, longMsg } = readTexts();
+    if (!name || !shortMsg || !longMsg) {
+      showStep(1);
+      return goNext();
+    }
 
     submitBtn.disabled = true;
+    prevBtn.disabled = true;
     submitBtn.textContent = '등록 중...';
     try {
       const images = await (preparing ?? Promise.resolve(null));
@@ -160,16 +215,14 @@ const UI = (() => {
         spriteUrl: images?.front ?? null,
         walkUrl: images?.walk ?? null,
       });
-      form.reset();
-      sources = { front: null, walk: null };
-      preparing = null;
-      preview.hidden = true;
+      resetForm();
       writeModal.close();
       showToast('방명록이 등록되었어요! 🎉');
     } catch (err) {
       showError(err.message);
     } finally {
       submitBtn.disabled = false;
+      prevBtn.disabled = false;
       submitBtn.textContent = '등록하기';
     }
   });

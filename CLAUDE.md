@@ -22,7 +22,7 @@ js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
-js/ui.js                방명록 팝업, 작성 폼, 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/ui.js                방명록 팝업, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/view.js              MapView: 카메라 확대/축소(핀치·휠·버튼)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
@@ -60,7 +60,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
    - 걷기 생성만 실패하면 정면만으로 등록 가능. 한 접속당 생성 3회 제한(`CONFIG.ai.maxGenerations`, 클라이언트 측).
    - 걷기 스트립 프레임 분할: 투명 세로줄 기준으로 캐릭터 덩어리를 찾아 정확히 4개면 사용, 아니면 균등 분할(`findFrameCells`).
 1. 브라우저: 폼 입력 + 이미지 파일 → 배경 제거·크롭·높이 128로 축소 → PNG data URL (한 장 수십 KB)
-2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름·멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
+2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름 15자, 멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
 3. API가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)
 4. Discussion 작성 → push/discussion 이벤트로 Actions가 재배포 (1~2분)
 5. 브라우저는 배포를 기다리지 않고 방금 처리한 data URL 이미지로 즉시 맵에 추가. 이후 재조회 때 같은 UUID라 중복 생성 안 됨.
