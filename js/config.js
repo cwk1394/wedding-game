@@ -70,9 +70,11 @@ const CONFIG = {
     //   walk/jump/prone: 왼쪽을 바라봄, ladder/rope: 뒷모습
     motions: ['walk', 'jump', 'ladder', 'rope', 'prone'],
     motionFrames: { walk: 4, jump: 4, ladder: 4, rope: 4, prone: 2 }, // 동작 스트립 한 장의 가로 프레임 수
-    // 서 있는 키 대비, 그 동작에서 가장 키가 큰 프레임의 표시 높이. 없으면 1
-    //   jump: 점프 포즈는 웅크려서 서 있을 때보다 살짝 작다 / prone: 엎드리면 낮고 길다
-    motionHeight: { jump: 0.92, prone: 0.5 },
+    // 동작 이미지 크기: 서 있는 자세(걷기·점프·사다리·로프 등)는 정면 이미지의 머리 폭에 맞추고(measureHead),
+    // 누운 자세(lyingMotions)는 서 있는 키 대비 motionHeight 비율로 맞춘다
+    headRegion: 0.4, // 머리 폭을 잴 영역 = 캐릭터 위쪽 40%
+    lyingMotions: ['prone', 'sleep'],
+    motionHeight: { prone: 0.5 }, // 누운 자세에서 가장 키 큰 프레임의 높이 비율 (없으면 1)
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
   },
 

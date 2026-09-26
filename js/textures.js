@@ -218,29 +218,63 @@ function buildFrontCanvas(frontImg, height) {
 }
 
 /**
- * 동작 스트립(가로 N프레임) → 배경 제거 후 프레임별 캔버스 배열 (모두 같은 크기, 높이 height).
- * - 프레임마다 자기 영역만 잘라서 발(아래쪽)을 맞춰 놓는다. AI가 "위아래로 움직이지 말라"는 프롬프트를 무시하고
- *   점프 프레임을 위로 띄워 그려도, 실제 점프 높이는 코드가 주므로 여기서는 무시한다.
- * - 크기는 가장 키가 큰 한 프레임이 height가 되도록 맞춘다. (예전엔 모든 프레임의 세로 범위를 합쳐서 맞췄더니,
- *   프레임마다 위아래로 어긋난 점프 스트립은 범위가 커져 캐릭터가 작게 보였다)
+ * 머리(머리카락 포함) 가로 폭: 캐릭터 영역 위쪽 CONFIG.sprite.headRegion 비율 안에서 가장 넓은 줄의 폭.
+ * 치비 캐릭터는 머리가 커서 자세(서기·걷기·점프·사다리)가 달라도 머리 폭은 거의 같다 → 동작 이미지 크기 맞추는 기준
+ */
+function measureHead(canvas) {
+  const { width, height } = canvas;
+  const d = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const rows = Math.max(1, Math.round(height * CONFIG.sprite.headRegion));
+  let top = 0;
+  // 위쪽 투명 여백은 건너뛴다
+  outer: for (; top < height; top++) for (let x = 0; x < width; x++) if (d[(top * width + x) * 4 + 3] > 40) break outer;
+  let best = 0;
+  for (let y = top; y < Math.min(height, top + rows); y++) {
+    let x0 = -1;
+    let x1 = -1;
+    for (let x = 0; x < width; x++) {
+      if (d[(y * width + x) * 4 + 3] > 40) {
+        if (x0 < 0) x0 = x;
+        x1 = x;
+      }
+    }
+    if (x0 >= 0) best = Math.max(best, x1 - x0 + 1);
+  }
+  return best;
+}
+
+/**
+ * 동작 스트립(가로 N프레임) → 배경 제거 후 프레임별 캔버스 배열 (모두 같은 크기).
+ * - 프레임마다 자기 영역만 잘라서 발(아래쪽)을 맞춰 놓는다. AI가 점프 프레임을 위로 띄워 그려도 무시 (점프 높이는 코드가 줌).
+ * - 크기: refHead(정면 이미지의 머리 폭, 표시 크기 기준)가 있으면 프레임들의 머리 폭 중간값이 그와 같아지게 맞춘다.
+ *   → 웅크린 점프·다리 올린 사다리처럼 키가 다른 자세도 정면과 같은 크기로 보인다.
+ *   refHead가 없으면(엎드리기·자기처럼 누운 자세) 가장 키 큰 프레임이 height가 되게 맞춘다.
  * - 좌우로는 CONFIG.sprite.framePadding만큼 여유를 둬서 머리카락·치마가 프레임 끝에 걸리지 않게 한다.
  */
-function buildStripFrames(stripImg, height, frames = 4) {
+function buildStripFrames(stripImg, height, frames = 4, refHead = null) {
   const strip = removeBackground(stripImg);
   const parts = splitFrames(strip, frames);
   const w = Math.max(...parts.map((p) => p.w));
-  const scale = height / Math.max(...parts.map((p) => p.h));
+  const maxH = Math.max(...parts.map((p) => p.h));
+  let scale = height / maxH;
+  if (refHead) {
+    const heads = parts.map((p) => measureHead(p.canvas)).sort((a, b) => a - b);
+    const head = heads[Math.floor(heads.length / 2)];
+    // 머리 측정이 이상하게 나온 경우를 대비해 키 기준 크기의 0.6~1.3배 안으로 제한
+    if (head > 0) scale = Phaser.Math.Clamp(refHead / head, scale * 0.6, scale * 1.3);
+  }
+  const outH = Math.round(maxH * scale);
   const pad = Math.round(w * scale * CONFIG.sprite.framePadding);
   return parts.map((p) => {
     // 이 프레임 픽셀만 남긴 캔버스를 공통 폭(+양옆 여유) 캔버스의 가로 가운데, 아래쪽(발)에 맞춰 놓는다
     const frame = document.createElement('canvas');
     frame.width = Math.round(w * scale) + pad * 2;
-    frame.height = height;
+    frame.height = outH;
     const ctx = frame.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
     const dw = p.w * scale;
     const dh = p.h * scale;
-    ctx.drawImage(p.canvas, 0, 0, p.w, p.h, pad + ((w - p.w) / 2) * scale, height - dh, dw, dh);
+    ctx.drawImage(p.canvas, 0, 0, p.w, p.h, pad + ((w - p.w) / 2) * scale, outH - dh, dw, dh);
     return frame;
   });
 }
@@ -394,12 +428,16 @@ async function loadSpriteTextures(scene, info) {
       ),
     ]);
     const height = (info.height ?? CONFIG.sprite.height) * CONFIG.sprite.textureScale;
-    scene.textures.addCanvas(`${key}_0`, buildFrontCanvas(frontImg, height));
+    const front = buildFrontCanvas(frontImg, height);
+    scene.textures.addCanvas(`${key}_0`, front);
+    // 동작 이미지 크기를 정면 머리 폭에 맞춘다 — 사람형 캐릭터만. 네발 동물 NPC는 위쪽에 등·꼬리가 섞여 머리 폭 측정이 안 맞아서 키 기준
+    const refHead = info.npc ? null : measureHead(front);
 
     motionList.forEach((m, i) => {
       if (!stripImgs[i]) return;
       const h = Math.round(height * ratioOf(m));
-      const frameKeys = buildStripFrames(stripImgs[i], h, framesOf(m)).map((canvas, f) => {
+      const head = CONFIG.sprite.lyingMotions.includes(m) ? null : refHead;
+      const frameKeys = buildStripFrames(stripImgs[i], h, framesOf(m), head).map((canvas, f) => {
         scene.textures.addCanvas(`${key}_${m}${f}`, canvas);
         return `${key}_${m}${f}`;
       });

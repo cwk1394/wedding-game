@@ -17,14 +17,17 @@ function toImage(source) {
 async function prepareSpriteImages(sources) {
   if (!sources.front) return null;
   const height = CONFIG.sprite.uploadHeight;
-  const result = { front: buildFrontCanvas(await toImage(sources.front), height).toDataURL('image/png') };
+  const front = buildFrontCanvas(await toImage(sources.front), height);
+  const refHead = measureHead(front); // 동작 이미지 크기를 정면 머리 폭에 맞춘다 (textures.js와 같은 방식)
+  const result = { front: front.toDataURL('image/png') };
   for (const m of CONFIG.sprite.motions) {
     result[m] = sources[m]
       ? joinFrames(
           buildStripFrames(
             await toImage(sources[m]),
             Math.round(height * (CONFIG.sprite.motionHeight[m] ?? 1)),
-            CONFIG.sprite.motionFrames[m]
+            CONFIG.sprite.motionFrames[m],
+            CONFIG.sprite.lyingMotions.includes(m) ? null : refHead
           )
         ).toDataURL('image/png')
       : null;
