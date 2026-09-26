@@ -6,7 +6,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 ## 진행 상황
 - [x] 1단계: Phaser 껍데기 (맵, 더미 캐릭터, 이동/네임태그/말풍선, 클릭 팝업)
 - [x] 2단계: GitHub Discussions 읽기 (Actions → `guests.json` 방식)
-- [~] 3단계: Vercel Serverless Functions로 방명록 쓰기 — 로직은 `worker/`(Cloudflare용)에 완성, **`api/guestbook.js`로 이전 + Vercel 배포 + `CONFIG.apiUrl` 설정 필요** (Cloudflare는 사용 안 함)
+- [x] 3단계: Vercel Serverless Functions로 방명록 쓰기 (`api/guestbook.js`). Cloudflare는 사용 안 함
 - [ ] 4단계: AI 스프라이트 생성 파이프라인 — 이미지 저장(저장소 커밋)은 완료, AI 생성만 남음 (지금은 폼에서 이미지 파일 직접 업로드)
 - [ ] 5단계: 모바일 최적화, 로딩 UI
 
@@ -29,7 +29,9 @@ scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실�
 .github/workflows/deploy.yml  Pages 배포 워크플로
 img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, character1 = 예시 하객). *_move.png = 걷기 4프레임
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
-worker/                 (폐기 예정) Cloudflare Worker 버전 쓰기 API. Vercel `api/`로 옮긴 뒤 삭제
+api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
+package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
+vercel.json             ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
 ```
 

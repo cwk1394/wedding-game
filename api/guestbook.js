@@ -1,11 +1,24 @@
-// 방명록 API (Cloudflare Worker)
+// 방명록 쓰기 API (Vercel Serverless Function)
 // POST /api/guestbook  { name, shortMsg, longMsg, images?: { front, walk } }  (이미지는 PNG base64)
 //   1) UUID 발급
 //   2) 이미지를 img/guests/<uuid>/front.png, walk.png 로 저장소에 한 커밋으로 올림
 //   3) GitHub Discussion(방명록 카테고리)에 JSON 본문으로 글 작성
 //   4) 생성된 guest 객체 반환
+// GET /api/guestbook → 상태 확인용 { ok: true }
 //
-// 환경변수: GITHUB_TOKEN(secret), GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, DISCUSSION_CATEGORY, ALLOWED_ORIGINS
+// 환경변수(Vercel): GITHUB_TOKEN(필수)
+//   선택: GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, DISCUSSION_CATEGORY, ALLOWED_ORIGINS(쉼표 구분)
+
+const ENV = {
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GITHUB_OWNER: process.env.GITHUB_OWNER || 'kobe-KANG',
+  GITHUB_REPO: process.env.GITHUB_REPO || 'guestbook',
+  GITHUB_BRANCH: process.env.GITHUB_BRANCH || 'main',
+  DISCUSSION_CATEGORY: process.env.DISCUSSION_CATEGORY || '방명록',
+  // 로컬 테스트용 주소 포함
+  ALLOWED_ORIGINS:
+    process.env.ALLOWED_ORIGINS || 'https://kobe-kang.github.io,http://localhost:8765,http://127.0.0.1:8765',
+};
 
 const LIMITS = {
   name: 10,
@@ -21,32 +34,33 @@ class HttpError extends Error {
   }
 }
 
-export default {
-  async fetch(request, env) {
-    const cors = corsHeaders(request, env);
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+export function OPTIONS(request) {
+  return new Response(null, { status: 204, headers: corsHeaders(request, ENV) });
+}
 
-    try {
-      if (!cors['Access-Control-Allow-Origin']) throw new HttpError(403, '허용되지 않은 출처입니다.');
-      const { pathname } = new URL(request.url);
-      if (request.method === 'POST' && pathname === '/api/guestbook') {
-        const guest = await createGuest(await readJson(request), env);
-        return json({ guest }, 201, cors);
-      }
-      throw new HttpError(404, 'Not found');
-    } catch (err) {
-      const status = err instanceof HttpError ? err.status : 500;
-      if (status === 500) console.error(err);
-      return json({ error: status === 500 ? '서버 오류가 발생했습니다.' : err.message }, status, cors);
-    }
-  },
-};
+export function GET(request) {
+  return json({ ok: true, configured: Boolean(ENV.GITHUB_TOKEN) }, 200, corsHeaders(request, ENV));
+}
+
+export async function POST(request) {
+  const cors = corsHeaders(request, ENV);
+  try {
+    if (!cors['Access-Control-Allow-Origin']) throw new HttpError(403, '허용되지 않은 출처입니다.');
+    if (!ENV.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN 환경변수가 설정되지 않았습니다.');
+    const guest = await createGuest(await readJson(request), ENV);
+    return json({ guest }, 201, cors);
+  } catch (err) {
+    const status = err instanceof HttpError ? err.status : 500;
+    if (status === 500) console.error(err);
+    return json({ error: status === 500 ? '서버 오류가 발생했습니다.' : err.message }, status, cors);
+  }
+}
 
 function corsHeaders(request, env) {
   const origin = request.headers.get('Origin') || '';
   const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
   const headers = {
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     Vary: 'Origin',
   };
@@ -147,7 +161,7 @@ class GitHub {
       headers: {
         Authorization: `Bearer ${this.env.GITHUB_TOKEN}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'guestbook-worker',
+        'User-Agent': 'guestbook-api',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,

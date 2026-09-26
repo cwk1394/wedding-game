@@ -4,4 +4,4 @@ node_modules/
 .env
 .dev.vars
 _test.html
-.wrangler/
+.vercel/
