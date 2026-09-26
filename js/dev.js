@@ -1,8 +1,9 @@
 // 개발자 모드 (페이지를 ?dev 로 열기): 이동 가능 영역(발판·사다리·로프) 편집기.
 // - 종류(걷기/사다리/로프)와 도구(이동/추가/지우기)를 고르고 지도 위를 드래그해서 편집
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
-// - 조종 도구: 캐릭터를 눌러 바로 조종 (조종 자체는 js/control.js의 Controller)
+// - 조종: 캐릭터 팝업의 "조종하기" (개발자 모드에선 신랑·신부도). 조종 자체는 js/control.js의 Controller
 // - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
+// - 캐릭터 끌기(편집 도구가 아닐 때): 누르고 끌면 놓은 곳의 발판으로 옮김. 신랑·신부는 그 자리(CONFIG.couple)가 저장됨
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
@@ -47,10 +48,6 @@ class DevMode {
     return this.scene.control.controlled;
   }
 
-  selectGuest(character) {
-    this.scene.control.take(character);
-  }
-
   releaseGuest() {
     this.scene.control.release();
   }
@@ -72,7 +69,6 @@ class DevMode {
           <button type="button" data-v="move">이동</button>
           <button type="button" data-v="add">추가</button>
           <button type="button" data-v="erase">지우기</button>
-          <button type="button" data-v="control">조종</button>
           <button type="button" data-v="spawn">시작점</button>
         </div>
       </div>
@@ -89,7 +85,6 @@ class DevMode {
       seg.addEventListener('click', (e) => {
         const v = e.target.closest('[data-v]')?.dataset.v;
         if (!v) return;
-        if (seg.dataset.group === 'tool' && this.tool === 'control' && v !== 'control') this.releaseGuest();
         this[seg.dataset.group] = v;
         this.updateToolbar();
       })
@@ -111,18 +106,18 @@ class DevMode {
     this.bar.querySelector('.dev-save').classList.toggle('dirty', this.dirty);
     const label = DEV_TYPES[this.type];
     const hints = {
-      move: '드래그로 지도 이동 · 두 손가락/휠로 확대 · 보라 곡선 = 점프로 건너가는 곳(자동)',
+      move: '드래그로 지도 이동 · 캐릭터를 끌면 그 자리로 (신랑·신부 자리는 저장) · 두 손가락/휠로 확대 · 보라 곡선 = 자동 점프',
       add:
         this.type === 'walk'
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
           : `위 발판에서 세로로 드래그해서 ${label} 추가 (아래 끝이 발판이면 연결, 허공이면 매달린 ${label})`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
-      control: this.controlled
-        ? `${this.controlled.info.name} 조종 중 · ←→ 걷기 · ↑↓ 사다리/로프 · Space 점프 (점프 중 ↑↓로 매달리기)`
-        : '움직여 볼 캐릭터를 눌러서 선택하세요',
       spawn: '지도를 눌러 방명록 등록 직후 새 캐릭터가 나타날 시작점을 지정 (발판 위, 노란 깃발)',
     };
-    this.bar.querySelector('.dev-hint').textContent = hints[this.tool];
+    // 조종 중(캐릭터 팝업의 "조종하기")이면 조작법을 대신 보여준다
+    this.bar.querySelector('.dev-hint').textContent = this.controlled
+      ? `${this.controlled.info.name} 조종 중 · ←→ 걷기 · ↑↓ 사다리/로프 · Space 점프 (점프 중 ↑↓로 매달리기)`
+      : hints[this.tool];
   }
 
   // ---------- 그리기 ----------
@@ -205,9 +200,19 @@ class DevMode {
   }
 
   onDown(pointer) {
-    if (!this.editing) return;
+    const twoFingers = this.scene.input.manager.pointers.filter((p) => p.isDown).length >= 2;
+    if (!this.editing) {
+      // 편집 도구가 아니면: 캐릭터를 누르고 끌면 그 캐릭터를 옮긴다 (두 손가락이면 핀치 확대에 양보)
+      if (twoFingers) return this.endCharDrag();
+      const p = this.worldPoint(pointer);
+      const c = this.characterAt(p, [...this.scene.couple, ...this.scene.guests, ...this.scene.npcs]);
+      if (!c) return;
+      this.scene.view.drag = null; // 지도 대신 캐릭터를 끈다
+      this.charDrag = { id: pointer.id, character: c, dx: c.x - p.x, dy: c.y - p.y, sx: pointer.x, sy: pointer.y, moved: false };
+      return;
+    }
     // 두 손가락이면 핀치 확대에 양보
-    if (this.scene.input.manager.pointers.filter((p) => p.isDown).length >= 2) {
+    if (twoFingers) {
       this.stroke = null;
       this.preview.clear();
       return;
@@ -217,6 +222,20 @@ class DevMode {
   }
 
   onMove(pointer) {
+    const d = this.charDrag;
+    if (d && pointer.id === d.id && pointer.isDown) {
+      if (!d.moved) {
+        if (Math.hypot(pointer.x - d.sx, pointer.y - d.sy) < CONFIG.view.dragThreshold * DPR) return;
+        d.moved = true;
+        d.from = { floor: d.character.floorName, x: d.character.x };
+        d.character.held = true; // 끄는 동안은 스스로 움직이지 않음
+        d.character.hideBubble();
+        this.scene.view.dragMoved = true; // 손을 떼도 클릭(팝업·선택)으로 치지 않게
+      }
+      const p = this.worldPoint(pointer);
+      d.character.setPosition(p.x + d.dx, p.y + d.dy).setDepth(14000);
+      return;
+    }
     if (!this.stroke || pointer.id !== this.stroke.id || !pointer.isDown) return;
     const p = this.worldPoint(pointer);
     const last = this.stroke.points[this.stroke.points.length - 1];
@@ -236,21 +255,45 @@ class DevMode {
     this.changed();
   }
 
-  /** 조종 도구: 누른 곳의 캐릭터들(신랑·신부 포함) 중 가로로 가장 가까운 캐릭터를 선택 */
-  pickCharacter(pointer) {
-    if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
-    const p = this.worldPoint(pointer);
+  /** p(월드 좌표)를 누르는 영역에 둔 캐릭터들 중 가로로 가장 가까운 캐릭터 */
+  characterAt(p, list) {
     let best = null;
-    for (const c of [...this.scene.couple, ...this.scene.guests]) {
+    for (const c of list) {
       if (!c.visible || !c.input) continue;
       if (!Phaser.Geom.Rectangle.Contains(c.input.hitArea, p.x - c.x, p.y - c.y)) continue;
       if (!best || Math.abs(p.x - c.x) < Math.abs(p.x - best.x)) best = c;
     }
-    if (best) this.selectGuest(best);
+    return best;
+  }
+
+  /**
+   * 캐릭터 끌기를 마침: 놓은 곳의 발판(발 아래 가장 가까운 것) 위로 옮긴다. 발판이 없으면 원래 자리로.
+   * 신랑·신부는 그 자리가 지도 데이터(CONFIG.couple)에 들어가 되돌리기·저장 대상이 된다.
+   */
+  endCharDrag() {
+    const d = this.charDrag;
+    this.charDrag = null;
+    if (!d?.moved) return;
+    const c = d.character;
+    const isCouple = c instanceof CoupleCharacter;
+    const name = floorForDrop(c.x, c.y, isCouple);
+    if (!name) UI.showToast('발판(빨간 선) 위에 놓아 주세요');
+    if (isCouple && name) {
+      this.checkpoint();
+      CONFIG.couple = { ...coupleData(), [c.info.id]: { floor: name, x: Math.round(c.x) } };
+    }
+    if (isCouple && !c.controlled) {
+      c.held = false;
+      c.onMapChanged(); // 제자리(CONFIG.couple)에 선다
+    } else {
+      const to = name ? { floor: name, x: c.x } : d.from;
+      c.dropAt(to.floor, to.x);
+    }
+    if (isCouple && name) this.changed();
   }
 
   onUp(pointer) {
-    if (this.tool === 'control') return this.pickCharacter(pointer);
+    if (this.charDrag && pointer.id === this.charDrag.id) return this.endCharDrag();
     if (this.tool === 'spawn') return this.setSpawn(pointer);
     const stroke = this.stroke;
     if (!stroke || pointer.id !== stroke.id) return;
@@ -264,7 +307,7 @@ class DevMode {
   // ---------- 편집 ----------
 
   snapshot() {
-    return JSON.stringify({ floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn });
+    return JSON.stringify(mapData());
   }
 
   /** 바꾸기 전에 호출: 되돌리기 스냅샷 저장 */
@@ -275,10 +318,14 @@ class DevMode {
 
   changed() {
     this.releaseGuest();
-    // 시작점 발판이 지워졌거나 잘렸으면 그 x를 덮는 발판으로 옮기고, 없으면 해제
-    if (CONFIG.spawn && !CONFIG.floors[CONFIG.spawn.floor]) {
-      const f = Object.entries(CONFIG.floors).find(([n, fl]) => n !== 'stage' && CONFIG.spawn.x >= floorSpan(fl).x1 && CONFIG.spawn.x <= floorSpan(fl).x2);
-      CONFIG.spawn = f ? { ...CONFIG.spawn, floor: f[0] } : null;
+    // 시작점·신랑신부 자리의 발판이 지워졌거나 잘렸으면 그 x를 덮는 발판으로 옮기고, 없으면 해제
+    CONFIG.spawn = relocatePoint(CONFIG.spawn);
+    if (CONFIG.couple) {
+      for (const id of Object.keys(CONFIG.couple)) {
+        const p = relocatePoint(CONFIG.couple[id]);
+        if (p) CONFIG.couple[id] = p;
+        else delete CONFIG.couple[id]; // 기본 자리(stage 가운데)로
+      }
     }
     this.dirty = this.snapshot() !== this.savedSnap;
     this.draw();
@@ -289,10 +336,11 @@ class DevMode {
   undo() {
     const snap = this.history.pop();
     if (!snap) return;
-    const { floors, climbs, spawn } = JSON.parse(snap);
+    const { floors, climbs, spawn, couple } = JSON.parse(snap);
     CONFIG.floors = floors;
     CONFIG.climbs = climbs;
     CONFIG.spawn = spawn;
+    CONFIG.couple = couple;
     this.changed();
   }
 
@@ -363,7 +411,7 @@ class DevMode {
         );
         if (ends.every(Boolean)) climbs.push({ ...c, floors: ends });
       }
-      if (JSON.stringify({ floors, climbs, spawn: CONFIG.spawn }) === before) return;
+      if (JSON.stringify({ ...mapData(), floors, climbs }) === before) return;
       this.checkpoint();
       CONFIG.floors = floors;
       CONFIG.climbs = climbs;
@@ -395,7 +443,7 @@ class DevMode {
     btn.disabled = true;
     btn.textContent = '저장 중...';
     try {
-      await postJson('/api/map', { password, map: { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn } });
+      await postJson('/api/map', { password, map: mapData() });
       try {
         sessionStorage.setItem('devPassword', password);
       } catch {}
@@ -418,6 +466,46 @@ class DevMode {
 }
 
 // ---------- 편집용 도우미 ----------
+
+/** 저장·되돌리기 대상인 지도 데이터 전체 (js/map-data.js 내용) */
+function mapData() {
+  return { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn, couple: CONFIG.couple };
+}
+
+/** 지금 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (지정 안 된 쪽은 기본 자리) */
+function coupleData() {
+  return Object.fromEntries(
+    ['groom', 'bride'].map((id) => {
+      const p = couplePoint(id);
+      return [id, { floor: p.floor, x: Math.round(p.x) }];
+    })
+  );
+}
+
+/** 발판이 지워져 없어진 지점 { floor, x } → 그 x를 덮는 다른 발판으로 옮김 (없으면 null) */
+function relocatePoint(pt) {
+  if (!pt || CONFIG.floors[pt.floor]) return pt;
+  const f = Object.entries(CONFIG.floors).find(([n, fl]) => n !== 'stage' && pt.x >= floorSpan(fl).x1 && pt.x <= floorSpan(fl).x2);
+  return f ? { ...pt, floor: f[0] } : null;
+}
+
+/**
+ * 캐릭터를 놓을 발판: x를 덮는 발판 중 발 아래(위로 30px 여유)에서 가장 가까운 것, 없으면 위아래 가장 가까운 것.
+ * stage(신랑·신부 자리)는 allowStage일 때만
+ */
+function floorForDrop(x, y, allowStage) {
+  let below = null;
+  let near = null;
+  for (const [name, f] of Object.entries(CONFIG.floors)) {
+    if (name === 'stage' && !allowStage) continue;
+    const { x1, x2 } = floorSpan(f);
+    if (x < x1 || x > x2) continue;
+    const fy = floorY(f, x);
+    if (fy >= y - 30 && (!below || fy < below.y)) below = { name, y: fy };
+    if (!near || Math.abs(fy - y) < near.d) near = { name, d: Math.abs(fy - y) };
+  }
+  return (below ?? near)?.name ?? null;
+}
 
 function uniqueFloorName(prefix, taken = CONFIG.floors) {
   let i = 1;

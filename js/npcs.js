@@ -72,7 +72,7 @@ const NPCS = [
     floor: 'f7', // 오른쪽 아래 광장
     x: 1000,
     fixed: true, // 움직이지 않음
-    height: 58,
+    height: 87,
     motions: [],
     popup: { shortMsg: '빵빵~ 타세요!', longMsg: NPC_POPUP_TBD },
   },

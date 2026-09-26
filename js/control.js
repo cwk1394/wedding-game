@@ -1,5 +1,5 @@
 // 캐릭터 직접 조종 (일반 방문자 + 개발자 모드 공용).
-// - 방명록 팝업의 "조종하기" 버튼, 방명록 등록 직후, 개발자 모드 조종 도구에서 take()로 시작
+// - 방명록 팝업의 "조종하기" 버튼, 방명록 등록 직후, 개발자 모드에선 신랑·신부 팝업에도 표시. take()로 시작
 // - PC: 방향키 + Space(점프), 터치 기기: 화면 스틱(왼쪽 아래) + 점프 버튼(오른쪽 아래)
 // - 조종 중엔 카메라가 캐릭터를 따라간다 (지도를 드래그하는 동안은 멈춤)
 // 실제 움직임(중력·사다리·엎드리기 등)은 GuestCharacter.tickControlled 가 input 을 읽어 처리한다.
@@ -63,7 +63,7 @@ class Controller {
   update() {
     const c = this.controlled;
     const view = this.scene.view;
-    if (!c || view.drag || view.pinch) return;
+    if (!c || c.held || view.drag || view.pinch) return; // 끌고 있는 동안은 카메라 고정
     view.center.x += (c.x - view.center.x) * 0.12;
     view.center.y += (c.y - 40 - view.center.y) * 0.12;
     view.apply();

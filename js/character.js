@@ -36,7 +36,7 @@ class Character extends Phaser.GameObjects.Container {
       if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
       if (scene.dev?.editing) return; // 개발자 모드 편집 중
       if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
-      if (scene.dev?.tool === 'control' || scene.dev?.tool === 'spawn') return; // 개발자 모드 조종/시작점 도구는 DevMode가 처리
+      if (scene.dev?.tool === 'spawn') return; // 개발자 모드 시작점 도구는 DevMode가 처리
       onSelect?.(this);
     });
 
@@ -333,6 +333,28 @@ class GuestCharacter extends Character {
     this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
     this.y = floorY(this.floor, this.x);
     this.updatePose();
+  }
+
+  /** 개발자 모드에서 끌어다 놓기: name 발판의 x 위치에 바로 선다 (조종 중이면 조종은 그대로) */
+  dropAt(name, x) {
+    this.held = false;
+    this.climb = null;
+    this.jump = null;
+    this.leap = null;
+    this.setFloor(name);
+    const { x1, x2 } = floorSpan(this.floor);
+    this.x = this.controlled ? Phaser.Math.Clamp(x, x1, x2) : Phaser.Math.Clamp(x, this.minX, this.maxX);
+    const y = floorY(this.floor, this.x);
+    if (this.controlled) {
+      this.landOn(name, y);
+      this.poseKey = null;
+    } else {
+      this.y = y;
+      this.state = 'idle';
+      this.stateTimer = Phaser.Math.Between(800, 2000);
+      this.updatePose();
+    }
+    this.setDepth(this.y);
   }
 
   /** 다른 발판으로 점프해 건너가기 (포물선으로 착지점까지) */
@@ -659,6 +681,7 @@ class GuestCharacter extends Character {
 
 
   tick(delta) {
+    if (this.held) return; // 개발자 모드에서 끌고 있는 중
     if (this.controlled) return this.tickControlled(delta, this.scene.control.input);
     const m = CONFIG.motion;
 
@@ -748,15 +771,13 @@ class GuestCharacter extends Character {
 }
 
 /**
- * 신랑/신부: 평소엔 무대(stage) 제자리에 고정, 살짝 통통 튀는 대기 모션.
- * 개발자 모드 조종 도구로는 하객처럼 직접 움직일 수 있고, 놓으면 제자리로 돌아간다.
+ * 신랑/신부: 평소엔 제자리(couplePoint, 기본은 무대 가운데)에 고정, 살짝 통통 튀는 대기 모션.
+ * 개발자 모드에서는 팝업의 "조종하기"로 하객처럼 직접 움직일 수 있고, 놓으면 제자리로 돌아간다.
  */
 class CoupleCharacter extends GuestCharacter {
-  constructor(scene, x, y, info, opts) {
-    super(scene, CONFIG.floors.stage, info, { ...opts, x, tagColor: '#ffe066' });
-    this.home = { x, y };
-    this.y = y;
-    this.setDepth(y);
+  constructor(scene, info, opts) {
+    const home = couplePoint(info.id);
+    super(scene, CONFIG.floors[home.floor], info, { ...opts, x: home.x, tagColor: '#ffe066' });
     if (info.id === 'bride') this.sprite.setFlipX(true); // 신랑 쪽 바라보기
     this.bob = scene.tweens.add({
       targets: this.sprite,
@@ -776,9 +797,10 @@ class CoupleCharacter extends GuestCharacter {
 
   /** 제자리에서 정면을 보고 선다 */
   standAtHome() {
-    this.setFloor('stage');
-    this.x = this.home.x;
-    this.y = this.home.y;
+    const home = couplePoint(this.info.id);
+    this.setFloor(home.floor);
+    this.x = home.x;
+    this.y = home.y;
     this.setDepth(this.y);
     this.state = 'idle';
     this.sprite.stop();
@@ -861,9 +883,8 @@ class NpcCharacter extends GuestCharacter {
     super.setFloor(name);
     const range = this.npc?.range;
     if (range) {
-      // 신랑·신부(무대 가운데) 주변에서만
-      const { x1, x2 } = floorSpan(CONFIG.floors.stage);
-      const cx = (x1 + x2) / 2;
+      // 신랑·신부 주변에서만 (둘 사이 가운데 기준)
+      const cx = (couplePoint('groom').x + couplePoint('bride').x) / 2;
       this.minX = Math.max(this.minX, cx - range);
       this.maxX = Math.min(this.maxX, cx + range);
     }
@@ -902,6 +923,12 @@ class NpcCharacter extends GuestCharacter {
       this.sprite.setTexture(`${key}_0`);
       this.sprite.setFlipX(false);
     }
+  }
+
+  dropAt(name, x) {
+    this.pose = 'idle'; // 자던 중이었어도 내려놓으면 깨어남
+    super.dropAt(name, x);
+    if (this.npc.tilt) this.alignToFloor();
   }
 
   onMapChanged() {

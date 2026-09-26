@@ -57,14 +57,8 @@ class MapScene extends Phaser.Scene {
       );
     };
 
-    // 신랑/신부: 무대 가운데 고정
-    const stage = CONFIG.floors.stage;
-    const { x1, x2 } = floorSpan(stage);
-    const centerX = (x1 + x2) / 2;
-    this.couple = COUPLE.map((info, i) => {
-      const x = centerX + (i === 0 ? -30 : 30);
-      return new CoupleCharacter(this, x, floorY(stage, x), info, { onSelect: this.onSelect });
-    });
+    // 신랑/신부: 제자리 고정 (CONFIG.couple, 기본은 무대 가운데)
+    this.couple = COUPLE.map((info) => new CoupleCharacter(this, info, { onSelect: this.onSelect }));
 
     this.guests = [];
     this.guestIds = new Set();
@@ -161,6 +155,7 @@ class MapScene extends Phaser.Scene {
   refreshMap() {
     for (const guest of this.guests) guest.onMapChanged();
     for (const n of this.npcs) n.onMapChanged();
+    for (const c of this.couple) if (!c.controlled) c.onMapChanged(); // 자리(CONFIG.couple)가 바뀌었을 수 있음
     this.placeWarpgate();
   }
 

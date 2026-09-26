@@ -15,6 +15,7 @@ const CONFIG = {
   floors: MAP_DATA.floors,
   climbs: MAP_DATA.climbs,
   spawn: MAP_DATA.spawn ?? null, // { floor, x } — 방명록 등록 직후 새 캐릭터가 나타나는 곳 (개발자 모드 시작점 도구)
+  couple: MAP_DATA.couple ?? null, // { groom: { floor, x }, bride: { floor, x } } — 없으면 stage 가운데 (개발자 모드에서 끌어서 지정)
 
   // 하객 움직임
   motion: {
@@ -158,4 +159,20 @@ function spawnPoint() {
   const { x1, x2 } = floorSpan(floor);
   const x = Math.min(Math.max(sp.x, x1), x2);
   return { floor: sp.floor, x, y: floorY(floor, x) };
+}
+
+/** 신랑(groom)/신부(bride) 자리 { floor, x, y }. 지정이 없거나 발판이 사라졌으면 stage 가운데 ±30 */
+function couplePoint(id) {
+  const p = CONFIG.couple?.[id];
+  let name = p && CONFIG.floors[p.floor] ? p.floor : null;
+  let x = p?.x;
+  if (!name) {
+    name = 'stage';
+    const { x1, x2 } = floorSpan(CONFIG.floors.stage);
+    x = (x1 + x2) / 2 + (id === 'groom' ? -30 : 30);
+  }
+  const floor = CONFIG.floors[name];
+  const { x1, x2 } = floorSpan(floor);
+  x = Math.min(Math.max(x, x1), x2);
+  return { floor: name, x, y: floorY(floor, x) };
 }

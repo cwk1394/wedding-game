@@ -1,5 +1,5 @@
 // 개발자 모드 지도 저장 API (Vercel Serverless Function)
-// POST /api/map  { password, map: { floors, climbs } }
+// POST /api/map  { password, map: { floors, climbs, spawn, couple } }
 //   → 검증 후 js/map-data.js 를 다시 만들어 저장소에 커밋 → Pages 재배포(1~2분)로 반영
 // GET /api/map → 상태 확인용 { ok, configured }
 //
@@ -73,11 +73,25 @@ function validateMap(map) {
     spawn = { floor: map.spawn.floor, x: Math.round(map.spawn.x) };
   }
 
+  // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } — 없는 쪽은 stage 가운데
+  let couple = null;
+  if (map.couple != null) {
+    couple = {};
+    for (const id of ['groom', 'bride']) {
+      const p = map.couple[id];
+      if (p == null) continue;
+      if (!floors[p.floor] || !isCoord(p.x)) throw bad(`${id === 'groom' ? '신랑' : '신부'} 자리`);
+      couple[id] = { floor: p.floor, x: Math.round(p.x) };
+    }
+    if (!Object.keys(couple).length) couple = null;
+  }
+
   const climbs = map.climbs ?? [];
   if (!Array.isArray(climbs) || climbs.length > LIMITS.climbs) throw bad(`사다리/로프는 ${LIMITS.climbs}개 이하`);
   return {
     floors,
     spawn,
+    couple,
     climbs: climbs.map((c, i) => {
       if (!['ladder', 'rope'].includes(c?.type)) throw bad(`${i}번째 사다리/로프 종류`);
       if (!isCoord(c.x)) throw bad(`${i}번째 사다리/로프 x`);
@@ -95,7 +109,7 @@ function validateMap(map) {
 }
 
 /** js/map-data.js 내용 (사람이 읽기 좋게 한 줄에 발판 하나) */
-function renderMapFile({ floors, climbs, spawn }) {
+function renderMapFile({ floors, climbs, spawn, couple }) {
   return [
     '// 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.',
     '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage = 신랑/신부 자리',
@@ -108,6 +122,7 @@ function renderMapFile({ floors, climbs, spawn }) {
     ...climbs.map((c) => `    ${JSON.stringify(c)},`),
     '  ],',
     `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
+    `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 stage 가운데)`,
     '};',
     '',
   ].join('\n');
