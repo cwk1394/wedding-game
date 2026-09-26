@@ -46,7 +46,7 @@ const CONFIG = {
   view: {
     focus: { x: 700, y: 701 }, // 처음 화면 가운데에 올 지점 (세로 화면에서 웰컴 아치와 맵 가운데가 함께 보이게)
     maxZoom: 2.5, // 최대 확대: 맵 1px = 화면 2.5px (CSS 픽셀 기준)
-    controlZoom: 1.8, // 조종을 시작할 때 이 배율 이상으로 확대
+    controlZoom: 1.4, // 조종을 시작할 때 이 배율 이상으로 확대
     dragThreshold: 8, // 이만큼(CSS px) 움직여야 드래그로 인식 (그보다 작으면 탭)
   },
 
