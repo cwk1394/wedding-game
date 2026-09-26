@@ -1,0 +1,60 @@
+name: Cleanup guest images
+
+# 방명록 Discussion이 없는 하객 이미지(img/guests/<uuid>/)를 매일 정리
+# (Discussion 삭제, 등록 도중 실패로 이미지만 올라간 경우 등)
+on:
+  schedule:
+    - cron: '0 18 * * *' # 매일 03:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '삭제하지 않고 대상만 출력'
+        type: boolean
+        default: true
+      grace_hours:
+        description: '이 시간 안에 올라온 이미지는 남김'
+        default: '24'
+
+permissions:
+  contents: write
+  discussions: read
+
+concurrency:
+  group: cleanup-images
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 폴더별 마지막 커밋 시각 확인용
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Remove unreferenced images
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GUESTBOOK_CATEGORY: 방명록
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          GRACE_HOURS: ${{ inputs.grace_hours || '24' }}
+        run: node scripts/cleanup-guest-images.mjs
+
+      - name: Commit and push
+        run: |
+          if git diff --cached --quiet; then
+            echo "삭제할 이미지 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898208+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Remove guest images without a guestbook discussion"
+          # 그 사이 API가 새 하객 이미지를 커밋했을 수 있어서 rebase 후 재시도
+          for i in 1 2 3; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          echo "push 실패" && exit 1

@@ -26,8 +26,11 @@ js/ui.js                방명록 팝업, 작성 폼, 토스트. UI.onGuestCreat
 js/view.js              MapView: 카메라 확대/축소(핀치·휠·버튼)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
+scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
+scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
+.github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, character1 = 예시 하객). *_move.png = 걷기 4프레임
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
@@ -97,6 +100,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
 - API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.
+- 이미지 정리(`cleanup-images.yml`): 방명록 글 본문의 id(UUID) 또는 본문에 적힌 `img/guests/<폴더>/` 경로로 참조되지 않는 폴더를 삭제 커밋.
+  - API는 이미지 커밋 → Discussion 작성 순서라, 마지막 커밋이 `GRACE_HOURS`(기본 24시간) 이내인 폴더는 남긴다.
+  - Discussion 조회 실패/카테고리 없음이면 예외로 끝나 아무것도 지우지 않음. 삭제돼도 git 히스토리에서 복구 가능.
+  - 스케줄 워크플로는 저장소에 60일간 활동이 없으면 GitHub가 자동 비활성화함.
 
 ## 규칙
 - 사용자와는 항상 한국어로 대화한다.
