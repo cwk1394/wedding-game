@@ -40,5 +40,6 @@ const MAP_DATA = {
     {"type":"rope","x":280,"floors":["cherry","middleRoute"]},
     {"type":"ladder","x":616,"floors":["f6","heartBridge"]},
     {"type":"ladder","x":396,"floors":["f14","f15"]},
+    {"type":"ladder","x":766,"floors":["upperRoute_1","f9"]},
   ],
 };
