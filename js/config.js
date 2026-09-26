@@ -1,23 +1,31 @@
 // 게임 전역 설정
 const CONFIG = {
-  width: 1280,
-  height: 720,
+  // 월드 크기 = 배경 이미지 원본 크기 (좌표를 이미지 픽셀 기준으로 맞추기 위함)
+  width: 1774,
+  height: 887,
 
-  // 맵 배경 이미지 경로 (예: 'assets/map.png').
-  // null이면 코드로 그린 임시 맵을 사용한다. 이미지를 쓰면 아래 floors 좌표를 이미지 발판에 맞춰 조정할 것.
-  mapImage: null,
+  // 맵 배경 이미지 (원본: img/background/background.png, 용량 때문에 webp로 변환해서 사용)
+  // 로드 실패 시 코드로 그린 임시 맵으로 대체된다.
+  mapImage: 'img/background/background.webp',
 
-  // 발판(층) 정의: y = 발판 윗면(캐릭터 발 위치), x1~x2 = 걸어다닐 수 있는 범위
+  // 발판(층) 정의 — 배경 이미지 픽셀 좌표 기준
+  // y = 발판 윗면(캐릭터 발 위치), x1~x2 = 걸어다닐 수 있는 범위
   floors: {
-    ground: { x1: 0, x2: 1280, y: 660 },
-    midLeft: { x1: 60, x2: 440, y: 490 },
-    midRight: { x1: 840, x2: 1220, y: 490 },
-    top: { x1: 260, x2: 1020, y: 290 },
-    stage: { x1: 510, x2: 770, y: 470 }, // 신랑/신부 전용
+    topLeft: { x1: 465, x2: 790, y: 150 }, // 위쪽 공중 테라스 (왼쪽)
+    topRight: { x1: 965, x2: 1300, y: 150 }, // 위쪽 공중 테라스 (오른쪽)
+    upperLeft: { x1: 200, x2: 470, y: 205 }, // 왼쪽 윗층
+    upperRight: { x1: 1350, x2: 1600, y: 205 }, // 오른쪽 윗층
+    midLeft: { x1: 60, x2: 590, y: 370 }, // 왼쪽 중간층
+    midRight: { x1: 1185, x2: 1715, y: 370 }, // 오른쪽 중간층
+    mainLeft: { x1: 60, x2: 790, y: 545 }, // 본당 테라스 (제단 왼쪽)
+    mainRight: { x1: 995, x2: 1715, y: 545 }, // 본당 테라스 (제단 오른쪽)
+    bottomLeft: { x1: 130, x2: 680, y: 735 }, // 아래 산책로 (계단 왼쪽)
+    bottomRight: { x1: 1100, x2: 1620, y: 735 }, // 아래 산책로 (계단 오른쪽)
+    stage: { x1: 800, x2: 975, y: 548 }, // 제단 (신랑/신부 전용)
   },
 
-  // 하객이 스폰될 수 있는 층
-  guestFloors: ['ground', 'midLeft', 'midRight', 'top'],
+  // 하객이 스폰될 수 있는 층 (층 길이에 비례해서 랜덤 배치)
+  guestFloors: ['topLeft', 'topRight', 'upperLeft', 'upperRight', 'midLeft', 'midRight', 'mainLeft', 'mainRight', 'bottomLeft', 'bottomRight'],
 
   // 방명록 API (Vercel Serverless Functions) 주소
   // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
@@ -31,7 +39,7 @@ const CONFIG = {
 
   // 이미지 스프라이트 처리
   sprite: {
-    height: 64, // 화면에 표시할 캐릭터 높이 (px)
+    height: 72, // 화면에 표시할 캐릭터 높이 (월드 px)
     uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
     walkFrames: 4, // walkUrl 이미지의 가로 프레임 수
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주

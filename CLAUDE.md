@@ -17,7 +17,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 ```
 index.html              모달/버튼 DOM + 스크립트 로드
 css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
-js/config.js            CONFIG: 월드 크기(1280x720), 층(floors) 좌표, 속도, 말풍선 타이밍, 재조회 주기
+js/config.js            CONFIG: 월드 크기(=배경 이미지 1774x887), 배경 이미지, 층(floors) 좌표, 속도, 말풍선, API 주소, AI/스프라이트 설정
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
@@ -65,7 +65,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 캐릭터 컨테이너 원점(0,0) = 발 위치. 스프라이트 origin (0.5, 1).
 - 임시 캐릭터는 오른쪽을 바라보게 그림 → 왼쪽 이동 시 `setFlipX(true)`.
 - `look`이 없는 데이터는 `lookFromId(id)`로 id 해시 기반 고정 랜덤 색상.
-- 맵 이미지가 생기면 `CONFIG.mapImage`에 경로 지정 + `CONFIG.floors` 좌표를 이미지 발판에 맞춰 수정. `stage` 층은 신랑/신부 전용.
+- 배경: `img/background/background.png`(원본 3MB) → `background.webp`(466KB)로 변환해서 사용. 월드 크기 = 이미지 원본 크기라 `CONFIG.floors`는 **이미지 픽셀 좌표 그대로**.
+  - 층 10개(위 공중 테라스 2, 윗층 2, 중간층 2, 본당 테라스 좌우 2, 아래 산책로 좌우 2) + `stage`(제단, 신랑/신부 전용). 하객은 층 길이에 비례한 확률로 배치(`pickGuestFloor`).
+  - 페이지를 `?debug`로 열면 발판 위치가 빨간 선으로 표시됨 → 배경을 바꾸면 이걸 보며 floors 조정.
+  - 배경 이미지 로드 실패 시에만 코드로 그린 임시 맵(하늘/발판/꽃 아치) 사용.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 4단계 스프라이트 예시(`img/characters/*_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 

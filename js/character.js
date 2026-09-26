@@ -16,7 +16,7 @@ class Character extends Phaser.GameObjects.Container {
     this.tag = scene.add
       .text(0, 4, info.name, {
         fontFamily: CONFIG.fontFamily,
-        fontSize: '13px',
+        fontSize: '15px',
         color: tagColor,
         backgroundColor: 'rgba(0,0,0,0.6)',
         padding: { x: 5, y: 2 },
@@ -71,7 +71,7 @@ class Character extends Phaser.GameObjects.Container {
     const text = this.scene.add
       .text(0, 0, message, {
         fontFamily: CONFIG.fontFamily,
-        fontSize: '14px',
+        fontSize: '16px',
         color: '#222222',
         resolution: TEXT_RESOLUTION,
       })

@@ -8,13 +8,17 @@ class MapScene extends Phaser.Scene {
   }
 
   create({ guests = [], live = false } = {}) {
-    if (CONFIG.mapImage) {
+    if (this.textures.exists('map')) {
       this.add.image(0, 0, 'map').setOrigin(0).setDisplaySize(CONFIG.width, CONFIG.height);
     } else {
+      // 배경 이미지가 없거나 로드 실패 시 임시 맵
       this.drawBackground();
       this.drawPlatforms();
+      this.drawWeddingArch();
     }
-    this.drawWeddingArch();
+
+    // ?debug 로 열면 발판 위치를 선으로 표시 (배경 이미지에 맞춰 floors 좌표 조정할 때 사용)
+    if (new URLSearchParams(location.search).has('debug')) this.drawFloorGuides();
 
     this.onSelect = (character) =>
       UI.openGuestbook({ ...character.info, avatarUrl: character.getAvatarUrl() });
@@ -48,8 +52,7 @@ class MapScene extends Phaser.Scene {
   addGuest(info) {
     if (this.guestIds.has(info.id)) return null;
     this.guestIds.add(info.id);
-    const floorName = Phaser.Utils.Array.GetRandom(CONFIG.guestFloors);
-    const guest = new GuestCharacter(this, CONFIG.floors[floorName], info, { onSelect: this.onSelect });
+    const guest = new GuestCharacter(this, pickGuestFloor(), info, { onSelect: this.onSelect });
     this.guests.push(guest);
     return guest;
   }
@@ -59,6 +62,18 @@ class MapScene extends Phaser.Scene {
   }
 
   // ---------- 임시 맵 그리기 (맵 이미지 준비되면 CONFIG.mapImage로 대체) ----------
+
+  drawFloorGuides() {
+    const g = this.add.graphics().setDepth(10000);
+    for (const [name, f] of Object.entries(CONFIG.floors)) {
+      g.lineStyle(3, name === 'stage' ? 0xffd700 : 0xff0000, 0.9);
+      g.lineBetween(f.x1, f.y, f.x2, f.y);
+      g.fillStyle(0xff0000, 1).fillCircle(f.x1, f.y, 5).fillCircle(f.x2, f.y, 5);
+      this.add
+        .text(f.x1, f.y + 4, `${name} y=${f.y}`, { fontSize: '14px', color: '#fff', backgroundColor: '#c00' })
+        .setDepth(10000);
+    }
+  }
 
   drawBackground() {
     const { width, height } = CONFIG;
@@ -151,4 +166,15 @@ class MapScene extends Phaser.Scene {
       .setDepth(stage.y - 1);
     this.tweens.add({ targets: heart, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
   }
+}
+
+/** 하객 층을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
+function pickGuestFloor() {
+  const floors = CONFIG.guestFloors.map((name) => CONFIG.floors[name]);
+  let r = Math.random() * floors.reduce((sum, f) => sum + (f.x2 - f.x1), 0);
+  for (const f of floors) {
+    r -= f.x2 - f.x1;
+    if (r <= 0) return f;
+  }
+  return floors[floors.length - 1];
 }
