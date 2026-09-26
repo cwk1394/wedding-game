@@ -2,8 +2,8 @@
 // - floor: 처음 서 있을 발판 (없어졌으면 랜덤), x: 처음 위치(없으면 랜덤)
 // - NPC는 점프·사다리·로프를 쓰지 않고 자기 발판(이어진 발판 포함) 위만 돌아다닌다. 조종 불가
 // - popup: 팝업에 보일 한줄 멘트/소개 글 (미정 — 정해지면 여기서 수정)
-// - effect: petals(꽃가루 뿌리기) | bubbles(서 있으면 비눗방울, 걸으면 나팔 음표)
-// - states: 서기/걷기/자기 비율과 지속 시간(ms)
+// - effect: petals(꽃가루 뿌리기) | bubbles(서 있으면 비눗방울, 걸으면 파티 블로어 음표)
+// - states: 걷기(walk)·특수 동작(sleep, scratch 등) 비율과 지속 시간(<동작>Time, ms). 나머지 확률은 서기(idle)
 
 const NPC_POPUP_TBD = '소개 글을 준비하고 있어요.';
 
@@ -52,8 +52,8 @@ const NPCS = [
     range: 170, // 신랑·신부(무대 가운데)에서 좌우 이만큼 안에서만
     height: 36,
     speed: [75, 100],
-    motions: ['idle', 'walk'],
-    states: { walk: 0.7, idle: 0.3, walkTime: [800, 2200], idleTime: [1500, 3500] },
+    motions: ['idle', 'walk', 'scratch'], // scratch = 앉아서 뒷다리로 머리 긁기
+    states: { walk: 0.6, scratch: 0.15, idle: 0.25, walkTime: [800, 2200], idleTime: [1500, 3500], scratchTime: [1800, 3000] },
     popup: { shortMsg: '', longMsg: NPC_POPUP_TBD },
   },
   {

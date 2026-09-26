@@ -118,8 +118,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
 
 ## NPC (`js/npcs.js`, `NpcCharacter`)
-- 푸딩(흰 토끼, 늘 꽃가루), 얼룩말(서 있으면 비눗방울, 걸으면 나팔 음표), 고양이 4마리(미미·옹이·복실이·별이: 어슬렁/그루밍/자기), 에쏘(보더콜리, 신랑·신부 주변 ±170px만 뛰어다님), 택시(고정).
-- `NpcCharacter extends GuestCharacter`: 점프·사다리·로프 안 씀(canJump/canClimb=false), 조종 불가(팝업에 조종 버튼 없음). 동작은 idle/walk/sleep, NPC별 height·motionFrames·motionHeight.
+- 푸딩(흰 토끼, 늘 꽃가루), 얼룩말(하트 선글라스, 서 있으면 비눗방울, 걸으면 파티 블로어 + 음표), 고양이 4마리(미미·옹이·복실이·별이(흰 페르시안): 어슬렁/그루밍/자기), 에쏘(크림색 보더콜리, 신랑·신부 주변 ±170px 뛰어다님, 앉아서 뒷다리로 머리 긁기), 택시(고정).
+- 푸딩·에쏘·별이는 실제 사진 `img/npc/<id>/origin.jpg` 기반으로 생성(사진은 개인 사진이라 `.gitignore`로 저장소에 안 올림 — 다시 생성하려면 로컬에 있어야 함).
+- NPC 이미지는 OpenAI `background: transparent`로 생성. `removeBackground`는 네 귀퉁이가 투명한 이미지면 흰색을 지우지 않음(흰 털이 뚫리던 문제).
+- `NpcCharacter extends GuestCharacter`: 점프·사다리·로프 안 씀(canJump/canClimb=false), 조종 불가(팝업에 조종 버튼 없음). 동작은 idle/walk + NPC별 특수 동작(sleep, scratch…, `states`에 비율·`<동작>Time`), NPC별 height·motionFrames·motionHeight.
 - 효과는 `NpcEffect`(Phaser 파티클: 꽃잎 재사용, 비눗방울·음표 텍스처는 코드로 생성).
 - 팝업 글은 미정 → `NPC_POPUP_TBD`. 정해지면 npcs.js의 popup 수정. 처음 발판은 map-data 발판 이름이라 지도를 크게 바꾸면 확인.
 - 이미지 다시 만들기: `OPENAI_API_KEY=... node scripts/gen-npc.mjs <id>` 또는 `<id>:<motion>` (sharp 필요: `npm i --no-save sharp`).

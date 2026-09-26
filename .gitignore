@@ -6,3 +6,4 @@ node_modules/
 _test.html
 .vercel/
 .cache/
+img/npc/*/origin.*

@@ -1,7 +1,8 @@
 // NPC 스프라이트 생성 (OpenAI 이미지 API). 로컬에서 한 번씩 돌리는 도구 — 키는 환경변수로만 받는다.
 //   OPENAI_API_KEY=... node scripts/gen-npc.mjs                 전부 생성
 //   OPENAI_API_KEY=... node scripts/gen-npc.mjs pudding cat-mimi:sleep   일부만 다시 생성
-// 1) NPC마다 기준 이미지(front)를 글로 생성 → 2) 그 이미지를 참고로 동작 스트립(idle/walk/sleep) 생성
+// 1) NPC마다 기준 이미지(front)를 글로 생성 — img/npc/<id>/origin.jpg(실제 사진)가 있으면 그 사진을 바탕으로 생성
+// 2) 그 기준 이미지를 참고로 동작 스트립(idle/walk/sleep/scratch) 생성
 // 결과: img/npc/<id>/<motion>.webp (sharp로 가로 768px로 줄여 저장, 원본은 .cache/npc-raw/)
 // 옵션: OPENAI_IMAGE_MODEL(쉼표 구분, 기본 gpt-image-2,gpt-image-1.5,gpt-image-1), OPENAI_IMAGE_QUALITY(기본 medium)
 
@@ -19,7 +20,7 @@ const sharp = (await import('sharp')).default;
 
 const STYLE = `Authentic classic MapleStory-style 2D pixel art sprite: chibi proportions, chunky visible pixels, clean 1px dark outline,
 flat color shading, limited palette, no anti-aliasing, no smooth gradients, no painterly rendering.
-Pure white background (#FFFFFF). No text, no logo, no watermark, no UI, no ground, no shadow, no environment.`;
+Transparent background (no background at all). No text, no logo, no watermark, no UI, no ground, no shadow, no environment.`;
 
 const spacing = (n) => `FRAME LAYOUT (VERY IMPORTANT — the game slices frames automatically):
 - Exactly ${n} frames in ONE horizontal row, ${n} equal-width cells, identical scale in every frame.
@@ -27,7 +28,7 @@ const spacing = (n) => `FRAME LAYOUT (VERY IMPORTANT — the game slices frames 
 - Keep a clear EMPTY white gap between neighboring characters of at least 15% of a cell width,
   and at least 10% margin on the left and right of each character inside its own cell.
 - No part of a character (ears, tail, paws, props, effects) may touch or cross into a neighboring cell.
-- Do not draw borders, separators, or grid lines.`;
+- Do not draw borders, separators, or grid lines. The gaps are fully transparent.`;
 
 const facingLeft = 'The character faces LEFT (left-facing side / three-quarter view) in every frame.';
 
@@ -44,31 +45,41 @@ const catBase = (look) => `A cute small cat NPC in MapleStory style, ${look}, wa
 
 const NPCS = {
   pudding: {
-    front: `A cute white rabbit NPC named Pudding in MapleStory style: snow-white fluffy fur, bright red eyes, pink inner ears, big happy smile,
-standing upright on two legs, carrying a small woven basket full of pink flower petals. Full body, three-quarter view facing LEFT, chibi proportions.`,
+    origin: true,
+    front: `Turn the real rabbit in this photo into a cute MapleStory-style NPC named Pudding. Keep its real look: pure snow-white fluffy fur,
+bright red eyes, long upright ears with pink insides, round body. Give it a big happy smile and let it stand upright on two legs,
+carrying a small woven basket full of pink flower petals. Full body, three-quarter view facing LEFT, chibi proportions. Ignore the photo background.`,
     motions: {
       idle: strip(4, 'Standing in place, smiling happily and tossing pink flower petals into the air from the basket with one paw (a looping sprinkle motion). A few small petals may float just above the paw, staying inside the cell.'),
       walk: strip(4, 'Walking/hopping cheerfully to the LEFT while smiling and sprinkling pink flower petals from the basket. A few small petals near the paw, inside the cell.'),
     },
   },
   zebra: {
-    front: `A cute zebra NPC in MapleStory style: black and white stripes, short spiky mane, cheerful face, standing upright on two legs like a person,
-holding a bubble wand in one hand and a small toy trumpet shaped like an elephant (party trumpet) hanging at the side. Full body, three-quarter view facing LEFT, chibi proportions.`,
+    front: `A goofy, mischievous zebra NPC in MapleStory style — a playful class-clown personality: black and white stripes, wild spiky mane,
+cheeky toothy grin, wearing funky oversized novelty sunglasses (bright pink heart-shaped frames with star sparkles), standing upright on two legs like a person
+in a silly confident pose, holding a bubble wand in one hand and a colorful curled paper party blower in the other.
+Full body, three-quarter view facing LEFT, chibi proportions.`,
     motions: {
-      idle: strip(4, 'Standing in place and blowing soap bubbles through a bubble wand toward the left. Show a few round translucent soap bubbles near the wand, inside the cell.'),
-      walk: strip(4, 'Walking to the LEFT while happily blowing a small elephant-shaped toy trumpet (party horn), cheeks puffed. Walking legs clearly alternate.'),
+      idle: strip(4, 'Standing in place doing a silly little dance/wiggle while blowing soap bubbles through a bubble wand toward the left, grinning behind the funky sunglasses. Show a few round translucent soap bubbles near the wand, inside the cell.'),
+      walk: strip(4, 'Strutting/bouncing goofily to the LEFT while blowing a colorful paper party blower: the curled party blower unrolls and extends straight out in some frames and curls back in others, cheeks puffed, funky sunglasses on. Walking legs clearly alternate.'),
     },
   },
   'cat-mimi': { look: 'pure white fur with blue eyes and a small pink nose' },
   'cat-ongi': { look: 'orange cheese tabby fur with darker orange stripes and green eyes' },
   'cat-boksil': { look: 'very fluffy long-haired light grey fur with a big fluffy tail and yellow eyes' },
-  'cat-byeol': { look: 'glossy black fur with golden eyes and a tiny yellow star-shaped mark on the forehead' },
+  'cat-byeol': {
+    origin: true,
+    look: 'the real cat in the reference photo: a pure white, very fluffy long-haired Persian-style cat with a flat round face, blue-grey eyes and a small pink nose',
+  },
   esso: {
-    front: `A cute border collie dog NPC named Esso in MapleStory style: light brown (tan) and white coat, fluffy ears, bright happy open-mouth smile,
-standing on four legs, side view facing LEFT, full body, chibi and round.`,
+    origin: true,
+    front: `Turn the real dog in this photo into a cute MapleStory-style NPC named Esso. Keep its real look: a fluffy light cream / pale golden-brown
+border collie with a white chest and muzzle, soft floppy ears, bright happy open-mouth smile with tongue out. Standing on four legs, side view facing LEFT,
+full body, chibi and round. Ignore the photo background and people.`,
     motions: {
       idle: strip(4, 'Standing in place with an innocent happy grin, mouth open and tongue out panting ("hehe"), head turning slightly to look around, tail wagging.'),
       walk: strip(4, 'Running happily to the LEFT with a big innocent smile, tongue out, ears bouncing, a playful energetic run cycle.'),
+      scratch: strip(4, 'Sitting on the ground and scratching behind its ear/head with one hind leg, like a real dog: the hind leg moves up and down in a quick scratching loop, head tilted, eyes squinted happily.'),
     },
   },
   taxi: {
@@ -79,7 +90,7 @@ a small pink ribbon on the side for a wedding, full vehicle visible. ${STYLE}`,
 };
 for (const [id, cat] of Object.entries(NPCS)) {
   if (!cat.look) continue;
-  cat.front = catBase(cat.look);
+  cat.front = (cat.origin ? 'Turn the real cat in this photo into a MapleStory-style NPC. Ignore the photo background and pose. ' : '') + catBase(cat.look);
   cat.motions = {
     walk: strip(4, 'Slowly prowling/strolling to the LEFT in a relaxed, lazy way (a calm cat walk cycle), tail swaying.'),
     idle: strip(4, 'Sitting and grooming itself: licking a front paw and washing its face/body, a looping grooming motion.'),
@@ -114,7 +125,7 @@ async function callOpenAI(path, makeBody) {
 }
 
 const generate = (prompt, size) =>
-  callOpenAI('generations', (model) => JSON.stringify({ model, prompt, size, quality: QUALITY, output_format: 'webp', output_compression: 92 }));
+  callOpenAI('generations', (model) => JSON.stringify({ model, prompt, size, quality: QUALITY, output_format: 'webp', output_compression: 92, background: 'transparent' }));
 
 const edit = (prompt, size, ref) =>
   callOpenAI('edits', (model) => {
@@ -126,6 +137,7 @@ const edit = (prompt, size, ref) =>
     form.append('quality', QUALITY);
     form.append('output_format', 'webp');
     form.append('output_compression', '92');
+    form.append('background', 'transparent'); // 흰 털 캐릭터가 배경 제거 때 뚫리지 않게 투명 배경으로
     return form;
   });
 
@@ -160,7 +172,14 @@ await pool(
     .map(([id, npc]) => async () => {
       const size = id === 'taxi' ? '1536x1024' : '1024x1024';
       try {
-        await save(id, 'front', await generate(`${npc.front}\n${id === 'taxi' ? '' : STYLE}`, size));
+        const prompt = `${npc.front}\n${id === 'taxi' ? '' : STYLE}`;
+        const origin = `img/npc/${id}/origin.jpg`;
+        const buf =
+          npc.origin && existsSync(origin)
+            ? // 실제 사진 기반: EXIF 회전 반영 + 1024px로 줄여 참고 이미지로
+              await edit(prompt, size, await sharp(origin).rotate().resize(1024, 1024, { fit: 'inside' }).webp().toBuffer())
+            : await generate(prompt, size);
+        await save(id, 'front', buf);
         log(`${id}/front ok`);
       } catch (e) {
         log(`${id}/front FAIL ${e.message}`);

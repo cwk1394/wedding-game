@@ -808,7 +808,7 @@ class NpcCharacter extends GuestCharacter {
     this.npc = npc;
     this.canClimb = false;
     this.canJump = false;
-    this.sleeping = false;
+    this.pose = 'idle'; // 현재 동작 (idle | walk | sleep | scratch …)
     if (npc.speed) this.speed = Phaser.Math.Between(...npc.speed);
     this.setFloor(this.floorName); // range 적용
     this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
@@ -831,27 +831,28 @@ class NpcCharacter extends GuestCharacter {
   pickState() {
     const st = this.npc.states;
     if (!st) return super.pickState();
-    const r = Math.random();
-    this.sleeping = false;
-    if (r < st.walk) {
-      this.state = 'walk';
-      this.stateTimer = Phaser.Math.Between(...st.walkTime);
-      if (Math.random() < 0.5) this.dir = -this.dir;
-    } else if (r < st.walk + (st.sleep ?? 0)) {
-      this.state = 'idle';
-      this.sleeping = true;
-      this.stateTimer = Phaser.Math.Between(...st.sleepTime);
-    } else {
-      this.state = 'idle';
-      this.stateTimer = Phaser.Math.Between(...st.idleTime);
+    // walk / 특수 동작(sleep, scratch …) / 나머지는 idle
+    let r = Math.random();
+    this.pose = 'idle';
+    for (const [name, p] of Object.entries(st)) {
+      if (typeof p !== 'number' || name === 'idle') continue;
+      if (r < p) {
+        this.pose = name;
+        break;
+      }
+      r -= p;
     }
+    this.state = this.pose === 'walk' ? 'walk' : 'idle';
+    this.stateTimer = Phaser.Math.Between(...(st[`${this.pose}Time`] ?? st.idleTime));
+    if (this.pose === 'walk' && Math.random() < 0.5) this.dir = -this.dir;
     this.updatePose();
   }
 
   updatePose() {
     const key = this.texKey;
     const has = (m) => this.motions[m];
-    const anim = this.state === 'walk' ? 'walk' : this.sleeping && has('sleep') ? 'sleep' : 'idle';
+    const pose = this.state === 'walk' ? 'walk' : this.pose ?? 'idle';
+    const anim = has(pose) ? pose : this.state === 'walk' ? 'walk' : 'idle';
     if (has(anim)) {
       this.setDir(this.dir);
       this.sprite.play(`${key}_${anim}`, true);

@@ -145,7 +145,12 @@ function removeBackground(img) {
   const imageData = ctx.getImageData(0, 0, w, h);
   const d = imageData.data;
   const T = CONFIG.sprite.bgThreshold;
-  const isBg = (p) => d[p * 4 + 3] < 10 || (d[p * 4] >= T && d[p * 4 + 1] >= T && d[p * 4 + 2] >= T);
+  // 이미 투명 배경인 이미지(네 귀퉁이가 투명)는 흰색을 지우지 않는다 — 흰 털(흰 고양이·토끼)이 뚫리지 않게
+  const corners = [0, w - 1, (h - 1) * w, h * w - 1];
+  const transparentBg = corners.every((p) => d[p * 4 + 3] < 10);
+  const isBg = transparentBg
+    ? (p) => d[p * 4 + 3] < 10
+    : (p) => d[p * 4 + 3] < 10 || (d[p * 4] >= T && d[p * 4 + 1] >= T && d[p * 4 + 2] >= T);
 
   const visited = new Uint8Array(w * h);
   const stack = [];
