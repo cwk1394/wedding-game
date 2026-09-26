@@ -218,28 +218,29 @@ function buildFrontCanvas(frontImg, height) {
 }
 
 /**
- * 동작 스트립(가로 4프레임) → 배경 제거 후 프레임별 캔버스 배열 (모두 같은 크기, 높이 height).
- * 모든 프레임을 같은 세로 범위로 잘라야 발 위치가 흔들리지 않는다
- * → 프레임별 경계 박스를 구한 뒤 가장 큰 폭/공통 세로 범위로 맞춰 자른다.
- * 좌우로는 CONFIG.sprite.framePadding만큼 여유를 둬서 머리카락·치마가 프레임 끝에 걸리지 않게 한다.
- * 점프 스트립도 같은 방식이라, 다리를 접은 프레임은 발이 살짝 떠 보인다 (몸 위치는 고정).
+ * 동작 스트립(가로 N프레임) → 배경 제거 후 프레임별 캔버스 배열 (모두 같은 크기, 높이 height).
+ * - 프레임마다 자기 영역만 잘라서 발(아래쪽)을 맞춰 놓는다. AI가 "위아래로 움직이지 말라"는 프롬프트를 무시하고
+ *   점프 프레임을 위로 띄워 그려도, 실제 점프 높이는 코드가 주므로 여기서는 무시한다.
+ * - 크기는 가장 키가 큰 한 프레임이 height가 되도록 맞춘다. (예전엔 모든 프레임의 세로 범위를 합쳐서 맞췄더니,
+ *   프레임마다 위아래로 어긋난 점프 스트립은 범위가 커져 캐릭터가 작게 보였다)
+ * - 좌우로는 CONFIG.sprite.framePadding만큼 여유를 둬서 머리카락·치마가 프레임 끝에 걸리지 않게 한다.
  */
 function buildStripFrames(stripImg, height, frames = 4) {
   const strip = removeBackground(stripImg);
   const parts = splitFrames(strip, frames);
   const w = Math.max(...parts.map((p) => p.w));
-  const y0 = Math.min(...parts.map((p) => p.y));
-  const h = Math.max(...parts.map((p) => p.y + p.h)) - y0;
-  const scale = height / h;
+  const scale = height / Math.max(...parts.map((p) => p.h));
   const pad = Math.round(w * scale * CONFIG.sprite.framePadding);
   return parts.map((p) => {
-    // 이 프레임 픽셀만 남긴 캔버스를 공통 폭(+양옆 여유) 캔버스 가운데에 놓는다
+    // 이 프레임 픽셀만 남긴 캔버스를 공통 폭(+양옆 여유) 캔버스의 가로 가운데, 아래쪽(발)에 맞춰 놓는다
     const frame = document.createElement('canvas');
     frame.width = Math.round(w * scale) + pad * 2;
     frame.height = height;
     const ctx = frame.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(p.canvas, 0, y0 - p.y, p.w, h, pad + ((w - p.w) / 2) * scale, 0, p.w * scale, height);
+    const dw = p.w * scale;
+    const dh = p.h * scale;
+    ctx.drawImage(p.canvas, 0, 0, p.w, p.h, pad + ((w - p.w) / 2) * scale, height - dh, dw, dh);
     return frame;
   });
 }
