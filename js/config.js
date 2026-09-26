@@ -82,6 +82,7 @@ const CONFIG = {
     textureScale: 2, // 확대해도 선명하도록 텍스처는 표시 크기의 2배로 만들어 축소 표시
     uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
     frames: 4, // 동작 스트립(walkUrl 등) 한 장의 가로 프레임 수
+    framePadding: 0.12, // 프레임 좌우 여유 (프레임 폭 대비). 머리카락·치마가 흔들려도 잘리지 않게
     // 정면 외 동작 스트립. 데이터 필드는 `${motion}Url`, 업로드 파일은 `${motion}.png`
     //   walk/jump: 왼쪽을 바라봄, ladder/rope: 뒷모습
     motions: ['walk', 'jump', 'ladder', 'rope'],

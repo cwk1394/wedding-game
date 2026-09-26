@@ -241,6 +241,25 @@ The animation must also work naturally when played in reverse for descending.
 Preserve the exact pixel-art density and rendering style of the reference character.
 
 ────────────────────
+[FRAME SPACING / SAFE MARGIN]
+────────────────────
+
+THIS IS EXTREMELY IMPORTANT FOR SPRITE SLICING.
+
+Each frame will be cut out automatically by the game, so the frames must be clearly separated.
+
+- Divide the canvas into exactly 4 equal-width frame cells.
+- Place ONE character in the horizontal center of each cell.
+- Keep a clear, EMPTY pure-white gap between neighboring characters.
+  The gap must be at least 15% of a single cell's width.
+- Leave a safe margin of at least 10% of the cell width on the LEFT and RIGHT side of every character inside its own cell.
+- NO part of a character may cross into, touch, or overlap a neighboring cell:
+  this includes long hair, flowing hair strands, ponytails, dresses, skirts, capes, ribbons, sleeves, arms, legs, weapons, and accessories.
+- Swinging hair or clothing must stay entirely inside the character's own cell.
+- If the character has long hair or a long dress, scale the character slightly smaller so the margins are preserved rather than letting it touch the next frame.
+- Do NOT draw separators, borders, or grid lines between cells. The gap must be plain white background only.
+
+────────────────────
 [Output Conditions]
 ────────────────────
 
@@ -253,6 +272,7 @@ Pure White (#FFFFFF)
 
 Output Requirements:
 
+- Clear empty white gap between frames (no hair, dress, or limbs touching a neighboring frame)
 - Exactly 4 frames
 - Exactly one horizontal row
 - Single character only

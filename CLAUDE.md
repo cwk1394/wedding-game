@@ -60,7 +60,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
    - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing}.txt`.
    - 각 호출 최대 ~2분. 모델은 `OPENAI_IMAGE_MODEL`(쉼표 구분, 기본 gpt-image-2 → 1.5 → 1 순으로 시도, 없는 모델이면 다음으로), 품질 `OPENAI_IMAGE_QUALITY`(기본 medium).
    - 걷기 생성만 실패하면 정면만으로 등록 가능. 한 접속당 생성 3회 제한(`CONFIG.ai.maxGenerations`, 클라이언트 측).
-   - 걷기 스트립 프레임 분할: 투명 세로줄 기준으로 캐릭터 덩어리를 찾아 정확히 4개면 사용, 아니면 균등 분할(`findFrameCells`).
+   - 동작 스트립 프레임 분할(`splitFrames`): 열 무게 k-means로 프레임 중심 4개 → 붙어 있는 픽셀 덩어리 단위로 가까운 중심에 배정(두 프레임에 걸친 덩어리는 픽셀별). 긴 머리·치마가 옆 프레임에 닿아도 조각이 섞이지 않음.
+   - 자른 프레임은 좌우에 `CONFIG.sprite.framePadding`(12%) 여유를 둔다. 프롬프트에도 프레임 사이 빈 간격(셀 폭 15% 이상)·좌우 여백을 요구하는 `[FRAME SPACING / SAFE MARGIN]` 섹션이 있음.
 1. 브라우저: 폼 입력 + 이미지 파일 → 배경 제거·크롭·높이 128로 축소 → PNG data URL (한 장 수십 KB)
 2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름 15자, 멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
 3. API가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)

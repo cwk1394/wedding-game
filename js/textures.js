@@ -216,69 +216,142 @@ function buildFrontCanvas(frontImg, height) {
  * 동작 스트립(가로 4프레임) → 배경 제거 후 프레임별 캔버스 배열 (모두 같은 크기, 높이 height).
  * 모든 프레임을 같은 세로 범위로 잘라야 발 위치가 흔들리지 않는다
  * → 프레임별 경계 박스를 구한 뒤 가장 큰 폭/공통 세로 범위로 맞춰 자른다.
+ * 좌우로는 CONFIG.sprite.framePadding만큼 여유를 둬서 머리카락·치마가 프레임 끝에 걸리지 않게 한다.
  * 점프 스트립도 같은 방식이라, 다리를 접은 프레임은 발이 살짝 떠 보인다 (몸 위치는 고정).
  */
 function buildStripFrames(stripImg, height) {
   const strip = removeBackground(stripImg);
-  const cells = findFrameCells(strip, CONFIG.sprite.frames);
-  const boxes = cells.map((c) => {
-    const b = contentBounds(strip, c.x, 0, c.w, strip.height);
-    return { ...b, x: b.x + c.x };
-  });
-  const w = Math.max(...boxes.map((b) => b.w));
-  const y0 = Math.min(...boxes.map((b) => b.y));
-  const h = Math.max(...boxes.map((b) => b.y + b.h)) - y0;
+  const parts = splitFrames(strip, CONFIG.sprite.frames);
+  const w = Math.max(...parts.map((p) => p.w));
+  const y0 = Math.min(...parts.map((p) => p.y));
+  const h = Math.max(...parts.map((p) => p.y + p.h)) - y0;
   const scale = height / h;
-  return boxes.map((b) => {
-    // 자기 프레임 영역만 잘라서 공통 폭 캔버스 가운데에 놓는다 (옆 프레임이 섞이지 않게)
+  const pad = Math.round(w * scale * CONFIG.sprite.framePadding);
+  return parts.map((p) => {
+    // 이 프레임 픽셀만 남긴 캔버스를 공통 폭(+양옆 여유) 캔버스 가운데에 놓는다
     const frame = document.createElement('canvas');
-    frame.width = Math.round(w * scale);
+    frame.width = Math.round(w * scale) + pad * 2;
     frame.height = height;
     const ctx = frame.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(strip, b.x, y0, b.w, h, ((w - b.w) / 2) * scale, 0, b.w * scale, height);
+    ctx.drawImage(p.canvas, 0, y0 - p.y, p.w, h, pad + ((w - p.w) / 2) * scale, 0, p.w * scale, height);
     return frame;
   });
 }
 
 /**
- * 가로 스트립에서 프레임 n개의 가로 구간을 찾는다.
- * AI 이미지는 프레임 간격이 일정하지 않을 수 있어서, 비어 있는 세로줄(투명)을 경계로 캐릭터 덩어리를 찾고
- * 정확히 n개가 나오면 그 구간을 쓰고, 아니면 균등 분할로 대체한다.
+ * 가로 스트립을 캐릭터 n명(프레임)으로 나눈다. 반환: [{ canvas, x, y, w, h }]
+ * (canvas = 그 프레임 픽셀만 담은 크롭, x/y/w/h = 스트립 좌표 기준 박스)
+ * AI 이미지는 프레임 간격이 일정하지 않고, 긴 머리·치마가 옆 프레임과 붙어 있기도 해서
+ * 세로줄로 자르면 옆 프레임 조각이 섞이거나 잘린다. 그래서
+ *  1) 불투명 열의 무게로 프레임 중심 n개를 찾고 (1차원 k-means)
+ *  2) 붙어 있는 픽셀 덩어리(연결 요소) 단위로 가장 가까운 중심에 배정한다.
+ *     덩어리 하나가 두 프레임에 걸칠 만큼 크면(서로 붙은 치마 등) 픽셀별로 가까운 중심에 나눈다.
  */
-function findFrameCells(canvas, n) {
+function splitFrames(canvas, n) {
   const { width, height } = canvas;
-  const d = canvas.getContext('2d').getImageData(0, 0, width, height).data;
-  const filled = new Uint8Array(width);
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
-      if (d[(y * width + x) * 4 + 3] > 20) {
-        filled[x] = 1;
-        break;
+  const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const opaque = (x, y) => data[(y * width + x) * 4 + 3] > 20;
+
+  // 1) 프레임 중심: 열마다 불투명 픽셀 수를 무게로 k-means
+  const colWeight = new Float64Array(width);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (opaque(x, y)) colWeight[x]++;
+  let centers = [...Array(n)].map((_, i) => ((i + 0.5) * width) / n);
+  const nearest = (x) => {
+    let k = 0;
+    for (let j = 1; j < n; j++) if (Math.abs(x - centers[j]) < Math.abs(x - centers[k])) k = j;
+    return k;
+  };
+  for (let iter = 0; iter < 20; iter++) {
+    const sum = new Float64Array(n);
+    const cnt = new Float64Array(n);
+    for (let x = 0; x < width; x++) {
+      if (!colWeight[x]) continue;
+      const k = nearest(x);
+      sum[k] += x * colWeight[x];
+      cnt[k] += colWeight[x];
+    }
+    centers = centers.map((c, k) => (cnt[k] ? sum[k] / cnt[k] : c));
+  }
+  const cellW = width / n;
+
+  // 2) 연결 요소 라벨링 (4px 블록 단위로 줄여서 빠르게, 8방향 연결)
+  const B = 4;
+  const bw = Math.ceil(width / B);
+  const bh = Math.ceil(height / B);
+  const block = new Uint8Array(bw * bh);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) if (opaque(x, y)) block[((y / B) | 0) * bw + ((x / B) | 0)] = 1;
+  }
+  const label = new Int32Array(bw * bh).fill(-1);
+  const owner = []; // 덩어리 번호 → 프레임 번호 (-1이면 픽셀별로 나눔)
+  for (let start = 0; start < block.length; start++) {
+    if (!block[start] || label[start] >= 0) continue;
+    const id = owner.length;
+    const stack = [start];
+    label[start] = id;
+    let minX = Infinity;
+    let maxX = -1;
+    let sumX = 0;
+    let count = 0;
+    while (stack.length) {
+      const p = stack.pop();
+      const bx = p % bw;
+      const by = (p / bw) | 0;
+      minX = Math.min(minX, bx);
+      maxX = Math.max(maxX, bx);
+      sumX += bx;
+      count++;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = bx + dx;
+          const ny = by + dy;
+          if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+          const q = ny * bw + nx;
+          if (block[q] && label[q] < 0) {
+            label[q] = id;
+            stack.push(q);
+          }
+        }
+      }
+    }
+    const spansTwo = (maxX - minX + 1) * B > cellW * 1.1;
+    owner.push(spansTwo ? -1 : nearest((sumX / count + 0.5) * B));
+  }
+
+  // 3) 프레임별로 자기 픽셀만 복사
+  const out = [...Array(n)].map(() => ({ img: new ImageData(width, height), x0: width, y0: height, x1: -1, y1: -1 }));
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] === 0) continue;
+      const id = label[((y / B) | 0) * bw + ((x / B) | 0)];
+      const f = out[id >= 0 && owner[id] >= 0 ? owner[id] : nearest(x)];
+      f.img.data.set(data.subarray(i, i + 4), i);
+      if (data[i + 3] > 20) {
+        if (x < f.x0) f.x0 = x;
+        if (x > f.x1) f.x1 = x;
+        if (y < f.y0) f.y0 = y;
+        if (y > f.y1) f.y1 = y;
       }
     }
   }
-
-  let runs = [];
-  for (let x = 0; x < width; x++) {
-    if (!filled[x]) continue;
-    const start = x;
-    while (x < width && filled[x]) x++;
-    runs.push({ x: start, w: x - start });
-  }
-  // 머리카락 끝 같은 작은 조각은 가까운 덩어리에 합친다
-  const minGap = width * 0.01;
-  runs = runs.reduce((acc, r) => {
-    const last = acc[acc.length - 1];
-    if (last && r.x - (last.x + last.w) < minGap) last.w = r.x + r.w - last.x;
-    else acc.push({ ...r });
-    return acc;
-  }, []);
-  runs = runs.filter((r) => r.w > width * 0.02);
-
-  if (runs.length === n) return runs;
-  const cw = Math.floor(width / n);
-  return [...Array(n)].map((_, i) => ({ x: i * cw, w: cw }));
+  return out.map((f, k) => {
+    if (f.x1 < 0) {
+      // 빈 프레임은 균등 칸으로 대신
+      f.x0 = Math.round(k * cellW);
+      f.x1 = Math.round((k + 1) * cellW) - 1;
+      f.y0 = 0;
+      f.y1 = height - 1;
+    }
+    const w = f.x1 - f.x0 + 1;
+    const h = f.y1 - f.y0 + 1;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    c.getContext('2d').putImageData(f.img, -f.x0, -f.y0, f.x0, f.y0, w, h);
+    return { canvas: c, x: f.x0, y: f.y0, w, h };
+  });
 }
 
 /** 같은 크기의 프레임들을 가로 한 줄 스트립으로 합친다 (업로드용) */

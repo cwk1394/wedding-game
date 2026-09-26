@@ -268,6 +268,25 @@ The character must occupy exactly the SAME fixed location inside every frame cel
 If all four frame cells were stacked directly on top of each other, the character's central body anchor should overlap at the same coordinates.
 
 ────────────────────
+[FRAME SPACING / SAFE MARGIN]
+────────────────────
+
+THIS IS EXTREMELY IMPORTANT FOR SPRITE SLICING.
+
+Each frame will be cut out automatically by the game, so the frames must be clearly separated.
+
+- Divide the canvas into exactly 4 equal-width frame cells.
+- Place ONE character in the horizontal center of each cell.
+- Keep a clear, EMPTY pure-white gap between neighboring characters.
+  The gap must be at least 15% of a single cell's width.
+- Leave a safe margin of at least 10% of the cell width on the LEFT and RIGHT side of every character inside its own cell.
+- NO part of a character may cross into, touch, or overlap a neighboring cell:
+  this includes long hair, flowing hair strands, ponytails, dresses, skirts, capes, ribbons, sleeves, arms, legs, weapons, and accessories.
+- Swinging hair or clothing must stay entirely inside the character's own cell.
+- If the character has long hair or a long dress, scale the character slightly smaller so the margins are preserved rather than letting it touch the next frame.
+- Do NOT draw separators, borders, or grid lines between cells. The gap must be plain white background only.
+
+────────────────────
 [Output Conditions]
 ────────────────────
 
@@ -280,6 +299,7 @@ Pure White (#FFFFFF)
 
 Requirements:
 
+- Clear empty white gap between frames (no hair, dress, or limbs touching a neighboring frame)
 - Exactly 4 frames
 - Exactly 1 horizontal row
 - Single Character Only
