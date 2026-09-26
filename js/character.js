@@ -35,7 +35,7 @@ class Character extends Phaser.GameObjects.Container {
       if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
       if (scene.dev?.editing) return; // 개발자 모드 편집 중
       if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
-      if (scene.dev?.tool === 'control') return scene.dev.selectGuest(this); // 개발자 모드: 조종할 캐릭터 선택
+      if (scene.dev?.tool === 'control') return; // 개발자 모드 조종 도구: 선택은 DevMode가 처리 (겹친 캐릭터 중 가장 가까운 것)
       onSelect?.(this);
     });
 
@@ -138,28 +138,6 @@ class Character extends Phaser.GameObjects.Container {
   tick() {}
 }
 
-/** 신랑/신부: 제자리에 고정, 살짝 통통 튀는 대기 모션 */
-class CoupleCharacter extends Character {
-  constructor(scene, x, y, info, opts) {
-    super(scene, x, y, info, { ...opts, tagColor: '#ffe066' });
-    if (info.id === 'bride') this.sprite.setFlipX(true); // 신랑 쪽 바라보기
-    scene.tweens.add({
-      targets: this.sprite,
-      y: -2,
-      duration: 600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Phaser.Math.Between(0, 400),
-    });
-  }
-
-  applySprite(sprite) {
-    super.applySprite(sprite);
-    this.sprite.setFlipX(false); // 정면 이미지는 뒤집지 않음
-  }
-}
-
 /**
  * 발판 끝(dir 방향)에 바로 이어지는 다른 발판 이름 (끝점끼리 가로 6px·세로 10px 이내).
  * 개발자 모드에서 직선 여러 개로 그린 길은 이렇게 이어진 발판들 → 끊김 없이 걸어서 넘어간다.
@@ -215,7 +193,7 @@ class GuestCharacter extends Character {
   constructor(scene, floor, info, opts) {
     const { x1, x2 } = floorSpan(floor);
     const margin = Math.min(CHAR_W / 2, (x2 - x1) / 4); // 짧은 발판에서도 범위가 뒤집히지 않게
-    const x = Phaser.Math.Between(x1 + margin, x2 - margin);
+    const x = opts?.x ?? Phaser.Math.Between(x1 + margin, x2 - margin);
     super(scene, x, floorY(floor, x), info, opts);
 
     this.motions = {}; // 이미지 스프라이트 로드 후 { walk, jump, ladder, rope } 사용 가능 여부
@@ -727,5 +705,67 @@ class GuestCharacter extends Character {
     const groundY = floorY(this.floor, this.x);
     this.y = groundY - jumpOffset;
     this.setDepth(groundY);
+  }
+}
+
+/**
+ * 신랑/신부: 평소엔 무대(stage) 제자리에 고정, 살짝 통통 튀는 대기 모션.
+ * 개발자 모드 조종 도구로는 하객처럼 직접 움직일 수 있고, 놓으면 제자리로 돌아간다.
+ */
+class CoupleCharacter extends GuestCharacter {
+  constructor(scene, x, y, info, opts) {
+    super(scene, CONFIG.floors.stage, info, { ...opts, x, tagColor: '#ffe066' });
+    this.home = { x, y };
+    this.y = y;
+    this.setDepth(y);
+    if (info.id === 'bride') this.sprite.setFlipX(true); // 신랑 쪽 바라보기
+    this.bob = scene.tweens.add({
+      targets: this.sprite,
+      y: -2,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Phaser.Math.Between(0, 400),
+    });
+  }
+
+  applySprite(sprite) {
+    super.applySprite(sprite);
+    if (!this.controlled) this.standAtHome();
+  }
+
+  /** 제자리에서 정면을 보고 선다 */
+  standAtHome() {
+    this.setFloor('stage');
+    this.x = this.home.x;
+    this.y = this.home.y;
+    this.setDepth(this.y);
+    this.state = 'idle';
+    this.sprite.stop();
+    this.sprite.setTexture(`${this.texKey}_0`);
+    this.sprite.setFlipX(this.texKey.startsWith('sprite_') ? false : this.info.id === 'bride');
+  }
+
+  setControlled(on) {
+    if (on) {
+      this.bob.pause();
+      this.sprite.y = 0;
+    }
+    super.setControlled(on);
+  }
+
+  /** 조종을 놓거나 지도가 바뀌면 제자리로 (하객처럼 다른 발판으로 가지 않음) */
+  onMapChanged() {
+    this.phys = null;
+    this.climb = null;
+    this.jump = null;
+    this.leap = null;
+    this.standAtHome();
+    this.bob.resume();
+  }
+
+  tick(delta) {
+    if (this.controlled) super.tick(delta); // 평소엔 움직이지 않음
   }
 }

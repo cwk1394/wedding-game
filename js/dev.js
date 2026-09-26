@@ -66,7 +66,6 @@ class DevMode {
   }
 
   selectGuest(guest) {
-    if (!(guest instanceof GuestCharacter)) return UI.showToast('신랑·신부는 조종할 수 없어요');
     if (this.controlled === guest) return;
     this.releaseGuest();
     guest.setControlled(true);
@@ -323,7 +322,21 @@ class DevMode {
     this.drawPreview();
   }
 
+  /** 조종 도구: 누른 곳의 캐릭터들(신랑·신부 포함) 중 가로로 가장 가까운 캐릭터를 선택 */
+  pickCharacter(pointer) {
+    if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
+    const p = this.worldPoint(pointer);
+    let best = null;
+    for (const c of [...this.scene.couple, ...this.scene.guests]) {
+      if (!c.visible || !c.input) continue;
+      if (!Phaser.Geom.Rectangle.Contains(c.input.hitArea, p.x - c.x, p.y - c.y)) continue;
+      if (!best || Math.abs(p.x - c.x) < Math.abs(p.x - best.x)) best = c;
+    }
+    if (best) this.selectGuest(best);
+  }
+
   onUp(pointer) {
+    if (this.tool === 'control') return this.pickCharacter(pointer);
     const stroke = this.stroke;
     if (!stroke || pointer.id !== stroke.id) return;
     this.stroke = null;

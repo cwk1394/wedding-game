@@ -22,6 +22,13 @@ const COUPLE = [
   },
 ];
 
+// 개발자 모드(?dev)에서는 신랑/신부도 조종할 수 있으므로 나머지 동작 이미지도 불러온다
+if (new URLSearchParams(location.search).has('dev')) {
+  for (const c of COUPLE) {
+    for (const m of ['jump', 'ladder', 'rope', 'prone']) c[`${m}Url`] = `img/npc/${c.id}/${m}.webp`;
+  }
+}
+
 // guests.json을 못 읽을 때(로컬에서 파일로 열었을 때 등) 쓰는 더미 데이터
 const DUMMY_GUESTS = [
   {

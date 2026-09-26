@@ -87,6 +87,7 @@ class MapScene extends Phaser.Scene {
   update(_time, delta) {
     this.dev?.update();
     for (const guest of this.guests) guest.tick(delta);
+    for (const c of this.couple) c.tick(delta); // 신랑/신부는 개발자 모드에서 조종할 때만 움직임
   }
 
   // ---------- 임시 맵 그리기 (맵 이미지 준비되면 CONFIG.mapImage로 대체) ----------
