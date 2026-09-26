@@ -319,27 +319,3 @@ html, body {
 /* ---------- 지도 확대/축소 ---------- */
 #game { touch-action: none; }
 #game canvas { display: block; }
-
-.zoom-controls {
-  position: fixed;
-  left: 16px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.zoom-controls button {
-  width: 40px;
-  height: 40px;
-  border: 1.5px solid rgba(255, 255, 255, .8);
-  border-radius: 12px;
-  background: rgba(255, 228, 220, .8);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  color: var(--coral-deep);
-  font: bold 20px/1 sans-serif;
-  cursor: pointer;
-  box-shadow: 0 2px 0 rgba(216, 88, 74, .45), 0 4px 10px rgba(190, 70, 55, .15);
-}
-.zoom-controls button:active { transform: translateY(2px); box-shadow: none; }

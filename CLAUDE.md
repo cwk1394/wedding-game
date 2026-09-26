@@ -23,7 +23,7 @@ js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스�
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
 js/ui.js                방명록 팝업, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
-js/view.js              MapView: 카메라 확대/축소(핀치·휠·버튼)와 드래그 이동, DPR 상수
+js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드

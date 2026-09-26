@@ -24,19 +24,6 @@
     game.scale.setZoom(1 / DPR);
   });
 
-  // 확대/축소 버튼
-  document.querySelector('.zoom-controls').addEventListener('click', (e) => {
-    const action = e.target.closest('[data-zoom]')?.dataset.zoom;
-    const view = scene()?.view;
-    if (!view) return;
-    if (action === 'in') view.zoomBy(1.4);
-    if (action === 'out') view.zoomBy(1 / 1.4);
-    if (action === 'reset') {
-      view.touched = false;
-      view.reset();
-    }
-  });
-
   // 브라우저 자체 확대(핀치)가 게임 조작과 겹치지 않게 막기 (iOS Safari)
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
