@@ -1,0 +1,236 @@
+Create a seamless looping animated GIF of a beautiful 2D side-scrolling fantasy MMORPG wedding garden map.
+
+The scene is designed as a wedding guestbook background where approximately 100 small game characters will later be placed.
+
+IMPORTANT:
+Do NOT add any people, characters, avatars, NPCs, bride, or groom.
+Animate ONLY subtle environmental elements.
+The map structure, platforms, flowers, wedding arch, and camera must remain completely stable.
+
+────────────────────
+ANIMATION MOOD
+────────────────────
+
+Create a gentle, dreamy wedding atmosphere with a soft spring breeze.
+
+The animation should feel peaceful, romantic, magical, and elegant.
+
+Movement must be subtle and slow.
+Nothing should move dramatically.
+
+The scene should feel alive while still functioning as a clean background for approximately 100 characters.
+
+────────────────────
+BALLOON ANIMATION
+────────────────────
+
+The white, pearl, translucent, blush pink, and pastel pink balloons in the background should gently sway in the breeze.
+
+Animate them with:
+
+* very small side-to-side movement
+* slightly different timing for each balloon cluster
+* gentle floating motion
+* subtle string movement
+* soft natural inertia
+
+Some balloons should lean slightly left and slowly return.
+Others should move slightly upward and downward.
+
+Do NOT make balloons bounce rapidly.
+Do NOT make balloons fly away.
+Do NOT dramatically change their positions.
+
+The motion should resemble balloons tied in place and gently moving in a light spring breeze.
+
+────────────────────
+FLOWER PETAL ANIMATION
+────────────────────
+
+A small amount of white and pale pink flower petals should gently drift through the scene.
+
+Petals should:
+
+* slowly fall diagonally
+* occasionally rotate
+* gently float upward for a moment in the breeze
+* move at slightly different speeds
+* appear at different depths
+
+Use only a moderate number of petals.
+
+Most petals should travel from upper left toward lower right, while a few move in slightly different directions to create natural airflow.
+
+Some petals may briefly pass in front of the wedding arch and terrace edges.
+
+IMPORTANT:
+Do not create a snowstorm of petals.
+Do not cover the character placement areas.
+Keep the effect delicate and elegant.
+
+────────────────────
+FLOWER & FOLIAGE MOTION
+────────────────────
+
+Only the smallest flowers, leaves, ribbons, and thin decorative elements may move slightly in the breeze.
+
+Use extremely subtle motion:
+
+* tiny flower-head swaying
+* slight leaf movement
+* gentle ribbon fluttering
+* very subtle hanging garland movement
+
+Large floral arrangements must remain structurally stable.
+
+The wedding arch itself must NOT move.
+
+────────────────────
+MAGICAL AMBIENCE
+────────────────────
+
+Add a very small amount of subtle sparkling particles around the central wedding area.
+
+Tiny warm-white sparkles may:
+
+* softly appear
+* glow briefly
+* slowly fade away
+
+Keep the sparkle effect restrained and elegant.
+
+The center wedding arch should have a faint magical shimmer without flashing or pulsing aggressively.
+
+────────────────────
+5-TIER MAP STRUCTURE
+────────────────────
+
+Maintain EXACTLY five horizontal character-standing levels.
+
+Tier 5 — highest garden terrace
+Tier 4 — upper garden terrace
+Tier 3 — central wedding ceremony terrace
+Tier 2 — lower-middle terrace
+Tier 1 — lowest foreground terrace
+
+All five platforms must remain COMPLETELY STATIC.
+
+Do not animate:
+
+* platforms
+* stairs
+* fences
+* architecture
+* ground
+* large floral structures
+
+Leave the top surfaces of all five tiers clean and unobstructed for approximately 100 characters to be composited later.
+
+────────────────────
+CENTRAL WEDDING AREA
+────────────────────
+
+Keep the elaborate wedding ceremony area exactly in the horizontal center of Tier 3.
+
+The central white floral wedding arch is surrounded by abundant white roses, blush pink roses, peonies, hydrangeas, flowing white fabric, pink ribbons, pearl decorations, fairy lights, and flower garlands.
+
+Reserve a large empty standing area directly in front of the wedding arch for the bride and groom characters to be added later.
+
+The central wedding area should remain the strongest visual focal point.
+
+Only:
+
+* ribbons
+* tiny flowers
+* petals
+* fairy-light sparkles
+
+may gently animate.
+
+────────────────────
+CAMERA & LOOP REQUIREMENTS
+────────────────────
+
+CAMERA MUST BE COMPLETELY LOCKED.
+
+No camera movement.
+No zoom.
+No pan.
+No tilt.
+No rotation.
+No parallax camera movement.
+No perspective changes.
+
+The first and last frames must match perfectly.
+
+Create a PERFECT SEAMLESS LOOP.
+
+Recommended animation duration:
+6–8 seconds.
+
+Recommended frame rate:
+12–16 FPS.
+
+The animation should loop indefinitely without a noticeable transition.
+
+────────────────────
+ART STYLE
+────────────────────
+
+High-quality 2D side-scrolling fantasy MMORPG wedding-map background.
+
+Cute Korean online RPG aesthetic.
+
+Bright pastel palette:
+
+* ivory white
+* pure white
+* blush pink
+* pastel pink
+* soft peach
+* light cream
+* subtle fresh green
+* pale blue sky
+
+Crisp illustrated details, clean cel shading, whimsical fantasy garden architecture, charming oversized flowers, polished 2D game environment.
+
+The environment should feel like a romantic wedding event map from a charming Korean 2D side-scrolling MMORPG.
+
+No photorealism.
+No 3D rendering.
+No cinematic realism.
+
+────────────────────
+CRITICAL ANIMATION RESTRICTIONS
+────────────────────
+
+NO characters
+NO people
+NO bride
+NO groom
+NO NPCs
+NO text
+NO logos
+NO UI
+
+NO camera movement
+NO zoom
+NO scene deformation
+NO platform movement
+NO architecture movement
+NO wedding arch movement
+NO morphing flowers
+NO changing object shapes
+NO flickering background
+NO sudden lighting changes
+NO fast balloon movement
+NO excessive petals
+NO strong wind
+NO rain
+NO snow
+
+Only gentle balloons, ribbons, tiny foliage, drifting flower petals, and subtle magical sparkles should move.
+
+The final result must look like a beautiful static wedding illustration that has quietly come alive through a gentle spring breeze.
+
+Ultra-wide panoramic composition, approximately 2:1 aspect ratio, high-resolution 2D game background, seamless animated loop.
