@@ -173,26 +173,24 @@ const UI = (() => {
       const sources = { front };
       await setSources(sources);
 
-      // 나머지 동작(걷기·점프·사다리·로프)은 정면 캐릭터를 기준으로 2개씩 동시에 만든다 (API 속도 제한 대비).
+      // 나머지 동작(걷기·점프·사다리·로프)은 정면 캐릭터를 기준으로 전부 동시에 만든다.
       // 하나가 실패해도 나머지로 등록할 수 있다.
-      const queue = [...CONFIG.sprite.motions];
+      const motions = CONFIG.sprite.motions;
       const failed = [];
       let done = 0;
-      const total = queue.length;
-      const worker = async () => {
-        while (queue.length) {
-          const motion = queue.shift();
-          try {
-            sources[motion] = await generateCharacter(motion, front);
-          } catch (err) {
-            failed.push({ motion, err });
-          }
-          done++;
-        }
-      };
       await withProgress(
-        () => `움직임 만드는 중... (2/2, ${done}/${total})`,
-        () => Promise.all([worker(), worker()])
+        () => `움직임 만드는 중... (2/2, ${done}/${motions.length})`,
+        () =>
+          Promise.all(
+            motions.map(async (motion) => {
+              try {
+                sources[motion] = await generateCharacter(motion, front);
+              } catch (err) {
+                failed.push({ motion, err });
+              }
+              done++;
+            })
+          )
       );
       await setSources({ ...sources });
       if (failed.length) {
