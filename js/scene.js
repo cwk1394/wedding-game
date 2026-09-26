@@ -105,8 +105,8 @@ class MapScene extends Phaser.Scene {
     }
     // 사다리(초록) / 로프(파랑)
     for (const c of CONFIG.climbs) {
-      const [a, b] = c.floors.map((name) => floorY(CONFIG.floors[name], c.x));
-      g.lineStyle(4, c.type === 'ladder' ? 0x00c853 : 0x2979ff, 0.9).lineBetween(c.x, a, c.x, b);
+      const { top, bottom } = climbEnds(c);
+      g.lineStyle(4, c.type === 'ladder' ? 0x00c853 : 0x2979ff, 0.9).lineBetween(c.x, top.y, c.x, bottom.y);
     }
   }
 

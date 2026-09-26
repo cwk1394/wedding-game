@@ -320,6 +320,11 @@ class GuestCharacter extends Character {
 
   /** 다른 발판으로 점프해 건너가기 (포물선으로 착지점까지) */
   startLeap(target) {
+    const span = floorSpan(CONFIG.floors[target.name]);
+    if (target.x < span.x1 || target.x > span.x2) {
+      target = { ...target, x: Phaser.Math.Clamp(target.x, span.x1, span.x2) };
+      target.y = floorY(CONFIG.floors[target.name], target.x);
+    }
     const dist = Math.hypot(target.x - this.x, target.y - this.y);
     this.jump = null;
     this.state = 'leap';
@@ -343,18 +348,32 @@ class GuestCharacter extends Character {
 
   /** x 위치의 사다리/로프를 타고 반대편 층으로 */
   startClimb(climb) {
-    const targetName = climb.floors.find((f) => f !== this.floorName);
-    const target = CONFIG.floors[targetName];
-    const toY = floorY(target, climb.x);
+    const { top, bottom } = climbEnds(climb);
+    // 매달린 사다리/로프는 위 발판에서만 탈 수 있다 (아래 끝이 허공)
+    if (!bottom.name && this.floorName !== top.name) return;
+    const target = this.floorName === top.name ? bottom : top;
     this.jump = null;
     this.state = 'climb';
-    this.climb = { type: climb.type, targetName, toY, dir: Math.sign(toY - this.y) };
+    this.climb = { ref: climb, type: climb.type, targetName: target.name, toY: target.y, dir: Math.sign(target.y - this.y) };
     this.x = climb.x;
     this.hideBubble();
     this.updatePose();
   }
 
   finishClimb() {
+    if (!this.climb.targetName) {
+      // 매달린 사다리/로프 아래 끝: 아래 가까이 발판이 있으면 뛰어내리고, 없으면 다시 올라간다
+      const below = this.floorBelow(this.x, this.y);
+      const by = below && floorY(CONFIG.floors[below], this.x);
+      if (below && by - this.y <= CONFIG.motion.gapJump.maxDown * 1.5) {
+        this.climb = null;
+        this.state = 'walk';
+        return this.startLeap({ name: below, x: this.x + this.dir * 10, y: floorY(CONFIG.floors[below], this.x + this.dir * 10) });
+      }
+      const { top } = climbEnds(this.climb.ref);
+      Object.assign(this.climb, { targetName: top.name, toY: top.y, dir: -1 });
+      return;
+    }
     this.setFloor(this.climb.targetName);
     this.y = this.climb.toY;
     this.climb = null;
@@ -380,9 +399,7 @@ class GuestCharacter extends Character {
       this.phys = { mode: 'ground', vx: 0, vy: 0, climb: null };
       if (aiClimb) {
         // 사다리/로프를 타던 중이면 그 자리에 매달린 채로 시작
-        const [top, bottom] = [this.floorName, aiClimb.targetName]
-          .map((name) => ({ name, y: floorY(CONFIG.floors[name], this.x) }))
-          .sort((a, b) => a.y - b.y);
+        const { top, bottom } = climbEnds(aiClimb.ref);
         this.phys = { mode: 'climb', vx: 0, vy: 0, climb: { type: aiClimb.type, x: this.x, top, bottom } };
       } else if (aiAirborne) {
         this.phys.mode = 'air'; // 점프 중이었으면 그 자리에서 떨어져 착지
@@ -440,12 +457,10 @@ class GuestCharacter extends Character {
     const range = CONFIG.motion.control.grabRange;
     for (const c of CONFIG.climbs) {
       if (Math.abs(c.x - this.x) > range || !c.floors.every((n) => CONFIG.floors[n])) continue;
-      const [top, bottom] = c.floors
-        .map((name) => ({ name, y: floorY(CONFIG.floors[name], c.x) }))
-        .sort((a, b) => a.y - b.y);
+      const { top, bottom } = climbEnds(c);
       const grab = (y) => ({ type: c.type, x: c.x, top, bottom, y });
       if (onFloor) {
-        if (vert < 0 && onFloor === bottom.name) return grab(bottom.y - 1);
+        if (vert < 0 && bottom.name && onFloor === bottom.name) return grab(bottom.y - 1);
         if (vert > 0 && onFloor === top.name) return grab(top.y + 1);
       } else if (this.y > top.y - 6 && this.y < bottom.y + 6) {
         return grab(Phaser.Math.Clamp(this.y, top.y + 1, bottom.y - 1));
@@ -489,11 +504,18 @@ class GuestCharacter extends Character {
       if (jump && h) {
         // 사다리에서 옆으로 점프해서 내리기
         Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity * 0.6, climb: null });
+        p.noGrabUntil = this.scene.time.now + 400; // 방금 놓은 사다리를 바로 다시 잡지 않게
         this.dir = h;
       } else {
         this.y += v * c.climbSpeed * dt;
         if (this.y <= cl.top.y) this.landOn(cl.top.name, cl.top.y);
-        else if (this.y >= cl.bottom.y) this.landOn(cl.bottom.name, cl.bottom.y);
+        else if (this.y >= cl.bottom.y) {
+          if (cl.bottom.name) this.landOn(cl.bottom.name, cl.bottom.y);
+          else {
+            Object.assign(p, { mode: 'air', vx: 0, vy: 0, climb: null }); // 매달린 끝에서 ↓ → 손 놓고 떨어짐
+            p.noGrabUntil = this.scene.time.now + 400;
+          }
+        }
       }
     } else if (p.mode === 'ground') {
       const grab = v ? this.findClimb(v, this.floorName) : null;
@@ -523,7 +545,8 @@ class GuestCharacter extends Character {
       p.vy += c.gravity * dt;
       this.x = Phaser.Math.Clamp(this.x + p.vx * dt, 0, CONFIG.width);
       this.y += p.vy * dt;
-      const grab = v ? this.findClimb(v, null) : null; // 점프 중 ↑↓ + 사다리/로프 가까이 → 매달리기
+      const canGrab = v && this.scene.time.now >= (p.noGrabUntil ?? 0);
+      const grab = canGrab ? this.findClimb(v, null) : null; // 점프 중 ↑↓ + 사다리/로프 가까이 → 매달리기
       if (grab) {
         Object.assign(p, { mode: 'climb', climb: grab, vx: 0, vy: 0 });
         this.x = grab.x;

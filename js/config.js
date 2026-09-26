@@ -11,6 +11,7 @@ const CONFIG = {
   // 발판(층)·사다리·로프 = js/map-data.js (개발자 모드 ?dev 에서 편집·저장)
   // floors: path = 캐릭터 발이 지나가는 꺾은선 [[x, y], ...] (x 오름차순, 점 사이 직선 보간). stage = 신랑/신부 전용
   // climbs: x 위치에서 두 층을 세로로 잇는 사다리/로프. 하객이 걷다가 지나가면 가끔 타고 오르내림
+  //   floors가 하나 + end(아래 끝 y)면 위쪽만 발판에 걸려 아래가 허공에 매달린 사다리/로프
   floors: MAP_DATA.floors,
   climbs: MAP_DATA.climbs,
 
@@ -97,4 +98,15 @@ function floorY(floor, x) {
     if (x <= x2) return x2 === x1 ? y2 : y1 + ((y2 - y1) * (x - x1)) / (x2 - x1);
   }
   return path[path.length - 1][1];
+}
+
+/**
+ * 사다리/로프의 위·아래 끝 { top: { name, y }, bottom: { name, y } }.
+ * floors가 하나뿐이면 위쪽만 발판에 걸린 매달린 사다리/로프 → bottom.name = null, bottom.y = end
+ */
+function climbEnds(c) {
+  const ends = c.floors.map((name) => ({ name, y: floorY(CONFIG.floors[name], c.x) }));
+  if (ends.length === 1) ends.push({ name: null, y: c.end });
+  ends.sort((a, b) => a.y - b.y);
+  return { top: ends[0], bottom: ends[1] };
 }

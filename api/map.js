@@ -74,8 +74,14 @@ function validateMap(map) {
     climbs: climbs.map((c, i) => {
       if (!['ladder', 'rope'].includes(c?.type)) throw bad(`${i}번째 사다리/로프 종류`);
       if (!isCoord(c.x)) throw bad(`${i}번째 사다리/로프 x`);
-      const [a, b] = Array.isArray(c.floors) ? c.floors : [];
-      if (!floors[a] || !floors[b] || a === b) throw bad(`${i}번째 사다리/로프가 잇는 발판`);
+      const names = Array.isArray(c.floors) ? c.floors : [];
+      if (names.length === 1) {
+        // 위쪽만 발판에 걸린 매달린 사다리/로프: end = 아래 끝 y
+        if (!floors[names[0]] || !isCoord(c.end)) throw bad(`${i}번째 매달린 사다리/로프`);
+        return { type: c.type, x: Math.round(c.x), floors: [names[0]], end: Math.round(c.end) };
+      }
+      const [a, b] = names;
+      if (names.length !== 2 || !floors[a] || !floors[b] || a === b) throw bad(`${i}번째 사다리/로프가 잇는 발판`);
       return { type: c.type, x: Math.round(c.x), floors: [a, b] };
     }),
   };
@@ -86,7 +92,7 @@ function renderMapFile({ floors, climbs }) {
   return [
     '// 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.',
     '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage = 신랑/신부 자리',
-    '// climbs: [{ type: ladder|rope, x, floors: [층A, 층B] }]',
+    '// climbs: [{ type: ladder|rope, x, floors: [층A, 층B] }] — floors가 하나면 위쪽만 걸리고 end(아래 끝 y)까지 매달림',
     'const MAP_DATA = {',
     '  floors: {',
     ...Object.entries(floors).map(([name, f]) => `    ${JSON.stringify(name)}: { "path": ${JSON.stringify(f.path)} },`),

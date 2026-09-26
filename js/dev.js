@@ -221,7 +221,7 @@ class DevMode {
       add:
         this.type === 'walk'
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
-          : `아래 발판에서 위 발판까지 세로로 드래그해서 ${label} 추가`,
+          : `위 발판에서 세로로 드래그해서 ${label} 추가 (아래 끝이 발판이면 연결, 허공이면 매달린 ${label})`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
       control: this.controlled
         ? `${this.controlled.info.name} 조종 중 · ←→ 걷기 · ↑↓ 사다리/로프 · Space 점프 (점프 중 ↑↓로 매달리기)`
@@ -241,10 +241,12 @@ class DevMode {
       f.path.forEach(([x, y]) => g.fillCircle(x, y, 3.5));
     }
     for (const c of CONFIG.climbs) {
-      const [a, b] = c.floors.map((n) => (CONFIG.floors[n] ? floorY(CONFIG.floors[n], c.x) : null));
-      if (a === null || b === null) continue;
-      g.lineStyle(6, DEV_COLORS[c.type], 0.9).lineBetween(c.x, a, c.x, b);
-      g.fillStyle(0xffffff, 1).fillCircle(c.x, a, 3.5).fillCircle(c.x, b, 3.5);
+      if (!c.floors.every((n) => CONFIG.floors[n])) continue;
+      const { top, bottom } = climbEnds(c);
+      g.lineStyle(6, DEV_COLORS[c.type], 0.9).lineBetween(c.x, top.y, c.x, bottom.y);
+      g.fillStyle(0xffffff, 1).fillCircle(c.x, top.y, 3.5);
+      if (bottom.name) g.fillCircle(c.x, bottom.y, 3.5);
+      else g.lineStyle(3, DEV_COLORS[c.type], 1).lineBetween(c.x - 7, bottom.y, c.x + 7, bottom.y); // 매달린 끝 (가로 눈금)
     }
     // 점프로 건너갈 수 있는 곳 (보라 곡선, 발판 양 끝에서) — CONFIG.motion.gapJump 기준 자동 계산
     g.lineStyle(2.5, DEV_COLORS.gapJump, 0.95);
@@ -371,16 +373,28 @@ class DevMode {
     this.changed();
   }
 
+  /**
+   * 세로 드래그로 사다리/로프 추가. 양 끝이 발판에 닿으면 두 발판을 잇고,
+   * 위쪽 끝만 발판에 닿으면 아래가 허공에 매달린 사다리/로프(아래 끝 = 뗀 높이)
+   */
   addClimb(points) {
-    const start = points[0];
-    const end = points[points.length - 1];
-    const a = floorNear(start.x, start.y);
-    const b = floorNear(start.x, end.y);
-    if (!a || !b || a === b) {
-      return UI.showToast(`${DEV_TYPES[this.type]} 양 끝을 서로 다른 발판(빨간 선) 위에 맞춰 주세요`);
+    const x = points[0].x;
+    const ys = [points[0].y, points[points.length - 1].y].sort((a, b) => a - b);
+    const [topY, bottomY] = ys;
+    const top = floorNear(x, topY);
+    const bottom = floorNear(x, bottomY);
+    const label = DEV_TYPES[this.type];
+    if (!top) return UI.showToast(`${label} 위쪽 끝을 발판(빨간 선) 위에 맞춰 주세요`);
+    let climb;
+    if (bottom && bottom !== top) {
+      climb = { type: this.type, x: Math.round(x), floors: [top, bottom] };
+    } else {
+      const end = Math.round(bottomY);
+      if (end - floorY(CONFIG.floors[top], x) < 20) return UI.showToast(`${label}를 아래로 조금 더 길게 드래그해 주세요`);
+      climb = { type: this.type, x: Math.round(x), floors: [top], end };
     }
     this.checkpoint();
-    CONFIG.climbs.push({ type: this.type, x: Math.round(start.x), floors: [a, b] });
+    CONFIG.climbs.push(climb);
     this.changed();
   }
 
@@ -422,8 +436,8 @@ class DevMode {
     } else {
       const keep = CONFIG.climbs.filter((c) => {
         if (c.type !== this.type || !c.floors.every((n) => CONFIG.floors[n])) return true;
-        const [a, b] = c.floors.map((n) => floorY(CONFIG.floors[n], c.x));
-        const [y0, y1] = [Math.min(a, b), Math.max(a, b)];
+        const { top, bottom } = climbEnds(c);
+        const [y0, y1] = [top.y, bottom.y];
         return !points.some((p) => Math.abs(p.x - c.x) <= r && p.y >= y0 - r && p.y <= y1 + r);
       });
       if (keep.length === CONFIG.climbs.length) return;
