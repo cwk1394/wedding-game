@@ -1,6 +1,7 @@
 // 캐릭터 이미지 생성 API (Vercel Serverless Function)
 // POST /api/character { type, image: <data URL> }
 //   front : 하객 사진 + prompt/create-character.txt                → 정면 캐릭터 (1024x1024)
+//           image 없이 보내면 사진 없이 prompt/create-character-noref.txt + 무작위 특징으로 새로 그림
 //   walk  : 정면 캐릭터 + prompt/create-character-walk.txt           → 왼쪽으로 걷는 4프레임 스트립 (1536x1024)
 //   jump  : 정면 캐릭터 + prompt/create-character-jump.txt           → 점프 4프레임 (왼쪽, 제자리 포즈만)
 //   ladder: 정면 캐릭터 + prompt/create-character-ladder-climbing.txt → 사다리 타기 4프레임 (뒷모습)
@@ -46,6 +47,13 @@ export function POST(request) {
     if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
     const spec = TYPES[body.type];
     if (!spec) throw new HttpError(400, `type은 ${Object.keys(TYPES).join(', ')} 중 하나여야 합니다.`);
+    if (body.type === 'front' && !body.image) {
+      // 사진 없이: 무작위 특징을 넣은 프롬프트로 새 캐릭터
+      const template = await readFile(join(process.cwd(), 'prompt', 'create-character-noref.txt'), 'utf8');
+      const prompt = template.replace('{{TRAITS}}', randomTraits());
+      const image = await generate({ prompt, size: spec.size, input: null });
+      return { status: 200, body: { image } };
+    }
     const input = decodeImage(body.image);
     const prompt = await readFile(join(process.cwd(), 'prompt', spec.prompt), 'utf8');
     const image = await generate({ prompt, size: spec.size, input });
@@ -63,23 +71,53 @@ function decodeImage(dataUrl) {
   return { blob: new Blob([bytes], { type: `image/${m[1]}` }), filename: `input.${ext}` };
 }
 
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+/** 사진 없이 만들 때 캐릭터가 매번 다르게 나오도록 무작위 특징 */
+function randomTraits() {
+  const gender = pick(['남자', '여자']);
+  const hair =
+    gender === '남자'
+      ? pick(['덥수룩한 짧은 머리', '앞머리 내린 투블럭', '살짝 뻗친 삐죽 머리', '가르마 댄디컷', '곱슬 펌 머리', '뒤로 넘긴 포마드'])
+      : pick(['긴 웨이브 머리', '양갈래 묶음 머리', '단발 보브컷', '높게 묶은 포니테일', '땋은 머리', '반묶음 긴 생머리', '둥근 똥머리']);
+  const color = pick(['검정', '짙은 갈색', '밝은 갈색', '밀크티 베이지', '분홍', '하늘색', '금발', '와인색', '민트색']);
+  const outfit =
+    gender === '남자'
+      ? pick(['네이비 정장과 넥타이', '베이지 셔츠와 멜빵바지', '카키 재킷과 청바지', '회색 조끼 정장과 나비넥타이', '하얀 셔츠와 슬랙스', '파스텔 니트와 면바지'])
+      : pick(['파스텔 핑크 원피스', '하늘색 플레어 원피스', '노란 블라우스와 치마', '라벤더 투피스', '꽃무늬 원피스', '민트 셔츠와 치마', '크림색 니트 원피스']);
+  const accessory = pick(['없음', '동그란 안경', '꽃 머리핀', '리본 머리띠', '작은 꽃다발', '작은 선물 상자', '베레모', '진주 목걸이', '하트 풍선']);
+  return [
+    `* 성별 느낌: ${gender}`,
+    `* 헤어스타일: ${hair}`,
+    `* 머리색: ${color}`,
+    `* 의상: ${outfit}`,
+    `* 액세서리: ${accessory}`,
+  ].join('\n');
+}
+
+/** input이 있으면 이미지 편집(사진 참고), 없으면 글만으로 이미지 생성 */
 async function generate({ prompt, size, input }) {
   const models = workingModel ? [workingModel] : MODELS;
   let lastError;
   for (const model of models) {
-    const form = new FormData();
-    form.append('model', model);
-    form.append('prompt', prompt);
-    form.append('image', input.blob, input.filename);
-    form.append('size', size);
-    form.append('quality', QUALITY);
-    form.append('output_format', 'webp');
-    form.append('output_compression', '90');
+    const params = { model, prompt, size, quality: QUALITY, output_format: 'webp', output_compression: 90 };
+    let body;
+    let headers = { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` };
+    if (input) {
+      // 이미지 편집(사진 참고): multipart
+      body = new FormData();
+      for (const [k, v] of Object.entries(params)) body.append(k, String(v));
+      body.append('image', input.blob, input.filename);
+    } else {
+      // 글만으로 생성: JSON만 받는다
+      body = JSON.stringify(params);
+      headers = { ...headers, 'Content-Type': 'application/json' };
+    }
 
-    const res = await fetch('https://api.openai.com/v1/images/edits', {
+    const res = await fetch(`https://api.openai.com/v1/images/${input ? 'edits' : 'generations'}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: form,
+      headers,
+      body,
     });
     const data = await res.json().catch(() => ({}));
 

@@ -67,7 +67,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
 ## 데이터 흐름 (쓰기)
-0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기), `prone`(엎드리기 2프레임)을 **모두 동시에(병렬)** 생성.
+0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp (사진 없이 누르면 image 없이 보내고, 서버가 `prompt/create-character-noref.txt` + 무작위 특징(성별 느낌·헤어·머리색·의상·액세서리)으로 글만 가지고 생성 — images/generations는 JSON 요청) → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기), `prone`(엎드리기 2프레임)을 **모두 동시에(병렬)** 생성.
    - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing,prone}.txt`.
    - 프레임 수는 동작마다 `CONFIG.sprite.motionFrames`(prone만 2), 표시 높이 비율 `motionHeight`(prone 0.5 — 엎드리면 낮고 길어서).
    - 각 호출 최대 ~2분. 모델은 `OPENAI_IMAGE_MODEL`(쉼표 구분, 기본 gpt-image-2 → 1.5 → 1 순으로 시도, 없는 모델이면 다음으로), 품질 `OPENAI_IMAGE_QUALITY`(기본 medium).

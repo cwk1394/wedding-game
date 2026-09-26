@@ -288,14 +288,13 @@ const UI = (() => {
 
   generateBtn.addEventListener('click', async () => {
     showError('');
-    const photo = fields.photo.files[0];
-    if (!photo) return showError('사진을 먼저 골라 주세요.');
+    const photo = fields.photo.files[0]; // 없으면 사진 없이 무작위 캐릭터를 새로 그린다
     if (generationCount >= CONFIG.ai.maxGenerations) return showError('생성 가능 횟수를 모두 썼어요.');
     generationCount++;
 
     try {
       const front = await withProgress('캐릭터 도트 찍는 중... (1/2)', async () =>
-        generateCharacter('front', await resizePhoto(photo))
+        generateCharacter('front', photo ? await resizePhoto(photo) : null)
       );
       const sources = { front };
       await setSources(sources);
