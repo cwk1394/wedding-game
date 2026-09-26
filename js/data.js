@@ -7,8 +7,8 @@ const COUPLE = [
     name: '신랑',
     shortMsg: '와줘서 고마워!',
     longMsg: '바쁘신 와중에 저희 결혼식에 와주셔서 진심으로 감사드립니다.\n행복하게 잘 살겠습니다!',
-    spriteUrl: 'img/characters/groom.png',
-    walkUrl: 'img/characters/groom_move.png',
+    spriteUrl: 'img/characters/groom.webp',
+    walkUrl: 'img/characters/groom_move.webp',
     look: { type: 'groom', hair: 0x2b1d0e }, // 이미지 로드 전/실패 시 임시 캐릭터
   },
   {
@@ -16,8 +16,8 @@ const COUPLE = [
     name: '신부',
     shortMsg: '행복하게 살게요',
     longMsg: '함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요 :)',
-    spriteUrl: 'img/characters/bride.png',
-    walkUrl: 'img/characters/bride_move.png',
+    spriteUrl: 'img/characters/bride.webp',
+    walkUrl: 'img/characters/bride_move.webp',
     look: { type: 'bride', hair: 0x6b3e1f },
   },
 ];
