@@ -88,7 +88,12 @@ async function generate({ prompt, size, input }) {
     if (err.code === 'moderation_blocked' || /safety|moderation/i.test(err.message || '')) {
       throw new HttpError(422, '이 사진으로는 캐릭터를 만들 수 없어요. 다른 사진으로 시도해 주세요.');
     }
-    if (res.status === 429) throw new HttpError(429, '지금 요청이 많아요. 잠시 후 다시 시도해 주세요.');
+    if (err.code === 'insufficient_quota' || err.type === 'insufficient_quota') {
+      throw new HttpError(503, '캐릭터 생성 서비스를 지금 쓸 수 없어요. (AI 사용 한도 초과: insufficient_quota)');
+    }
+    if (res.status === 429) {
+      throw new HttpError(429, `지금 요청이 많아요. 잠시 후 다시 시도해 주세요. (${err.code || 'rate_limit'})`);
+    }
     break;
   }
   throw new Error(`이미지 생성 실패 — ${lastError}`);
