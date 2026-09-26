@@ -96,8 +96,9 @@ full body, chibi and round. Ignore the photo background.`,
   taxi: {
     // 오른쪽 아래 광장(파스텔 분홍·크림색 돌바닥, 위에서 살짝 내려다보는 시점)에 서 있는 웨딩 택시
     front: `A cute MapleStory-style wedding taxi NPC, parked on a pastel pink-and-cream stone plaza in a dreamy flower wedding garden.
-Camera angle: slightly elevated three-quarter view from above (like a 2D side-scrolling map drawn with a gentle top-down tilt): we see the LEFT side of the car
-and a little of the roof and hood; the car faces LEFT and slightly toward the viewer.
+Camera angle: a clear THREE-QUARTER FRONT view with real 3D depth (NOT a flat side view): the car is turned about 35-45 degrees toward the viewer,
+facing front-LEFT, so we see the whole FRONT (headlights, grille, bumper, windshield) AND the LEFT side at the same time, plus the top of the roof and hood
+from a slightly elevated camera. Clear perspective: the front is closer and larger, the rear recedes. Isometric-like chunky toy-car volume.
 Rounded chibi cartoon car with soft pastel colors that blend with the pink/cream garden: creamy butter-yellow body, white trim, a small "TAXI" roof sign (shape only, no readable text),
 a pink satin ribbon bow on the side door, a tiny garland of pink roses and white flowers on the roof, "just married" style pastel ribbons trailing from the back bumper.
 Soft warm lighting from the upper left, subtle cute shading, full vehicle visible, no ground, no shadow. ${STYLE}`,

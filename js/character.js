@@ -848,10 +848,10 @@ class NpcCharacter extends GuestCharacter {
     this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
     this.y = floorY(this.floor, this.x);
     this.effect = npc.effect ? new NpcEffect(scene, this, npc.effect) : null;
-    if (npc.fixed) this.alignToFloor();
+    if (npc.tilt) this.alignToFloor();
   }
 
-  /** 고정 NPC(택시)는 발판 기울기에 맞춰 살짝 기울인다 */
+  /** npc.tilt면 발판 기울기에 맞춰 살짝 기울인다 (옆모습 이미지용. 3/4 입체 이미지는 똑바로 두는 게 자연스럽다) */
   alignToFloor() {
     const slope = (floorY(this.floor, this.x + 8) - floorY(this.floor, this.x - 8)) / 16;
     this.sprite.setRotation(Math.atan(slope));
@@ -909,7 +909,7 @@ class NpcCharacter extends GuestCharacter {
       // 고정 NPC(택시)는 발판이 남아 있으면 그 자리 그대로
       if (CONFIG.floors[this.floorName]) {
         this.y = floorY(this.floor, this.x);
-        this.alignToFloor();
+        if (this.npc.tilt) this.alignToFloor();
       }
       return;
     }
