@@ -202,8 +202,10 @@ html, body {
 }
 
 .modal-avatar {
-  width: 60px;
-  height: 60px;
+  width: 88px;
+  height: 88px;
+  flex: none;
+  padding: 13px; /* 원 안쪽 정사각형에 들어가게 — 넓은 이미지(택시 등)도 모서리가 원 밖으로 안 잘림 */
   object-fit: contain;
   image-rendering: pixelated;
   border: 2px solid var(--line);
