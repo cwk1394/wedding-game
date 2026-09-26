@@ -14,6 +14,7 @@ const CONFIG = {
   //   floors가 하나 + end(아래 끝 y)면 위쪽만 발판에 걸려 아래가 허공에 매달린 사다리/로프
   floors: MAP_DATA.floors,
   climbs: MAP_DATA.climbs,
+  spawn: MAP_DATA.spawn ?? null, // { floor, x } — 방명록 등록 직후 새 캐릭터가 나타나는 곳 (개발자 모드 시작점 도구)
 
   // 하객 움직임
   motion: {
@@ -45,6 +46,7 @@ const CONFIG = {
   view: {
     focus: { x: 700, y: 701 }, // 처음 화면 가운데에 올 지점 (세로 화면에서 웰컴 아치와 맵 가운데가 함께 보이게)
     maxZoom: 2.5, // 최대 확대: 맵 1px = 화면 2.5px (CSS 픽셀 기준)
+    controlZoom: 1.8, // 조종을 시작할 때 이 배율 이상으로 확대
     dragThreshold: 8, // 이만큼(CSS px) 움직여야 드래그로 인식 (그보다 작으면 탭)
   },
 
@@ -111,4 +113,14 @@ function climbEnds(c) {
   if (ends.length === 1) ends.push({ name: null, y: c.end });
   ends.sort((a, b) => a.y - b.y);
   return { top: ends[0], bottom: ends[1] };
+}
+
+/** 시작점 { floor, x, y } (없거나 발판이 사라졌으면 null) */
+function spawnPoint() {
+  const sp = CONFIG.spawn;
+  const floor = sp && CONFIG.floors[sp.floor];
+  if (!floor) return null;
+  const { x1, x2 } = floorSpan(floor);
+  const x = Math.min(Math.max(sp.x, x1), x2);
+  return { floor: sp.floor, x, y: floorY(floor, x) };
 }

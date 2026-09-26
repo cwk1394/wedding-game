@@ -23,12 +23,20 @@ class MapScene extends Phaser.Scene {
     this.view = new MapView(this);
 
     // ?dev = 이동 가능 영역 편집기, ?debug = 발판 위치만 선으로 표시
+    this.control = new Controller(this); // 캐릭터 직접 조종 (방명록 팝업 "조종하기", 등록 직후, 개발자 모드)
     const params = new URLSearchParams(location.search);
     if (params.has('dev')) this.dev = new DevMode(this);
     else if (params.has('debug')) this.drawFloorGuides();
 
     this.onSelect = (character) =>
-      UI.openGuestbook({ ...character.info, avatarUrl: character.getAvatarUrl() });
+      UI.openGuestbook(
+        { ...character.info, avatarUrl: character.getAvatarUrl() },
+        {
+          controlling: this.control.controlled === character,
+          onControl: () => this.control.take(character, { zoom: true }),
+          onRelease: () => this.control.release(),
+        }
+      );
 
     // 신랑/신부: 무대 가운데 고정
     const stage = CONFIG.floors.stage;
@@ -70,11 +78,13 @@ class MapScene extends Phaser.Scene {
     }
   }
 
-  /** 하객 한 명을 랜덤 층에 스폰. 이미 있는 id면 무시. */
-  addGuest(info) {
+  /** 하객 한 명을 스폰 (atSpawn이면 시작점, 아니면 랜덤 층). 이미 있는 id면 무시. */
+  addGuest(info, { atSpawn = false } = {}) {
     if (this.guestIds.has(info.id)) return null;
     this.guestIds.add(info.id);
-    const guest = new GuestCharacter(this, pickGuestFloor(), info, { onSelect: this.onSelect });
+    const spawn = atSpawn ? spawnPoint() : null;
+    const floor = spawn ? CONFIG.floors[spawn.floor] : pickGuestFloor();
+    const guest = new GuestCharacter(this, floor, info, { onSelect: this.onSelect, x: spawn?.x });
     this.guests.push(guest);
     return guest;
   }
@@ -85,7 +95,7 @@ class MapScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
-    this.dev?.update();
+    this.control.update();
     for (const guest of this.guests) guest.tick(delta);
     for (const c of this.couple) c.tick(delta); // 신랑/신부는 개발자 모드에서 조종할 때만 움직임
   }

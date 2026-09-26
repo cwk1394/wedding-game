@@ -40,7 +40,24 @@ const UI = (() => {
   // ---------- 방명록 보기 ----------
   const viewModal = setupModal(document.getElementById('modal'));
 
-  function openGuestbook({ name, shortMsg, longMsg, avatarUrl }) {
+  const controlBtn = document.querySelector('#modal .control-btn');
+  let controlAction = null;
+  controlBtn.addEventListener('click', () => {
+    viewModal.close();
+    controlAction?.();
+  });
+
+  /**
+   * 방명록 보기. control: { controlling, onControl, onRelease } — 오른쪽 아래 버튼이
+   * 이 캐릭터를 조종 중이면 "조종 끝내기", 아니면 "조종하기"
+   */
+  function openGuestbook({ name, shortMsg, longMsg, avatarUrl }, control = null) {
+    controlBtn.hidden = !control;
+    if (control) {
+      controlBtn.textContent = control.controlling ? '조종 끝내기' : '조종하기';
+      controlBtn.classList.toggle('btn-ghost', control.controlling);
+      controlAction = control.controlling ? control.onRelease : control.onControl;
+    }
     document.getElementById('modal-name').textContent = name;
     document.getElementById('modal-short').textContent = shortMsg ? `“${shortMsg}”` : '';
     document.getElementById('modal-long').textContent = longMsg || '';
@@ -252,7 +269,12 @@ const UI = (() => {
       });
       resetForm();
       writeModal.close();
-      showToast('방명록이 등록되었어요! 🎉');
+      showToast(
+        matchMedia('(pointer: coarse)').matches
+          ? '방명록이 등록되었어요! 🎉 스틱과 점프 버튼으로 움직여 보세요'
+          : '방명록이 등록되었어요! 🎉 방향키와 Space(점프)로 움직여 보세요',
+        3500
+      );
     } catch (err) {
       showError(err.message);
     } finally {

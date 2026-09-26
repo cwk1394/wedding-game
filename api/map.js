@@ -67,10 +67,17 @@ function validateMap(map) {
   }
   if (!floors.stage) throw bad('stage(신랑/신부 자리) 발판이 없어요.');
 
+  let spawn = null;
+  if (map.spawn != null) {
+    if (!floors[map.spawn.floor] || !isCoord(map.spawn.x)) throw bad('시작점');
+    spawn = { floor: map.spawn.floor, x: Math.round(map.spawn.x) };
+  }
+
   const climbs = map.climbs ?? [];
   if (!Array.isArray(climbs) || climbs.length > LIMITS.climbs) throw bad(`사다리/로프는 ${LIMITS.climbs}개 이하`);
   return {
     floors,
+    spawn,
     climbs: climbs.map((c, i) => {
       if (!['ladder', 'rope'].includes(c?.type)) throw bad(`${i}번째 사다리/로프 종류`);
       if (!isCoord(c.x)) throw bad(`${i}번째 사다리/로프 x`);
@@ -88,7 +95,7 @@ function validateMap(map) {
 }
 
 /** js/map-data.js 내용 (사람이 읽기 좋게 한 줄에 발판 하나) */
-function renderMapFile({ floors, climbs }) {
+function renderMapFile({ floors, climbs, spawn }) {
   return [
     '// 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.',
     '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage = 신랑/신부 자리',
@@ -100,6 +107,7 @@ function renderMapFile({ floors, climbs }) {
     '  climbs: [',
     ...climbs.map((c) => `    ${JSON.stringify(c)},`),
     '  ],',
+    `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
     '};',
     '',
   ].join('\n');

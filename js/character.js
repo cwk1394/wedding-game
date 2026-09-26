@@ -35,7 +35,7 @@ class Character extends Phaser.GameObjects.Container {
       if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
       if (scene.dev?.editing) return; // 개발자 모드 편집 중
       if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
-      if (scene.dev?.tool === 'control') return; // 개발자 모드 조종 도구: 선택은 DevMode가 처리 (겹친 캐릭터 중 가장 가까운 것)
+      if (scene.dev?.tool === 'control' || scene.dev?.tool === 'spawn') return; // 개발자 모드 조종/시작점 도구는 DevMode가 처리
       onSelect?.(this);
     });
 
@@ -235,7 +235,12 @@ class GuestCharacter extends Character {
   applySprite(sprite) {
     super.applySprite(sprite);
     this.motions = sprite.motions ?? {};
-    this.updatePose();
+    if (this.controlled) {
+      this.poseKey = null; // 다음 프레임에 조종 포즈를 새 이미지로 다시 적용
+      this.placeMarker();
+    } else {
+      this.updatePose();
+    }
   }
 
   pickState() {
@@ -620,7 +625,7 @@ class GuestCharacter extends Character {
 
 
   tick(delta) {
-    if (this.controlled) return this.tickControlled(delta, this.scene.dev.input);
+    if (this.controlled) return this.tickControlled(delta, this.scene.control.input);
     const m = CONFIG.motion;
 
     if (this.state === 'leap') {

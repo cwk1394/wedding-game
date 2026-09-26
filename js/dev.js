@@ -1,7 +1,8 @@
 // 개발자 모드 (페이지를 ?dev 로 열기): 이동 가능 영역(발판·사다리·로프) 편집기.
 // - 종류(걷기/사다리/로프)와 도구(이동/추가/지우기)를 고르고 지도 위를 드래그해서 편집
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
-// - 조종 도구: 하객을 눌러 선택하고 방향키+스페이스(PC) 또는 화면 스틱+점프 버튼(모바일)으로 직접 움직여 본다
+// - 조종 도구: 캐릭터를 눌러 바로 조종 (조종 자체는 js/control.js의 Controller)
+// - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
@@ -17,16 +18,10 @@ class DevMode {
     this.dirty = false;
     this.stroke = null; // 드래그 중인 점들 (월드 좌표)
 
-    this.controlled = null; // 조종 중인 하객
-    this.keys = { left: false, right: false, up: false, down: false };
-    this.stick = { left: false, right: false, up: false, down: false };
-    this.jumpQueued = false;
-
     this.gfx = scene.add.graphics().setDepth(20000);
     this.preview = scene.add.graphics().setDepth(20001);
-    this.buildPad();
+    scene.control.onChange = () => this.updateToolbar();
     this.buildToolbar();
-    this.bindKeys();
     this.draw();
 
     const input = scene.input;
@@ -46,118 +41,18 @@ class DevMode {
     return this.tool === 'add' || this.tool === 'erase';
   }
 
-  // ---------- 조종 ----------
+  // ---------- 조종 (Controller에 위임) ----------
 
-  /** 조종 입력 (키보드 + 화면 스틱). 하객의 tickControlled가 매 프레임 읽는다 */
-  get input() {
-    const k = this.keys;
-    const s = this.stick;
-    return {
-      left: k.left || s.left,
-      right: k.right || s.right,
-      up: k.up || s.up,
-      down: k.down || s.down,
-      consumeJump: () => {
-        const j = this.jumpQueued;
-        this.jumpQueued = false;
-        return j;
-      },
-    };
+  get controlled() {
+    return this.scene.control.controlled;
   }
 
-  selectGuest(guest) {
-    if (this.controlled === guest) return;
-    this.releaseGuest();
-    guest.setControlled(true);
-    this.controlled = guest;
-    this.updateToolbar();
+  selectGuest(character) {
+    this.scene.control.take(character);
   }
 
   releaseGuest() {
-    this.controlled?.setControlled(false);
-    this.controlled = null;
-  }
-
-  /** 매 프레임: 조종 중인 하객을 카메라가 따라간다 (지도를 드래그하는 중엔 멈춤) */
-  update() {
-    const g = this.controlled;
-    const view = this.scene.view;
-    if (!g || view.drag || view.pinch) return;
-    view.center.x += (g.x - view.center.x) * 0.12;
-    view.center.y += (g.y - 40 - view.center.y) * 0.12;
-    view.apply();
-  }
-
-  bindKeys() {
-    const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-    const active = () => this.tool === 'control' && document.querySelector('.modal:not([hidden])') === null;
-    window.addEventListener('keydown', (e) => {
-      if (!active()) return;
-      if (map[e.key]) {
-        this.keys[map[e.key]] = true;
-        e.preventDefault();
-      } else if (e.code === 'Space') {
-        if (!e.repeat) this.jumpQueued = true;
-        e.preventDefault();
-        document.activeElement?.blur?.(); // 툴바 버튼에 포커스가 있으면 스페이스가 버튼을 누르지 않게
-      }
-    });
-    window.addEventListener('keyup', (e) => {
-      if (map[e.key]) this.keys[map[e.key]] = false;
-    });
-    window.addEventListener('blur', () => Object.keys(this.keys).forEach((k) => (this.keys[k] = false)));
-  }
-
-  /** 모바일용 화면 스틱(왼쪽 아래) + 점프 버튼(오른쪽 아래). 조종 도구일 때만 보임 */
-  buildPad() {
-    const pad = document.createElement('div');
-    pad.className = 'dev-pad';
-    pad.hidden = true;
-    pad.innerHTML = `
-      <div class="dev-stick"><div class="dev-knob"></div></div>
-      <button type="button" class="dev-jump">점프</button>`;
-    document.body.append(pad);
-    this.pad = pad;
-
-    // Phaser가 window에서 받는 터치/마우스로 새지 않게 (지도 드래그·핀치로 오인 방지)
-    for (const type of ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'mousemove']) {
-      pad.addEventListener(type, (e) => e.stopPropagation());
-    }
-
-    const stick = pad.querySelector('.dev-stick');
-    const knob = pad.querySelector('.dev-knob');
-    let active = null;
-    const setStick = (dx, dy) => {
-      const len = Math.hypot(dx, dy);
-      const max = stick.clientWidth / 2;
-      const k = len > max ? max / len : 1;
-      knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
-      const nx = dx / max;
-      const ny = dy / max;
-      Object.assign(this.stick, { left: nx < -0.35, right: nx > 0.35, up: ny < -0.5, down: ny > 0.5 });
-    };
-    stick.addEventListener('pointerdown', (e) => {
-      active = e.pointerId;
-      stick.setPointerCapture(e.pointerId);
-      const r = stick.getBoundingClientRect();
-      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
-    });
-    stick.addEventListener('pointermove', (e) => {
-      if (e.pointerId !== active) return;
-      const r = stick.getBoundingClientRect();
-      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
-    });
-    const end = (e) => {
-      if (e.pointerId !== active) return;
-      active = null;
-      setStick(0, 0);
-    };
-    stick.addEventListener('pointerup', end);
-    stick.addEventListener('pointercancel', end);
-    pad.querySelector('.dev-jump').addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      this.jumpQueued = true;
-    });
+    this.scene.control.release();
   }
 
   // ---------- 툴바 ----------
@@ -178,6 +73,7 @@ class DevMode {
           <button type="button" data-v="add">추가</button>
           <button type="button" data-v="erase">지우기</button>
           <button type="button" data-v="control">조종</button>
+          <button type="button" data-v="spawn">시작점</button>
         </div>
       </div>
       <div class="dev-row">
@@ -193,6 +89,7 @@ class DevMode {
       seg.addEventListener('click', (e) => {
         const v = e.target.closest('[data-v]')?.dataset.v;
         if (!v) return;
+        if (seg.dataset.group === 'tool' && this.tool === 'control' && v !== 'control') this.releaseGuest();
         this[seg.dataset.group] = v;
         this.updateToolbar();
       })
@@ -206,12 +103,10 @@ class DevMode {
   }
 
   updateToolbar() {
-    if (this.tool !== 'control') this.releaseGuest();
-    this.pad.hidden = this.tool !== 'control';
     this.bar.querySelectorAll('.dev-seg').forEach((seg) =>
       seg.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === this[seg.dataset.group]))
     );
-    this.bar.querySelector('[data-group="type"]').classList.toggle('dim', this.tool === 'move' || this.tool === 'control');
+    this.bar.querySelector('[data-group="type"]').classList.toggle('dim', !this.editing);
     this.bar.querySelector('[data-act="undo"]').disabled = !this.history.length;
     this.bar.querySelector('.dev-save').classList.toggle('dirty', this.dirty);
     const label = DEV_TYPES[this.type];
@@ -224,7 +119,8 @@ class DevMode {
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
       control: this.controlled
         ? `${this.controlled.info.name} 조종 중 · ←→ 걷기 · ↑↓ 사다리/로프 · Space 점프 (점프 중 ↑↓로 매달리기)`
-        : '움직여 볼 하객을 눌러서 선택하세요',
+        : '움직여 볼 캐릭터를 눌러서 선택하세요',
+      spawn: '지도를 눌러 방명록 등록 직후 새 캐릭터가 나타날 시작점을 지정 (발판 위, 노란 깃발)',
     };
     this.bar.querySelector('.dev-hint').textContent = hints[this.tool];
   }
@@ -246,6 +142,13 @@ class DevMode {
       g.fillStyle(0xffffff, 1).fillCircle(c.x, top.y, 3.5);
       if (bottom.name) g.fillCircle(c.x, bottom.y, 3.5);
       else g.lineStyle(3, DEV_COLORS[c.type], 1).lineBetween(c.x - 7, bottom.y, c.x + 7, bottom.y); // 매달린 끝 (가로 눈금)
+    }
+    // 시작점 (노란 깃발)
+    const spawn = spawnPoint();
+    if (spawn) {
+      g.lineStyle(3, 0x6b4e00, 1).lineBetween(spawn.x, spawn.y, spawn.x, spawn.y - 34);
+      g.fillStyle(0xffd400, 1).fillTriangle(spawn.x, spawn.y - 34, spawn.x + 22, spawn.y - 27, spawn.x, spawn.y - 20);
+      g.fillCircle(spawn.x, spawn.y, 5);
     }
     // 점프로 건너갈 수 있는 곳 (보라 곡선, 발판 양 끝에서) — CONFIG.motion.gapJump 기준 자동 계산
     g.lineStyle(2.5, DEV_COLORS.gapJump, 0.95);
@@ -322,6 +225,17 @@ class DevMode {
     this.drawPreview();
   }
 
+  /** 시작점 도구: 누른 곳 가까운 발판 위를 시작점으로 */
+  setSpawn(pointer) {
+    if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
+    const p = this.worldPoint(pointer);
+    const floor = floorNear(p.x, p.y);
+    if (!floor) return UI.showToast('발판(빨간 선) 가까이를 눌러 주세요');
+    this.checkpoint();
+    CONFIG.spawn = { floor, x: Math.round(p.x) };
+    this.changed();
+  }
+
   /** 조종 도구: 누른 곳의 캐릭터들(신랑·신부 포함) 중 가로로 가장 가까운 캐릭터를 선택 */
   pickCharacter(pointer) {
     if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
@@ -337,6 +251,7 @@ class DevMode {
 
   onUp(pointer) {
     if (this.tool === 'control') return this.pickCharacter(pointer);
+    if (this.tool === 'spawn') return this.setSpawn(pointer);
     const stroke = this.stroke;
     if (!stroke || pointer.id !== stroke.id) return;
     this.stroke = null;
@@ -349,7 +264,7 @@ class DevMode {
   // ---------- 편집 ----------
 
   snapshot() {
-    return JSON.stringify({ floors: CONFIG.floors, climbs: CONFIG.climbs });
+    return JSON.stringify({ floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn });
   }
 
   /** 바꾸기 전에 호출: 되돌리기 스냅샷 저장 */
@@ -360,6 +275,11 @@ class DevMode {
 
   changed() {
     this.releaseGuest();
+    // 시작점 발판이 지워졌거나 잘렸으면 그 x를 덮는 발판으로 옮기고, 없으면 해제
+    if (CONFIG.spawn && !CONFIG.floors[CONFIG.spawn.floor]) {
+      const f = Object.entries(CONFIG.floors).find(([n, fl]) => n !== 'stage' && CONFIG.spawn.x >= floorSpan(fl).x1 && CONFIG.spawn.x <= floorSpan(fl).x2);
+      CONFIG.spawn = f ? { ...CONFIG.spawn, floor: f[0] } : null;
+    }
     this.dirty = this.snapshot() !== this.savedSnap;
     this.draw();
     this.updateToolbar();
@@ -369,9 +289,10 @@ class DevMode {
   undo() {
     const snap = this.history.pop();
     if (!snap) return;
-    const { floors, climbs } = JSON.parse(snap);
+    const { floors, climbs, spawn } = JSON.parse(snap);
     CONFIG.floors = floors;
     CONFIG.climbs = climbs;
+    CONFIG.spawn = spawn;
     this.changed();
   }
 
@@ -442,7 +363,7 @@ class DevMode {
         );
         if (ends.every(Boolean)) climbs.push({ ...c, floors: ends });
       }
-      if (JSON.stringify({ floors, climbs }) === before) return;
+      if (JSON.stringify({ floors, climbs, spawn: CONFIG.spawn }) === before) return;
       this.checkpoint();
       CONFIG.floors = floors;
       CONFIG.climbs = climbs;
@@ -474,7 +395,7 @@ class DevMode {
     btn.disabled = true;
     btn.textContent = '저장 중...';
     try {
-      await postJson('/api/map', { password, map: { floors: CONFIG.floors, climbs: CONFIG.climbs } });
+      await postJson('/api/map', { password, map: { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn } });
       try {
         sessionStorage.setItem('devPassword', password);
       } catch {}

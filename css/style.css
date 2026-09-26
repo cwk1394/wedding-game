@@ -552,9 +552,9 @@ html, body {
 .dev-hint { color: rgba(255, 255, 255, .75); font-size: 12px; }
 
 .dev-seg.dim { opacity: .45; }
-/* 개발자 모드 조종: 화면 스틱 + 점프 버튼 */
-.dev-pad { position: fixed; inset: auto 0 0 0; height: 0; z-index: 15; }
-.dev-stick {
+/* 캐릭터 조종: 화면 스틱 + 점프 버튼 (터치 기기에서 조종 중일 때) */
+.ctl-pad { position: fixed; inset: auto 0 0 0; height: 0; z-index: 15; }
+.ctl-stick {
   position: fixed;
   left: 22px;
   bottom: calc(26px + env(safe-area-inset-bottom, 0px));
@@ -567,7 +567,7 @@ html, body {
   display: grid;
   place-items: center;
 }
-.dev-knob {
+.ctl-knob {
   width: 54px;
   height: 54px;
   border-radius: 50%;
@@ -575,7 +575,7 @@ html, body {
   box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
   pointer-events: none;
 }
-.dev-jump {
+.ctl-jump {
   position: fixed;
   right: 22px;
   bottom: calc(96px + env(safe-area-inset-bottom, 0px));
@@ -590,4 +590,7 @@ html, body {
   box-shadow: 0 3px 0 var(--coral-shadow), 0 6px 14px rgba(0, 0, 0, .25);
   touch-action: none;
 }
-.dev-jump:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--coral-shadow); }
+.ctl-jump:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--coral-shadow); }
+
+/* 방명록 팝업: 조종하기 버튼은 오른쪽 아래 */
+.modal-footer-end { justify-content: flex-end; }
