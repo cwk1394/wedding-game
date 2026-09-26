@@ -18,6 +18,20 @@ Reference Image (The previously generated MapleStory player avatar sprite)
 * Motion: Subtle bobbing of the head and body, swinging arms and legs naturally for a classic 2D MMORPG walk cycle.
 
 ────────────────────
+[NO HANDHELD OR CARRIED ITEMS — KEEP CHARACTER SIZE]
+
+Draw ONLY things that are WORN on the body:
+hair accessories (pins, ribbons, headbands), hats, glasses, earrings, necklaces, brooches, corsages, ties, bow ties, belts, bracelets, rings, and decorations that are part of the outfit.
+
+Do NOT draw any item that is held, carried, worn on the back, or dragged — even if the reference image shows one. Remove it:
+- balloons, bouquets, gift boxes, bags, handbags, backpacks, suitcases, shopping bags, umbrellas, phones, cups, drinks
+- baseball bats, clubs, sticks, canes, swords, bows, guns, or any other weapon or long object
+- pets, plush toys, flags, signs
+
+Both hands must be EMPTY. Nothing may stick out of the character's body silhouette.
+(Carried items change the character's measured size and make the character look smaller in the game.)
+
+────────────────────
 [PIXEL RENDERING SPEC]
 Important:
 - Low-resolution game sprite aesthetic
@@ -45,7 +59,7 @@ Each frame will be cut out automatically by the game, so the frames must be clea
   The gap must be at least 15% of a single cell's width.
 - Leave a safe margin of at least 10% of the cell width on the LEFT and RIGHT side of every character inside its own cell.
 - NO part of a character may cross into, touch, or overlap a neighboring cell:
-  this includes long hair, flowing hair strands, ponytails, dresses, skirts, capes, ribbons, sleeves, arms, legs, weapons, and accessories.
+  this includes long hair, flowing hair strands, ponytails, dresses, skirts, capes, ribbons, sleeves, arms, legs, and accessories.
 - Swinging hair or clothing must stay entirely inside the character's own cell.
 - If the character has long hair or a long dress, scale the character slightly smaller so the margins are preserved rather than letting it touch the next frame.
 - Do NOT draw separators, borders, or grid lines between cells. The gap must be plain white background only.
