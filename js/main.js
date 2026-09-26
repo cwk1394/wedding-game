@@ -28,7 +28,7 @@
     setTimeout(() => loading.remove(), 500);
     // 터치 기기에서 처음 한 번 조작 방법 안내
     if (matchMedia('(pointer: coarse)').matches) {
-      setTimeout(() => UI.showToast('두 손가락으로 확대, 드래그로 이동할 수 있어요', 3500), 700);
+      setTimeout(() => UI.showToast('두 손가락으로 확대,\n드래그로 이동할 수 있어요', 3500), 700);
     }
   };
   setTimeout(showMain, 20000); // 이미지 서버가 느려도 무한정 기다리지 않게

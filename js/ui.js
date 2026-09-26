@@ -178,7 +178,7 @@ const UI = (() => {
   const genStatus = form.querySelector('.gen-status');
   const photoPreview = form.querySelector('.photo-preview');
   const photoEmpty = form.querySelector('.photo-empty');
-  const [frontPreview, walkPreview] = form.querySelectorAll('.preview img');
+  const frontPreview = form.querySelector('.preview-front'); // 미리보기는 정면만 (동작 이미지는 표시 안 함)
   const previewEmpty = form.querySelector('.preview-empty');
 
   let step = 1;
@@ -253,7 +253,6 @@ const UI = (() => {
     }
     if (current !== preparing) return; // 그 사이 다른 이미지로 바뀜
     setImg(frontPreview, prepared?.front);
-    setImg(walkPreview, prepared?.walk);
     previewEmpty.hidden = Boolean(prepared);
   }
 
@@ -339,7 +338,6 @@ const UI = (() => {
     setPhoto(null);
     preparing = null;
     setImg(frontPreview, null);
-    setImg(walkPreview, null);
     previewEmpty.hidden = false;
     showStep(1);
   }
