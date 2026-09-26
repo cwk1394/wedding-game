@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)img/guests'"
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)img/guests'",
+  "redirects": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "https://kobe-kang.github.io/guestbook/$1",
+      "permanent": false
+    }
+  ]
 }

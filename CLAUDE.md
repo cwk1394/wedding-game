@@ -31,7 +31,7 @@ img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, c
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
-vercel.json             ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략
+vercel.json             ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
 ```
 
