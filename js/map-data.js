@@ -76,5 +76,5 @@ const MAP_DATA = {
     {"type":"rope","x":674,"floors":["f31"],"end":978},
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
-  couple: {"groom":{"floor":"f9","x":761},"bride":{"floor":"f9","x":821}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 무대 가운데)
+  couple: {"groom":{"floor":"f9","x":635},"bride":{"floor":"f9","x":697}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 무대 가운데)
 };
