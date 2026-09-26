@@ -57,6 +57,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
     "spriteUrl": "img/guests/<uuid>/front.png", "walkUrl": "img/guests/<uuid>/walk.png",
     "jumpUrl": "…/jump.png", "ladderUrl": "…/ladder.png", "ropeUrl": "…/rope.png" }
   ```
+- 본문에 없는 동작 이미지도 `img/guests/<uuid>/<동작>.png` 파일이 저장소에 있으면 `fetch-guests`가 채움 → 나중에 추가한 동작(예: 기존 하객 엎드리기)은 이미지만 커밋하면 됨.
 - `guests.json` 항목: `{ id, name, shortMsg, longMsg, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }`. name 없거나 JSON 파싱 실패 글은 건너뜀.
 - **id**: 본문의 UUID. UUID가 없는 옛 수동 글은 `d<discussion번호>`. 이름은 중복 가능하므로 식별·이미지 매핑은 항상 id로 한다.
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.

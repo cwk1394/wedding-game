@@ -2,6 +2,7 @@
 // GitHub Actions에서 실행: GITHUB_TOKEN, GITHUB_REPOSITORY 환경변수 필요.
 //   node scripts/fetch-guests.mjs <출력 경로>
 
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fetchGuestbookDiscussions, parseBody, UUID_RE } from './lib/discussions.mjs';
@@ -14,6 +15,21 @@ const imageUrl = (v) =>
   typeof v === 'string' && (v.startsWith('https://') || (/^img\/[\w\-/.]+\.png$/.test(v) && !v.includes('..')))
     ? v
     : null;
+
+const MOTIONS = ['walk', 'jump', 'ladder', 'rope', 'prone'];
+
+/**
+ * 본문에 없는 동작 이미지라도 저장소의 img/guests/<uuid>/<동작>.png 가 있으면 채운다.
+ * (나중에 추가한 동작 이미지 — 예: 기존 하객의 엎드리기 — 를 Discussion 본문 수정 없이 반영)
+ */
+function fillMotionFiles(guest) {
+  if (!UUID_RE.test(guest.id) || !guest.spriteUrl) return guest;
+  for (const m of MOTIONS) {
+    const path = `img/guests/${guest.id}/${m}.png`;
+    if (!guest[`${m}Url`] && existsSync(path)) guest[`${m}Url`] = path;
+  }
+  return guest;
+}
 
 function toGuest(discussion) {
   const data = parseBody(discussion.body);
@@ -39,7 +55,7 @@ function toGuest(discussion) {
 }
 
 const discussions = await fetchGuestbookDiscussions();
-const guests = discussions.map(toGuest).filter(Boolean);
+const guests = discussions.map(toGuest).filter(Boolean).map(fillMotionFiles);
 
 await mkdir(dirname(outPath), { recursive: true });
 await writeFile(outPath, JSON.stringify({ updatedAt: new Date().toISOString(), guests }, null, 2));
