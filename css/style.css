@@ -46,18 +46,18 @@ html, body {
 /* ---------- 오른쪽 아래 메뉴 ---------- */
 .menu {
   position: fixed;
-  right: 16px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
   z-index: 10;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
+  flex-direction: column-reverse; /* 버튼이 위, 항목은 아래로 펼쳐짐 */
+  align-items: flex-start;
+  gap: 10px;
 }
 .menu-btn {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -68,24 +68,24 @@ html, body {
 /* 햄버거 → X */
 .menu-btn span {
   position: absolute;
-  left: 18px;
-  width: 22px;
+  left: 14px;
+  width: 20px;
   height: 3px;
   border-radius: 2px;
   background: #fff;
   transition: transform .2s ease, opacity .2s ease, top .2s ease;
 }
-.menu-btn span:nth-child(1) { top: 20px; }
-.menu-btn span:nth-child(2) { top: 27.5px; }
-.menu-btn span:nth-child(3) { top: 35px; }
-.menu.open .menu-btn span:nth-child(1) { top: 27.5px; transform: rotate(45deg); }
+.menu-btn span:nth-child(1) { top: 16px; }
+.menu-btn span:nth-child(2) { top: 22.5px; }
+.menu-btn span:nth-child(3) { top: 29px; }
+.menu.open .menu-btn span:nth-child(1) { top: 22.5px; transform: rotate(45deg); }
 .menu.open .menu-btn span:nth-child(2) { opacity: 0; }
-.menu.open .menu-btn span:nth-child(3) { top: 27.5px; transform: rotate(-45deg); }
+.menu.open .menu-btn span:nth-child(3) { top: 22.5px; transform: rotate(-45deg); }
 
 .menu-items {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 10px;
   margin: 0;
   padding: 0;
@@ -93,7 +93,7 @@ html, body {
 }
 .menu-items li {
   opacity: 0;
-  transform: translateY(12px) scale(.9);
+  transform: translateY(-12px) scale(.9);
   visibility: hidden;
   transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
 }
@@ -103,10 +103,10 @@ html, body {
   visibility: visible;
   transition: opacity .18s ease, transform .18s ease;
 }
-/* 아래(버튼 가까운 쪽)부터 차례로 펼쳐지게 */
-.menu.open .menu-items li:nth-child(3) { transition-delay: 0s; }
+/* 위(버튼 가까운 쪽)부터 차례로 펼쳐지게 */
+.menu.open .menu-items li:nth-child(1) { transition-delay: 0s; }
 .menu.open .menu-items li:nth-child(2) { transition-delay: .04s; }
-.menu.open .menu-items li:nth-child(1) { transition-delay: .08s; }
+.menu.open .menu-items li:nth-child(3) { transition-delay: .08s; }
 .menu-items button {
   display: flex;
   align-items: center;
@@ -575,22 +575,25 @@ html, body {
   box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
   pointer-events: none;
 }
+/* 점프 버튼: 스틱과 같은 반투명 스타일 */
 .ctl-jump {
   position: fixed;
   right: 22px;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  width: 78px;
-  height: 78px;
-  border: none;
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  background: linear-gradient(var(--coral-light), var(--coral-deep));
-  color: #fff;
-  font: bold 16px/1 inherit;
+  background: rgba(34, 24, 30, .35);
+  border: 2px solid rgba(255, 255, 255, .7);
+  color: rgba(255, 255, 255, .95);
+  font: bold 17px/1 inherit;
   font-family: inherit;
-  box-shadow: 0 3px 0 var(--coral-shadow), 0 6px 14px rgba(0, 0, 0, .25);
+  letter-spacing: .02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
   touch-action: none;
+  cursor: pointer;
 }
-.ctl-jump:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--coral-shadow); }
+.ctl-jump:active { background: rgba(255, 255, 255, .45); }
 
 /* 방명록 팝업: 조종하기 버튼은 오른쪽 아래 */
 .modal-footer-end { justify-content: flex-end; }

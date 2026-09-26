@@ -15,7 +15,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 - `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → textures → character → api → ui → view → control → scene → dev → main`.
 
 ```
-index.html              오른쪽 아래 메뉴(캐릭터 생성·방명록 목록·웨딩 갤러리), 모달 DOM + 스크립트 로드
+index.html              왼쪽 위 메뉴(캐릭터 생성·방명록 목록·웨딩 갤러리), 모달 DOM + 스크립트 로드
 css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
 js/map-data.js          MAP_DATA: 이동 가능 영역(floors 꺾은선, climbs 사다리/로프). 개발자 모드 저장 시 API가 통째로 다시 씀
 js/config.js            CONFIG: 월드 크기(=배경 이미지 1122x1402, 세로형), 배경 이미지, 층(floors) 꺾은선 좌표 + floorSpan()/floorY(), 속도, 말풍선, API 주소, AI/스프라이트 설정
@@ -120,7 +120,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 배경음악(`ui.js`, `CONFIG.bgm`): 자동 재생 시도 → 브라우저가 막으면 첫 터치/클릭/키 입력 때 재생. 켜고 끔은 localStorage(`bgm`)에 기억(끄면 다음 방문에도 꺼짐). 파일 로드 실패면 버튼 숨김.
 
 ## 메뉴 / 팝업
-- 오른쪽 아래 메뉴 버튼 → 위로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
+- 왼쪽 위 메뉴 버튼 → 아래로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
 - 방명록 목록은 `UI.getGuests()`(main.js에서 scene.guests 연결)로 맵 위 하객을 그대로 사용 → 방금 등록한 하객도 바로 보임.
 - 갤러리: 배포 때 `build-gallery.mjs`가 sharp로 `img/gallery/thumb/*.webp`(목록)·`view/*.webp`(크게 보기)를 만들고 `data/gallery.json`(`{thumb, src}` 목록) 생성. 사진이 없으면 "준비하고 있어요" 문구.
   - 원본(장당 수 MB)은 저장소에만 두고 사이트에는 올리지 않음. 변환 결과는 Actions cache(`.cache/gallery`, 이름+파일 크기 기준)라 새 사진만 변환.

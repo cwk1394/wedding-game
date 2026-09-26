@@ -100,7 +100,7 @@ class Controller {
     pad.hidden = true;
     pad.innerHTML = `
       <div class="ctl-stick"><div class="ctl-knob"></div></div>
-      <button type="button" class="ctl-jump">점프</button>`;
+      <button type="button" class="ctl-jump">Jump</button>`;
     document.body.append(pad);
     this.pad = pad;
 
