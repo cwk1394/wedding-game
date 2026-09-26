@@ -437,5 +437,49 @@ const UI = (() => {
     toastTimer = setTimeout(() => (toast.hidden = true), duration);
   }
 
+  // ---------- 배경음악 ----------
+  // 자동 재생을 시도하고, 브라우저가 막으면(소리 있는 자동 재생은 사용자 동작이 필요) 첫 터치/클릭/키 입력 때 시작.
+  // 켜고 끈 상태는 이 브라우저에 기억. 음악 파일이 없으면 버튼을 숨긴다.
+  (() => {
+    const btn = document.getElementById('bgm-btn');
+    const audio = new Audio(CONFIG.bgm.src);
+    audio.loop = true;
+    audio.volume = CONFIG.bgm.volume;
+    audio.preload = 'auto';
+    let on = true;
+    try {
+      on = localStorage.getItem('bgm') !== 'off';
+    } catch {}
+
+    const render = () => {
+      btn.classList.toggle('off', !on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', on ? '배경음악 끄기' : '배경음악 켜기');
+    };
+    const play = () => {
+      if (on) audio.play().catch(() => {}); // 막히면 다음 사용자 동작 때 다시 시도
+    };
+    const onFirstGesture = () => {
+      play();
+      if (!audio.paused || !on) ['pointerdown', 'keydown'].forEach((t) => window.removeEventListener(t, onFirstGesture, true));
+    };
+
+    audio.addEventListener('error', () => (btn.hidden = true)); // 파일 없음
+    audio.addEventListener('canplay', () => (btn.hidden = false), { once: true });
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      on = !on;
+      try {
+        localStorage.setItem('bgm', on ? 'on' : 'off');
+      } catch {}
+      if (on) play();
+      else audio.pause();
+      render();
+    });
+    ['pointerdown', 'keydown'].forEach((t) => window.addEventListener(t, onFirstGesture, true));
+    render();
+    play();
+  })();
+
   return { openGuestbook, showToast, onGuestCreated: null, onModalChange: null, getGuests: null };
 })();

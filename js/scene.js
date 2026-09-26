@@ -21,6 +21,7 @@ class MapScene extends Phaser.Scene {
     }
 
     this.view = new MapView(this);
+    this.addPetals();
 
     // ?dev = 이동 가능 영역 편집기, ?debug = 발판 위치만 선으로 표시
     this.control = new Controller(this); // 캐릭터 직접 조종 (방명록 팝업 "조종하기", 등록 직후, 개발자 모드)
@@ -87,6 +88,45 @@ class MapScene extends Phaser.Scene {
     const guest = new GuestCharacter(this, floor, info, { onSelect: this.onSelect, x: spawn?.x });
     this.guests.push(guest);
     return guest;
+  }
+
+  /** 맵 전체에 꽃잎이 조금씩 흩날리는 효과 (위에서 천천히 떨어지며 좌우로 흔들림) */
+  addPetals() {
+    // 꽃잎 텍스처 2종 (진분홍 / 연분홍), 확대해도 선명하게 2배로 그림
+    const colors = [[0xff9fb8, 0xffd3de], [0xffc4d4, 0xfff0f4]];
+    colors.forEach(([base, light], i) => {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(base, 1).fillEllipse(8, 5, 16, 10);
+      g.fillStyle(light, 1).fillEllipse(6, 4, 7, 4);
+      g.generateTexture(`petal${i}`, 16, 10);
+      g.destroy();
+    });
+    const c = CONFIG.petals;
+    const common = {
+      x: { min: -40, max: CONFIG.width + 40 },
+      y: -20,
+      lifespan: ((CONFIG.height + 60) / c.fallSpeed.min) * 1000, // 가장 느린 꽃잎도 바닥까지
+      speedY: c.fallSpeed,
+      speedX: c.drift,
+      scale: { min: 0.35, max: 0.7 },
+      rotate: { start: 0, end: 360 },
+      alpha: { start: c.alpha, end: c.alpha * 0.6 },
+      frequency: c.frequency * 2, // 두 종류가 반씩
+      advance: 60000, // 처음부터 화면 곳곳에 꽃잎이 있게 미리 흘려 둠
+    };
+    this.petals = ['petal0', 'petal1'].map((key) => {
+      const emitter = this.add.particles(0, 0, key, common).setDepth(15000);
+      // 좌우로 살랑살랑: 꽃잎마다 다른 주기로 가로 속도를 흔든다
+      emitter.addParticleProcessor({
+        active: true,
+        update: (particle, delta) => {
+          particle.sway ??= Math.random() * Math.PI * 2;
+          particle.sway += delta * 0.0015;
+          particle.x += Math.sin(particle.sway) * 0.25 * (delta / 16);
+        },
+      });
+      return emitter;
+    });
   }
 
   /** 개발자 모드에서 발판/사다리를 바꾸면 하객들을 새 지도에 맞춘다 */

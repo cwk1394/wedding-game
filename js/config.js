@@ -76,6 +76,17 @@ const CONFIG = {
 
   refreshInterval: 60000, // guests.json 재조회 주기 (ms)
 
+  // 꽃잎 날리기 효과 (맵 전체에 천천히 떨어지며 흔들림)
+  petals: {
+    frequency: 450, // ms마다 1장 (작을수록 많이)
+    fallSpeed: { min: 18, max: 38 }, // px/s
+    drift: { min: -14, max: 14 }, // 가로 px/s
+    alpha: 0.85,
+  },
+
+  // 배경음악: audio/bgm.mp3 를 넣으면 자동 재생 (브라우저가 막으면 첫 터치/클릭 때 시작). 오른쪽 위 버튼으로 켜고 끔
+  bgm: { src: 'audio/bgm.mp3', volume: 0.35 },
+
   walkSpeed: { min: 35, max: 70 }, // px/s
   bubble: {
     duration: 5000, // 말풍선 표시 시간 (ms)

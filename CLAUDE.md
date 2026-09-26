@@ -31,7 +31,8 @@ js/dev.js               DevMode: 개발자 모드(?dev) 이동 가능 영역 편
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
-scripts/build-gallery.mjs  img/gallery/ 사진 → 썸네일(400px)·보기용(1600px) webp + gallery.json (Actions, sharp)
+scripts/build-gallery.mjs  audio/bgm.mp3           배경음악 (넣으면 자동 재생 + 오른쪽 위 ON/OFF 버튼 표시, 없으면 버튼 숨김). 배포 때 audio/ 폴더째 복사
+img/gallery/ 사진 → 썸네일(400px)·보기용(1600px) webp + gallery.json (Actions, sharp)
 scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/gallery/            웨딩 갤러리 사진. 파일 이름 순으로 보임(01.jpg, 02.jpg…). 폰에서 보므로 긴 변 1600px 안팎 권장
 img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
@@ -113,6 +114,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 편집은 CONFIG.floors/climbs를 바로 바꾸고 `scene.refreshMap()`으로 하객에게 즉시 적용. 되돌리기 최대 50단계.
 - 저장: 비밀번호(처음 한 번 입력, 탭 닫을 때까지 sessionStorage) → `POST /api/map` → `js/map-data.js` 커밋 → Pages 재배포(1~2분). Vercel은 이 파일만 바뀐 커밋은 재배포 생략.
   - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
+
+## 효과
+- 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).
+- 배경음악(`ui.js`, `CONFIG.bgm`): 자동 재생 시도 → 브라우저가 막으면 첫 터치/클릭/키 입력 때 재생. 켜고 끔은 localStorage(`bgm`)에 기억(끄면 다음 방문에도 꺼짐). 파일 로드 실패면 버튼 숨김.
 
 ## 메뉴 / 팝업
 - 오른쪽 아래 메뉴 버튼 → 위로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
