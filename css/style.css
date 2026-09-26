@@ -318,7 +318,7 @@ html, body {
 .steps li.active b { background: var(--coral); }
 
 .step { display: flex; flex-direction: column; gap: 14px; }
-.step-intro { margin: 0; font-size: 14px; color: var(--ink); }
+.step-intro { margin: 0; font-size: 14px; color: var(--ink); text-align: center; line-height: 1.6; }
 .step-intro small { color: var(--ink-soft); }
 
 /* 캐릭터 만들기: [내 사진] → [캐릭터] */
