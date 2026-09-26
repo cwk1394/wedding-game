@@ -352,6 +352,7 @@ class GuestCharacter extends Character {
     // 매달린 사다리/로프는 위 발판에서만 탈 수 있다 (아래 끝이 허공)
     if (!bottom.name && this.floorName !== top.name) return;
     const target = this.floorName === top.name ? bottom : top;
+    if (!target.name) target.y += CONFIG.motion.control.grabHeight; // 매달린 끝: 손이 끝에 걸릴 때까지
     this.jump = null;
     this.state = 'climb';
     this.climb = { ref: climb, type: climb.type, targetName: target.name, toY: target.y, dir: Math.sign(target.y - this.y) };
@@ -400,6 +401,7 @@ class GuestCharacter extends Character {
       if (aiClimb) {
         // 사다리/로프를 타던 중이면 그 자리에 매달린 채로 시작
         const { top, bottom } = climbEnds(aiClimb.ref);
+        if (!bottom.name) bottom.y += CONFIG.motion.control.grabHeight;
         this.phys = { mode: 'climb', vx: 0, vy: 0, climb: { type: aiClimb.type, x: this.x, top, bottom } };
       } else if (aiAirborne) {
         this.phys.mode = 'air'; // 점프 중이었으면 그 자리에서 떨어져 착지
@@ -454,16 +456,20 @@ class GuestCharacter extends Character {
    * 공중이면 사다리 x 가까이 + 사다리 높이 범위 안이면 잡는다.
    */
   findClimb(vert, onFloor) {
-    const range = CONFIG.motion.control.grabRange;
+    const { grabRange: range, grabHeight } = CONFIG.motion.control;
     for (const c of CONFIG.climbs) {
       if (Math.abs(c.x - this.x) > range || !c.floors.every((n) => CONFIG.floors[n])) continue;
       const { top, bottom } = climbEnds(c);
-      const grab = (y) => ({ type: c.type, x: c.x, top, bottom, y });
+      // 발이 내려갈 수 있는 한계: 발판이면 그 발판, 매달린 끝이면 손(발 위 grabHeight)이 끝에 걸릴 때까지
+      const bottomLimit = bottom.name ? bottom.y : bottom.y + grabHeight;
+      const grab = (y) => ({ type: c.type, x: c.x, top, bottom: { ...bottom, y: bottomLimit }, y });
       if (onFloor) {
         if (vert < 0 && bottom.name && onFloor === bottom.name) return grab(bottom.y - 1);
         if (vert > 0 && onFloor === top.name) return grab(top.y + 1);
-      } else if (this.y > top.y - 6 && this.y < bottom.y + 6) {
-        return grab(Phaser.Math.Clamp(this.y, top.y + 1, bottom.y - 1));
+      } else {
+        // 공중: 손 높이(발 - grabHeight)가 사다리/로프 범위 안이면 잡는다
+        const handY = this.y - grabHeight;
+        if (handY > top.y - 6 && handY < bottom.y + 6) return grab(Phaser.Math.Clamp(this.y, top.y + 1, bottomLimit - 1));
       }
     }
     return null;

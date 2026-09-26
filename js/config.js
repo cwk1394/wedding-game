@@ -30,6 +30,7 @@ const CONFIG = {
       gravity: 1000, // px/s²
       climbSpeed: 75, // px/s
       grabRange: 14, // 사다리/로프를 잡을 수 있는 가로 거리 (px)
+      grabHeight: 40, // 잡는 기준점 = 발에서 이만큼 위(손 높이). 매달린 로프는 손이 아래 끝에 닿을 때까지 내려갈 수 있음
     },
     // 발판 끝에서 가까운 다른 발판으로 점프해 건너가기
     gapJump: {
