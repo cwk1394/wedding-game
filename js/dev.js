@@ -3,6 +3,7 @@
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
 // - 조종: 캐릭터 팝업의 "조종하기" (개발자 모드에선 신랑·신부도). 조종 자체는 js/control.js의 Controller
 // - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
+// - 신랑신부 도구: 누른 곳 발판 위에 신랑·신부를 나란히 (CONFIG.couple)
 // - 캐릭터 끌기(편집 도구가 아닐 때): 누르고 끌면 놓은 곳의 발판으로 옮김. 신랑·신부는 그 자리(CONFIG.couple)가 저장됨
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
@@ -70,6 +71,7 @@ class DevMode {
           <button type="button" data-v="add">추가</button>
           <button type="button" data-v="erase">지우기</button>
           <button type="button" data-v="spawn">시작점</button>
+          <button type="button" data-v="couple">신랑신부</button>
         </div>
       </div>
       <div class="dev-row">
@@ -113,6 +115,7 @@ class DevMode {
           : `위 발판에서 세로로 드래그해서 ${label} 추가 (아래 끝이 발판이면 연결, 허공이면 매달린 ${label})`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
       spawn: '지도를 눌러 방명록 등록 직후 새 캐릭터가 나타날 시작점을 지정 (발판 위, 노란 깃발)',
+      couple: '지도를 눌러 신랑·신부 자리를 지정 (가까운 발판 위에 나란히) · 한 명씩 옮기려면 캐릭터를 끌기',
     };
     // 조종 중(캐릭터 팝업의 "조종하기")이면 조작법을 대신 보여준다
     this.bar.querySelector('.dev-hint').textContent = this.controlled
@@ -244,6 +247,19 @@ class DevMode {
     this.drawPreview();
   }
 
+  /** 신랑신부 도구: 누른 곳 가까운 발판(stage 포함) 위에 신랑(왼쪽)·신부(오른쪽)를 나란히 */
+  setCouple(pointer) {
+    if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
+    const p = this.worldPoint(pointer);
+    const floor = floorNear(p.x, p.y, true);
+    if (!floor) return UI.showToast('발판(빨간 선) 가까이를 눌러 주세요');
+    const { x1, x2 } = floorSpan(CONFIG.floors[floor]);
+    const at = (dx) => ({ floor, x: Math.round(Phaser.Math.Clamp(p.x + dx, x1, x2)) });
+    this.checkpoint();
+    CONFIG.couple = { groom: at(-30), bride: at(30) };
+    this.changed();
+  }
+
   /** 시작점 도구: 누른 곳 가까운 발판 위를 시작점으로 */
   setSpawn(pointer) {
     if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
@@ -295,6 +311,7 @@ class DevMode {
   onUp(pointer) {
     if (this.charDrag && pointer.id === this.charDrag.id) return this.endCharDrag();
     if (this.tool === 'spawn') return this.setSpawn(pointer);
+    if (this.tool === 'couple') return this.setCouple(pointer);
     const stroke = this.stroke;
     if (!stroke || pointer.id !== stroke.id) return;
     this.stroke = null;
@@ -513,12 +530,12 @@ function uniqueFloorName(prefix, taken = CONFIG.floors) {
   return `${prefix}${i}`;
 }
 
-/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (stage 제외) */
-function floorNear(x, y) {
+/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (stage는 allowStage일 때만) */
+function floorNear(x, y, allowStage = false) {
   let best = null;
   let bestDist = 24;
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === 'stage') continue;
+    if (name === 'stage' && !allowStage) continue;
     const { x1, x2 } = floorSpan(f);
     if (x < x1 - 6 || x > x2 + 6) continue;
     const d = Math.abs(floorY(f, x) - y);

@@ -36,7 +36,7 @@ class Character extends Phaser.GameObjects.Container {
       if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
       if (scene.dev?.editing) return; // 개발자 모드 편집 중
       if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
-      if (scene.dev?.tool === 'spawn') return; // 개발자 모드 시작점 도구는 DevMode가 처리
+      if (scene.dev?.tool === 'spawn' || scene.dev?.tool === 'couple') return; // 개발자 모드 시작점/신랑신부 도구는 DevMode가 처리
       onSelect?.(this);
     });
 
