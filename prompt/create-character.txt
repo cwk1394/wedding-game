@@ -34,8 +34,11 @@
 * 큰 눈동자
 * 눈동자 하이라이트
 * 코 표현 금지
-* 매우 작은 입
+* 매우 작은 입 — 입꼬리가 올라간 밝은 미소
 * 부드러운 홍조
+* 표정: 기본 표정은 항상 밝게 웃는 얼굴 (사진 속 표정과 상관없이)
+* 눈은 위 스펙(크고 반짝이는 눈동자) 그대로, 입과 볼로 웃음을 표현
+* 무표정·찡그림·울상·화난 표정·놀란 표정 금지
 목
 * 목 표현 금지
 * 머리가 몸통에 바로 연결
@@ -148,5 +151,5 @@ Fine-Grained Pixel Art
 Smooth Gradient Shading
 Airbrush Shading
 ────────────────────
-Create the person in the uploaded image as a true MapleStory player avatar sprite.
+Create the person in the uploaded image as a true MapleStory player avatar sprite with a happy smiling face.
 The result must look like an actual MapleStory player character converted from the person in the uploaded image, not a generic pixel-art character

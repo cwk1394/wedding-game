@@ -31,8 +31,11 @@
 * 큰 눈동자
 * 눈동자 하이라이트
 * 코 표현 금지
-* 매우 작은 입
+* 매우 작은 입 — 입꼬리가 올라간 밝은 미소
 * 부드러운 홍조
+* 표정: 기본 표정은 항상 밝게 웃는 얼굴
+* 눈은 위 스펙(크고 반짝이는 눈동자) 그대로, 입과 볼로 웃음을 표현
+* 무표정·찡그림·울상·화난 표정·놀란 표정 금지
 목
 * 목 표현 금지
 * 머리가 몸통에 바로 연결
@@ -145,5 +148,5 @@ Fine-Grained Pixel Art
 Smooth Gradient Shading
 Airbrush Shading
 ────────────────────
-Create a brand-new MapleStory player avatar sprite of a cheerful wedding guest with the traits above.
+Create a brand-new MapleStory player avatar sprite of a cheerful wedding guest with the traits above, with a happy smiling face.
 It must look like an actual MapleStory player character on the character selection screen, not a generic pixel-art character.
