@@ -66,10 +66,11 @@ class DevMode {
   }
 
   selectGuest(guest) {
+    if (!(guest instanceof GuestCharacter)) return UI.showToast('신랑·신부는 조종할 수 없어요');
     if (this.controlled === guest) return;
-    this.controlled?.setControlled(false);
-    this.controlled = guest;
+    this.releaseGuest();
     guest.setControlled(true);
+    this.controlled = guest;
     this.updateToolbar();
   }
 

@@ -26,16 +26,18 @@ class Character extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 0);
     this.add([this.sprite, this.tag]);
 
-    for (const target of [this.sprite, this.tag]) {
-      target.setInteractive({ useHandCursor: true });
-      target.on('pointerup', (pointer) => {
-        if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
-        if (scene.dev?.editing) return; // 개발자 모드 편집 중
-        if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
-        if (scene.dev?.tool === 'control') return scene.dev.selectGuest(this); // 개발자 모드: 조종할 캐릭터 선택
-        onSelect?.(this);
-      });
-    }
+    // 누르는 영역: 발(원점) 기준 고정 사각형 + 네임태그.
+    // 스프라이트 자체에 걸면 걷기·사다리 프레임마다 크기가 달라 가장자리를 눌러도 안 잡히는 경우가 생긴다.
+    this.setInteractive(new Phaser.Geom.Rectangle(0, 0, 1, 1), Phaser.Geom.Rectangle.Contains);
+    this.input.cursor = 'pointer';
+    this.updateHitArea(CHAR_W, CHAR_H);
+    this.on('pointerup', (pointer) => {
+      if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
+      if (scene.dev?.editing) return; // 개발자 모드 편집 중
+      if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
+      if (scene.dev?.tool === 'control') return scene.dev.selectGuest(this); // 개발자 모드: 조종할 캐릭터 선택
+      onSelect?.(this);
+    });
 
     this.facesLeft = false; // 원본 이미지가 왼쪽을 바라보는지 (걷기 방향 뒤집기용)
     this.setDepth(y);
@@ -54,7 +56,14 @@ class Character extends Phaser.GameObjects.Container {
     this.texKey = key;
     this.facesLeft = facesLeft;
     this.sprite.setTexture(`${key}_0`).setScale(1 / CONFIG.sprite.textureScale);
-    this.sprite.input.hitArea.setTo(0, 0, this.sprite.width, this.sprite.height);
+    this.updateHitArea(this.sprite.displayWidth, this.sprite.displayHeight);
+  }
+
+  /** 누르는 영역 = 캐릭터(정면 크기보다 조금 넓게 — 걸어다니는 중에도 잘 잡히게) + 발밑 네임태그 */
+  updateHitArea(width, height) {
+    const w = Math.max(CHAR_W, width) * 1.3;
+    const tagH = this.tag.height + 6;
+    this.input.hitArea.setTo(-w / 2, -height, w, height + tagH);
   }
 
   /** 스프라이트 이미지를 data URL로 반환 (팝업 프로필용) */
@@ -362,11 +371,22 @@ class GuestCharacter extends Character {
 
   setControlled(on) {
     this.controlled = on;
+    const aiClimb = this.state === 'climb' ? this.climb : null;
+    const aiAirborne = this.state === 'leap' || Boolean(this.jump);
     this.climb = null;
     this.jump = null;
     this.leap = null;
     if (on) {
       this.phys = { mode: 'ground', vx: 0, vy: 0, climb: null };
+      if (aiClimb) {
+        // 사다리/로프를 타던 중이면 그 자리에 매달린 채로 시작
+        const [top, bottom] = [this.floorName, aiClimb.targetName]
+          .map((name) => ({ name, y: floorY(CONFIG.floors[name], this.x) }))
+          .sort((a, b) => a.y - b.y);
+        this.phys = { mode: 'climb', vx: 0, vy: 0, climb: { type: aiClimb.type, x: this.x, top, bottom } };
+      } else if (aiAirborne) {
+        this.phys.mode = 'air'; // 점프 중이었으면 그 자리에서 떨어져 착지
+      }
       this.state = 'idle';
       this.poseKey = null;
       this.hideBubble();
