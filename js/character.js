@@ -475,6 +475,15 @@ class GuestCharacter extends Character {
     return null;
   }
 
+  /** 지금 서 있는 발판 아래에 다른 발판이 있는지 (엎드려 뛰어내리기 가능 여부) */
+  hasFloorBelow() {
+    return Object.entries(CONFIG.floors).some(([name, f]) => {
+      if (name === 'stage' || name === this.floorName) return false;
+      const { x1, x2 } = floorSpan(f);
+      return this.x >= x1 && this.x <= x2 && floorY(f, this.x) > this.y + 2;
+    });
+  }
+
   landOn(name, y) {
     this.setFloor(name);
     // 사다리 끝이 발판 끝보다 살짝 밖에 있어도 발판 안쪽에 내려선다 (안 그러면 바로 떨어져서 다시 매달림)
@@ -484,7 +493,7 @@ class GuestCharacter extends Character {
       y = floorY(this.floor, this.x);
     }
     this.y = y;
-    Object.assign(this.phys, { mode: 'ground', vx: 0, vy: 0, climb: null });
+    Object.assign(this.phys, { mode: 'ground', vx: 0, vy: 0, climb: null, prone: false, dropFrom: null });
   }
 
   /** 조종 중 포즈 (바뀔 때만 애니메이션 교체) */
@@ -529,6 +538,15 @@ class GuestCharacter extends Character {
         Object.assign(p, { mode: 'climb', climb: grab, vx: 0, vy: 0 });
         this.x = grab.x;
         this.y = grab.y;
+      } else if (p.prone) {
+        // 엎드린 상태: ↓를 떼거나 ←→면 일어서고, 점프면 발판 아래로 떨어진다 (아래에 발판이 있을 때만)
+        if (jump && this.hasFloorBelow()) {
+          Object.assign(p, { mode: 'air', vx: 0, vy: 0, prone: false, dropFrom: this.floorName });
+        } else if (h || v <= 0) {
+          p.prone = false;
+        }
+      } else if (v > 0) {
+        p.prone = true; // ↓ + 잡을 사다리/로프 없음 → 엎드리기
       } else if (jump) {
         Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity });
       } else {
@@ -561,7 +579,7 @@ class GuestCharacter extends Character {
         // 내려오는 중: 이번 프레임에 지나친 발판 중 가장 위에 착지
         let land = null;
         for (const [name, f] of Object.entries(CONFIG.floors)) {
-          if (name === 'stage') continue;
+          if (name === 'stage' || name === p.dropFrom) continue; // 엎드려 뛰어내린 발판은 통과
           const { x1, x2 } = floorSpan(f);
           if (this.x < x1 || this.x > x2) continue;
           const fy = floorY(f, this.x);
@@ -599,6 +617,13 @@ class GuestCharacter extends Character {
         this.setDir(this.dir);
         if (this.motions.jump) this.sprite.play({ key: `${key}_jump`, frameRate: 8 });
         else this.sprite.play(`${key}_walk`);
+      });
+    } else if (p.prone) {
+      this.setControlPose(`prone-${this.dir}`, () => {
+        this.setDir(this.dir);
+        if (this.motions.prone) this.sprite.play(`${key}_prone`);
+        else if (this.motions.jump) this.sprite.stop().setTexture(`${key}_jump0`);
+        else this.sprite.stop().setTexture(`${key}_0`).setFlipX(false);
       });
     } else if (h) {
       this.setControlPose(`walk-${this.dir}`, () => {

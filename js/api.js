@@ -20,7 +20,13 @@ async function prepareSpriteImages(sources) {
   const result = { front: buildFrontCanvas(await toImage(sources.front), height).toDataURL('image/png') };
   for (const m of CONFIG.sprite.motions) {
     result[m] = sources[m]
-      ? joinFrames(buildStripFrames(await toImage(sources[m]), height)).toDataURL('image/png')
+      ? joinFrames(
+          buildStripFrames(
+            await toImage(sources[m]),
+            Math.round(height * (CONFIG.sprite.motionHeight[m] ?? 1)),
+            CONFIG.sprite.motionFrames[m]
+          )
+        ).toDataURL('image/png')
       : null;
   }
   return result;

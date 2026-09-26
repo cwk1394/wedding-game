@@ -219,9 +219,9 @@ function buildFrontCanvas(frontImg, height) {
  * 좌우로는 CONFIG.sprite.framePadding만큼 여유를 둬서 머리카락·치마가 프레임 끝에 걸리지 않게 한다.
  * 점프 스트립도 같은 방식이라, 다리를 접은 프레임은 발이 살짝 떠 보인다 (몸 위치는 고정).
  */
-function buildStripFrames(stripImg, height) {
+function buildStripFrames(stripImg, height, frames = 4) {
   const strip = removeBackground(stripImg);
-  const parts = splitFrames(strip, CONFIG.sprite.frames);
+  const parts = splitFrames(strip, frames);
   const w = Math.max(...parts.map((p) => p.w));
   const y0 = Math.min(...parts.map((p) => p.y));
   const h = Math.max(...parts.map((p) => p.y + p.h)) - y0;
@@ -388,14 +388,15 @@ async function loadSpriteTextures(scene, info) {
 
     CONFIG.sprite.motions.forEach((m, i) => {
       if (!stripImgs[i]) return;
-      const frameKeys = buildStripFrames(stripImgs[i], height).map((canvas, f) => {
+      const h = Math.round(height * (CONFIG.sprite.motionHeight[m] ?? 1));
+      const frameKeys = buildStripFrames(stripImgs[i], h, CONFIG.sprite.motionFrames[m]).map((canvas, f) => {
         scene.textures.addCanvas(`${key}_${m}${f}`, canvas);
         return `${key}_${m}${f}`;
       });
       scene.anims.create({
         key: `${key}_${m}`,
         frames: frameKeys.map((k) => ({ key: k })),
-        frameRate: m === 'walk' ? 8 : 6,
+        frameRate: { walk: 8, prone: 2 }[m] ?? 6,
         repeat: m === 'jump' ? 0 : -1,
       });
     });

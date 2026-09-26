@@ -33,6 +33,7 @@ function toGuest(discussion) {
     jumpUrl: imageUrl(data.jumpUrl),
     ladderUrl: imageUrl(data.ladderUrl),
     ropeUrl: imageUrl(data.ropeUrl),
+    proneUrl: imageUrl(data.proneUrl),
     createdAt: discussion.createdAt,
   };
 }

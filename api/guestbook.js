@@ -1,5 +1,5 @@
 // 방명록 쓰기 API (Vercel Serverless Function)
-// POST /api/guestbook  { name, shortMsg, longMsg, images?: { front, walk, jump, ladder, rope } }  (이미지는 PNG base64)
+// POST /api/guestbook  { name, shortMsg, longMsg, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
 //   1) UUID 발급
 //   2) 이미지를 img/guests/<uuid>/front.png, walk.png, jump.png, ladder.png, rope.png 로 저장소에 한 커밋으로 올림
 //   3) GitHub Discussion(방명록 카테고리)에 JSON 본문으로 글 작성
@@ -22,7 +22,7 @@ const LIMITS = {
 };
 
 // 정면 외의 동작 스트립 (모두 선택). 파일명 = <motion>.png, 본문 필드 = <motion>Url
-const MOTIONS = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프' };
+const MOTIONS = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프', prone: '엎드리기' };
 
 export const OPTIONS = preflight;
 

@@ -63,11 +63,12 @@ const CONFIG = {
     height: 72, // 화면에 표시할 캐릭터 높이 (월드 px)
     textureScale: 2, // 확대해도 선명하도록 텍스처는 표시 크기의 2배로 만들어 축소 표시
     uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
-    frames: 4, // 동작 스트립(walkUrl 등) 한 장의 가로 프레임 수
     framePadding: 0.12, // 프레임 좌우 여유 (프레임 폭 대비). 머리카락·치마가 흔들려도 잘리지 않게
     // 정면 외 동작 스트립. 데이터 필드는 `${motion}Url`, 업로드 파일은 `${motion}.png`
-    //   walk/jump: 왼쪽을 바라봄, ladder/rope: 뒷모습
-    motions: ['walk', 'jump', 'ladder', 'rope'],
+    //   walk/jump/prone: 왼쪽을 바라봄, ladder/rope: 뒷모습
+    motions: ['walk', 'jump', 'ladder', 'rope', 'prone'],
+    motionFrames: { walk: 4, jump: 4, ladder: 4, rope: 4, prone: 2 }, // 동작 스트립 한 장의 가로 프레임 수
+    motionHeight: { prone: 0.5 }, // 서 있는 키 대비 표시 높이 (엎드리면 낮고 길다). 없으면 1
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
   },
 

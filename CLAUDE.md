@@ -36,11 +36,11 @@ img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
-img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope.png(투명 배경, 4프레임, 높이 128, 모두 선택)
+img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope/prone.png(투명 배경, 4프레임, 높이 128, 모두 선택)
 api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion 작성)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
-api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
+api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
 api/map.js              Vercel 함수: POST {password, map} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
@@ -62,8 +62,9 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
 ## 데이터 흐름 (쓰기)
-0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기)를 **모두 동시에(병렬)** 생성.
-   - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing}.txt`.
+0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기), `prone`(엎드리기 2프레임)을 **모두 동시에(병렬)** 생성.
+   - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing,prone}.txt`.
+   - 프레임 수는 동작마다 `CONFIG.sprite.motionFrames`(prone만 2), 표시 높이 비율 `motionHeight`(prone 0.5 — 엎드리면 낮고 길어서).
    - 각 호출 최대 ~2분. 모델은 `OPENAI_IMAGE_MODEL`(쉼표 구분, 기본 gpt-image-2 → 1.5 → 1 순으로 시도, 없는 모델이면 다음으로), 품질 `OPENAI_IMAGE_QUALITY`(기본 medium).
    - 걷기 생성만 실패하면 정면만으로 등록 가능. 한 접속당 생성 3회 제한(`CONFIG.ai.maxGenerations`, 클라이언트 측).
    - 동작 스트립 프레임 분할(`splitFrames`): 열 무게 k-means로 프레임 중심 4개 → 붙어 있는 픽셀 덩어리 단위로 가까운 중심에 배정(두 프레임에 걸친 덩어리는 픽셀별). 긴 머리·치마가 옆 프레임에 닿아도 조각이 섞이지 않음.
@@ -97,6 +98,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 지우기: 선택한 종류만 지움. 발판 중간을 지우면 조각으로 나뉘고, 걸려 있던 사다리/로프는 x를 덮는 조각에 다시 연결(없으면 삭제). stage는 안 지워짐.
   - 편집 도구가 켜져 있으면 한 손가락 드래그는 편집, 두 손가락/휠은 확대. 이동 도구로 바꾸면 드래그로 지도 이동.
 - 조종 도구: 하객을 눌러 선택(▼ 표시, 신랑·신부는 불가). AI가 사다리/점프 중이던 하객은 그 자리에서 이어서 조종 → 직접 조종, 카메라가 따라감. 다른 도구로 바꾸거나 지도를 편집하면 놓아줌(AI로 복귀).
+  - ↓(잡을 사다리/로프 없을 때) = 엎드리기(↓ 떼거나 ←→면 일어섬), 엎드려서 Space = 지금 발판을 통과해 아래 발판으로 떨어짐(아래 발판이 있을 때만). 엎드리기 이미지가 없으면 점프 첫 프레임으로 대신.
   - PC: ←→ 걷기, ↑↓ 사다리/로프(아래 끝 발판에서 ↑, 위 끝 발판에서 ↓), Space 점프. 모바일: 왼쪽 아래 스틱 + 오른쪽 아래 점프 버튼.
   - 물리(`CONFIG.motion.control`): ground / air(중력, 내려올 때만 발판 착지 → 아래에서 위로는 통과) / climb. 발판 끝에서 걸어 나가면 떨어짐. 점프 중 ↑↓ + 사다리 x 근처(grabRange 14px)이고 손 높이(발 - grabHeight 40px)가 사다리 범위 안이면 매달림 → 발판에서 점프로 약 100px 위 로프 끝까지 잡힘. 매달린 로프는 손이 끝에 걸릴 때까지(발 = end + 40) 내려감. 사다리에서 ←→+Space로 옆으로 뛰어내림.
   - 스틱/버튼의 터치·마우스 이벤트는 stopPropagation → Phaser(window 리스너)가 지도 드래그·핀치로 오인하지 않게.

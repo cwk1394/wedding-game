@@ -5,6 +5,7 @@
 //   jump  : 정면 캐릭터 + prompt/create-character-jump.txt           → 점프 4프레임 (왼쪽, 제자리 포즈만)
 //   ladder: 정면 캐릭터 + prompt/create-character-ladder-climbing.txt → 사다리 타기 4프레임 (뒷모습)
 //   rope  : 정면 캐릭터 + prompt/create-character-rope-climbing.txt   → 로프 타기 4프레임 (뒷모습)
+//   prone : 정면 캐릭터 + prompt/create-character-prone.txt           → 엎드리기 2프레임 (왼쪽)
 //   → { image: <data URL (webp)> }
 // 한 번에 다 만들면 오래 걸리므로(각 최대 ~2분) 브라우저가 front를 먼저 만들고 나머지를 따로 호출한다.
 // 생성된 이미지는 저장하지 않는다. 저장은 방명록 등록(/api/guestbook) 때 브라우저가 후처리한 PNG로.
@@ -29,6 +30,7 @@ const TYPES = {
   jump: { prompt: 'create-character-jump.txt', size: '1536x1024' },
   ladder: { prompt: 'create-character-ladder-climbing.txt', size: '1536x1024' },
   rope: { prompt: 'create-character-rope-climbing.txt', size: '1536x1024' },
+  prone: { prompt: 'create-character-prone.txt', size: '1536x1024' },
 };
 
 let workingModel = null; // 한 번 성공한 모델은 기억해 두고 계속 사용

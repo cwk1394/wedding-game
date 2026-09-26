@@ -1,0 +1,145 @@
+You are a professional pixel art director specializing in converting MapleStory player avatars into prone (lying down) animation sprite sheets.
+
+[Input]
+Reference Image:
+The previously generated MapleStory player avatar sprite.
+
+[Task]
+1. Maintain the exact character design, proportions, face, hairstyle, hair color, hair volume, outfit, accessories, equipment, and gear layers from the reference image.
+2. Create a 2-frame PRONE animation sprite sheet: the character lying flat on the ground on their stomach, like the classic MapleStory "down arrow" prone pose.
+3. The output must consist of exactly 2 frames arranged horizontally in a single row.
+4. The style must strictly match the original MapleStory player sprite specifications:
+   chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, and no smooth gradients.
+
+────────────────────
+[PRONE POSE SPEC]
+────────────────────
+
+* Direction: The character's HEAD is on the LEFT side and the feet are on the RIGHT side. The character faces LEFT.
+* Pose: Lying flat on the stomach, body stretched horizontally, close to the ground.
+  - chest and belly touching the ground line
+  - head slightly raised, face visible in left-facing profile / three-quarter view
+  - arms bent forward under or in front of the head, elbows on the ground
+  - legs stretched straight back to the right
+* Silhouette: long and low. The lying character's total HEIGHT must be about 40–50% of the reference character's standing height.
+* Scale: Use the SAME pixel scale as the reference character (head size must match the reference head size).
+* Proportions: Keep the exact 2.0–2.3-head chibi proportions, oversized head, giant hair volume, and short cylindrical limbs.
+* Hair: Preserve the exact hairstyle and volume. Long hair may rest on the back or the ground but must stay inside the frame cell.
+* Clothing: Dresses, skirts, and coats should lie naturally along the body and stay inside the frame cell.
+
+────────────────────
+[2-FRAME CYCLE]
+────────────────────
+
+The two frames form a subtle, calm idle loop while lying down:
+
+FRAME 1 — Resting prone pose.
+
+FRAME 2 — Same pose with a very small breathing motion:
+- chest/shoulders raised by 1–2 pixels
+- head raised by 1–2 pixels
+
+Everything else stays identical. The loop must be seamless: Frame 1 → Frame 2 → Frame 1.
+
+────────────────────
+[CRITICAL FRAME ALIGNMENT]
+────────────────────
+
+The character must stay at EXACTLY THE SAME X AND Y POSITION in both frames.
+
+- same ground line (the bottom of the body touches the same baseline in both frames)
+- same horizontal position
+- same scale
+- same bounding-box center
+
+Only the tiny breathing motion may change between the frames.
+
+────────────────────
+[FRAME SPACING / SAFE MARGIN]
+────────────────────
+
+THIS IS EXTREMELY IMPORTANT FOR SPRITE SLICING.
+
+Each frame will be cut out automatically by the game, so the frames must be clearly separated.
+
+- Divide the canvas into exactly 2 equal-width frame cells.
+- Place ONE character in the horizontal center of each cell.
+- The spacing must be IDENTICAL: both characters sit at the same position inside their own cell, so the distance between the two characters equals the distance between cell centers.
+- Keep a clear, EMPTY pure-white gap between the two characters.
+  The gap must be at least 15% of a single cell's width.
+- Leave a safe margin of at least 10% of the cell width on the LEFT and RIGHT side of every character inside its own cell.
+- NO part of a character may cross into, touch, or overlap the neighboring cell:
+  this includes long hair, flowing hair strands, dresses, skirts, capes, ribbons, sleeves, arms, legs, weapons, and accessories.
+- If the character has long hair or a long dress, scale the character slightly smaller so the margins are preserved rather than letting it touch the other frame.
+- Do NOT draw separators, borders, or grid lines between cells. The gap must be plain white background only.
+
+────────────────────
+[PIXEL RENDERING SPEC]
+────────────────────
+
+- Authentic classic MapleStory player sprite aesthetic
+- Low-resolution game sprite aesthetic
+- Chunky pixel structure
+- Grid-aligned pixel art
+- Clearly visible pixel blocks
+- Clean 1px pixel outline
+- Limited color palette
+- Flat color shading
+- No dithering
+- No anti-aliasing
+- No smooth gradients
+- No airbrush effects
+
+Do NOT increase the visual detail beyond the reference image.
+
+────────────────────
+[Output Conditions]
+────────────────────
+
+Canvas Size:
+Horizontal widescreen format with exactly 2 equal cells side by side.
+
+Background:
+Pure White (#FFFFFF)
+
+Requirements:
+
+- Exactly 2 frames
+- Exactly 1 horizontal row
+- Clear empty white gap between the frames (no hair, dress, or limbs touching the other frame)
+- Single character per frame
+- Full body visible in both frames
+- Head on the left, feet on the right
+- Same character scale in both frames
+- Same X and Y position in both frames
+- No Cropping
+- No Additional Characters
+- No Pets
+- No Environment
+- No Ground
+- No Platform
+- No Shadow
+- No Bed, Pillow, or Blanket
+- No Text
+- No Frame Numbers
+- No Logo
+- No Watermark
+- No UI
+
+────────────────────
+[Absolute Prohibitions]
+────────────────────
+
+Pokemon Style, Terraria Style, Stardew Valley Style, Ragnarok Online Style, JRPG Battle Sprite, Octopath Traveler Style, Western Cartoon, Disney Style, Realistic, Semi Realistic, 3D Render, Illustration, Concept Art, Splash Art, Poster, Wallpaper, Anime Illustration, Digital Painting, Cinematic Lighting, Ultra Detailed Sprite, High Definition Pixel Art, Smooth Gradient Shading, Airbrush Shading, Anti-Aliasing, Vertical stacking of frames, Sitting pose, Kneeling pose, Crouching pose, Lying on the back, Sleeping with closed eyes, Character redesign, Different scale between frames.
+
+────────────────────
+[FINAL INSTRUCTION]
+────────────────────
+
+Generate exactly ONE 2-frame horizontal PRONE sprite sheet using the character from the reference image.
+
+The character lies flat on the stomach with the head on the LEFT, facing left, in the classic MapleStory prone pose.
+
+Both frames must be equally spaced, clearly separated by white space, and aligned to the same ground line, with only a subtle breathing motion between them.
+
+Preserve the reference character's exact visual identity, scale, proportions, and MapleStory player-sprite appearance.

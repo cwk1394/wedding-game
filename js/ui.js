@@ -203,7 +203,7 @@ const UI = (() => {
       );
       await setSources({ ...sources });
       if (failed.length) {
-        const labels = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프' };
+        const labels = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프', prone: '엎드리기' };
         showError(
           `${failed.map((f) => labels[f.motion]).join(', ')} 동작은 만들지 못했어요. ` +
             `이대로 등록해도 되고, 다시 만들 수도 있어요. (${failed[0].err.message})`
