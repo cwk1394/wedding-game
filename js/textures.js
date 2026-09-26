@@ -373,36 +373,40 @@ function joinFrames(frames) {
 async function loadSpriteTextures(scene, info) {
   const key = `sprite_${info.id}`;
   const motions = {};
+  // NPC는 idle/sleep 같은 자기만의 동작, 자기 키(height), 동작별 프레임 수·높이 비율을 가질 수 있다
+  const motionList = [...CONFIG.sprite.motions, ...(info.extraMotions ?? [])];
+  const framesOf = (m) => info.motionFrames?.[m] ?? CONFIG.sprite.motionFrames[m] ?? 4;
+  const ratioOf = (m) => info.motionHeight?.[m] ?? CONFIG.sprite.motionHeight[m] ?? 1;
 
   if (!scene.textures.exists(`${key}_0`)) {
     const [frontImg, ...stripImgs] = await Promise.all([
       loadImage(info.spriteUrl),
-      ...CONFIG.sprite.motions.map((m) =>
+      ...motionList.map((m) =>
         info[`${m}Url`]
           ? loadImage(info[`${m}Url`]).catch((err) => console.warn(`${info.name} ${m} 이미지 로드 실패:`, err))
           : null
       ),
     ]);
-    const height = CONFIG.sprite.height * CONFIG.sprite.textureScale;
+    const height = (info.height ?? CONFIG.sprite.height) * CONFIG.sprite.textureScale;
     scene.textures.addCanvas(`${key}_0`, buildFrontCanvas(frontImg, height));
 
-    CONFIG.sprite.motions.forEach((m, i) => {
+    motionList.forEach((m, i) => {
       if (!stripImgs[i]) return;
-      const h = Math.round(height * (CONFIG.sprite.motionHeight[m] ?? 1));
-      const frameKeys = buildStripFrames(stripImgs[i], h, CONFIG.sprite.motionFrames[m]).map((canvas, f) => {
+      const h = Math.round(height * ratioOf(m));
+      const frameKeys = buildStripFrames(stripImgs[i], h, framesOf(m)).map((canvas, f) => {
         scene.textures.addCanvas(`${key}_${m}${f}`, canvas);
         return `${key}_${m}${f}`;
       });
       scene.anims.create({
         key: `${key}_${m}`,
         frames: frameKeys.map((k) => ({ key: k })),
-        frameRate: { walk: 8, prone: 2 }[m] ?? 6,
+        frameRate: { walk: 8, prone: 2, sleep: 2 }[m] ?? 6,
         repeat: m === 'jump' ? 0 : -1,
       });
     });
   }
 
-  for (const m of CONFIG.sprite.motions) motions[m] = scene.anims.exists(`${key}_${m}`);
+  for (const m of motionList) motions[m] = scene.anims.exists(`${key}_${m}`);
   // 걷기 이미지가 없으면 정면 이미지 한 장으로 걷는다 (방향 뒤집기 기준은 오른쪽)
   if (!motions.walk && !scene.anims.exists(`${key}_walk`)) {
     scene.anims.create({ key: `${key}_walk`, frames: [{ key: `${key}_0` }], repeat: -1 });

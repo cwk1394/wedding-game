@@ -12,13 +12,14 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 
 ## 기술 스택 / 구조
 - 순수 HTML/JS + Phaser 3.80.1 (jsDelivr CDN). 빌드 도구·번들러 없음, 스크립트는 전역 변수로 연결.
-- `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → textures → character → api → ui → view → control → scene → dev → main`.
+- `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → npcs → textures → character → api → ui → view → control → scene → dev → main`.
 
 ```
 index.html              왼쪽 위 메뉴(캐릭터 생성·방명록 목록·웨딩 갤러리), 모달 DOM + 스크립트 로드
 css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
 js/map-data.js          MAP_DATA: 이동 가능 영역(floors 꺾은선, climbs 사다리/로프). 개발자 모드 저장 시 API가 통째로 다시 씀
 js/config.js            CONFIG: 월드 크기(=배경 이미지 1122x1402, 세로형), 배경 이미지, 층(floors) 꺾은선 좌표 + floorSpan()/floorY(), 속도, 말풍선, API 주소, AI/스프라이트 설정
+js/npcs.js              NPCS: NPC 설정(이름, 처음 발판, 키, 속도, 동작, 효과, 팝업 글)
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
@@ -31,6 +32,7 @@ js/dev.js               DevMode: 개발자 모드(?dev) 이동 가능 영역 편
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
+scripts/gen-npc.mjs     NPC 이미지 생성 도구(로컬 실행, OPENAI_API_KEY 환경변수). 기준 이미지 → idle/walk/sleep 스트립 → img/npc/<id>/
 scripts/build-gallery.mjs  audio/bgm.mp3           배경음악 (넣으면 자동 재생 + 오른쪽 위 ON/OFF 버튼 표시, 없으면 버튼 숨김). 배포 때 audio/ 폴더째 복사
 img/gallery/ 사진 → 썸네일(400px)·보기용(1600px) webp + gallery.json (Actions, sharp)
 scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/gallery/            웨딩 갤러리 사진. 파일 이름 순으로 보임(01.jpg, 02.jpg…). 폰에서 보므로 긴 변 1600px 안팎 권장
@@ -114,6 +116,13 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 편집은 CONFIG.floors/climbs를 바로 바꾸고 `scene.refreshMap()`으로 하객에게 즉시 적용. 되돌리기 최대 50단계.
 - 저장: 비밀번호(처음 한 번 입력, 탭 닫을 때까지 sessionStorage) → `POST /api/map` → `js/map-data.js` 커밋 → Pages 재배포(1~2분). Vercel은 이 파일만 바뀐 커밋은 재배포 생략.
   - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
+
+## NPC (`js/npcs.js`, `NpcCharacter`)
+- 푸딩(흰 토끼, 늘 꽃가루), 얼룩말(서 있으면 비눗방울, 걸으면 나팔 음표), 고양이 4마리(미미·옹이·복실이·별이: 어슬렁/그루밍/자기), 에쏘(보더콜리, 신랑·신부 주변 ±170px만 뛰어다님), 택시(고정).
+- `NpcCharacter extends GuestCharacter`: 점프·사다리·로프 안 씀(canJump/canClimb=false), 조종 불가(팝업에 조종 버튼 없음). 동작은 idle/walk/sleep, NPC별 height·motionFrames·motionHeight.
+- 효과는 `NpcEffect`(Phaser 파티클: 꽃잎 재사용, 비눗방울·음표 텍스처는 코드로 생성).
+- 팝업 글은 미정 → `NPC_POPUP_TBD`. 정해지면 npcs.js의 popup 수정. 처음 발판은 map-data 발판 이름이라 지도를 크게 바꾸면 확인.
+- 이미지 다시 만들기: `OPENAI_API_KEY=... node scripts/gen-npc.mjs <id>` 또는 `<id>:<motion>` (sharp 필요: `npm i --no-save sharp`).
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).

@@ -215,7 +215,7 @@ class GuestCharacter extends Character {
     // 이어진 발판이 있는 쪽 끝은 여유 없이 끝까지 (그대로 걸어서 넘어감)
     this.nextFloor = { [-1]: floorContinuation(name, -1), [1]: floorContinuation(name, 1) };
     // 사다리/로프가 층 끝 가까이 있어도 닿을 수 있게 범위를 넓힌다
-    const climbXs = climbsOn(name).map((c) => c.x);
+    const climbXs = this.info?.npc ? [] : climbsOn(name).map((c) => c.x); // NPC는 사다리/로프를 안 탄다
     this.minX = Math.min(this.nextFloor[-1] ? x1 : x1 + margin, ...climbXs);
     this.maxX = Math.max(this.nextFloor[1] ? x2 : x2 - margin, ...climbXs);
   }
@@ -684,7 +684,7 @@ class GuestCharacter extends Character {
         // 발판 끝: 이어진 발판이면 그대로 걸어가고, 가까운 발판이 있으면 가끔 점프, 아니면 돌아선다
         if (next) {
           this.continueTo(next);
-        } else if (!this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
+        } else if (this.canJump !== false && !this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
           const targets = gapJumpTargets(this.floorName, this.x, edgeDir);
           if (targets.length && Math.random() < m.gapJump.chance) {
             return this.startLeap(Phaser.Utils.Array.GetRandom(targets));
@@ -698,11 +698,11 @@ class GuestCharacter extends Character {
         const crossed = climbsOn(this.floorName).find(
           (c) => Math.min(prevX, this.x) <= c.x && c.x <= Math.max(prevX, this.x)
         );
-        if (crossed && this.scene.time.now >= this.climbReadyAt) {
+        if (crossed && this.canClimb !== false && this.scene.time.now >= this.climbReadyAt) {
           this.climbReadyAt = this.scene.time.now + 1500; // 같은 사다리를 지나는 동안 한 번만 판정
           if (Math.random() < m.climbChance) return this.startClimb(crossed);
         }
-        if (Math.random() < (m.jumpChance * delta) / 1000) this.startJump();
+        if (this.canJump !== false && Math.random() < (m.jumpChance * delta) / 1000) this.startJump();
       }
     }
 
@@ -772,5 +772,204 @@ class CoupleCharacter extends GuestCharacter {
 
   tick(delta) {
     if (this.controlled) super.tick(delta); // 평소엔 움직이지 않음
+  }
+}
+
+// ---------- NPC ----------
+
+/** js/npcs.js 설정 → 캐릭터 info */
+function npcInfo(npc) {
+  const dir = `img/npc/${npc.id}`;
+  const info = {
+    id: `npc-${npc.id}`,
+    name: npc.name,
+    npc: true,
+    shortMsg: npc.popup?.shortMsg ?? '',
+    longMsg: npc.popup?.longMsg ?? '',
+    spriteUrl: `${dir}/front.webp`,
+    walkUrl: npc.motions.includes('walk') ? `${dir}/walk.webp` : null,
+    extraMotions: npc.motions.filter((m) => m !== 'walk'),
+    height: npc.height,
+    motionFrames: npc.motionFrames,
+    motionHeight: npc.motionHeight,
+  };
+  for (const m of info.extraMotions) info[`${m}Url`] = `${dir}/${m}.webp`;
+  return info;
+}
+
+/**
+ * NPC: 자기 발판(이어진 발판 포함) 위만 돌아다니고 점프·사다리·로프는 안 쓴다. 조종 불가.
+ * 서기(idle)/걷기(walk)/자기(sleep) 애니메이션을 쓰고, 효과(꽃가루·비눗방울·음표)를 낼 수 있다.
+ */
+class NpcCharacter extends GuestCharacter {
+  constructor(scene, npc, opts) {
+    const floor = CONFIG.floors[npc.floor] ?? pickGuestFloor();
+    super(scene, floor, npcInfo(npc), { ...opts, x: npc.x, tagColor: '#c9f2ff' });
+    this.npc = npc;
+    this.canClimb = false;
+    this.canJump = false;
+    this.sleeping = false;
+    if (npc.speed) this.speed = Phaser.Math.Between(...npc.speed);
+    this.setFloor(this.floorName); // range 적용
+    this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
+    this.y = floorY(this.floor, this.x);
+    this.effect = npc.effect ? new NpcEffect(scene, this, npc.effect) : null;
+  }
+
+  setFloor(name) {
+    super.setFloor(name);
+    const range = this.npc?.range;
+    if (range) {
+      // 신랑·신부(무대 가운데) 주변에서만
+      const { x1, x2 } = floorSpan(CONFIG.floors.stage);
+      const cx = (x1 + x2) / 2;
+      this.minX = Math.max(this.minX, cx - range);
+      this.maxX = Math.min(this.maxX, cx + range);
+    }
+  }
+
+  pickState() {
+    const st = this.npc.states;
+    if (!st) return super.pickState();
+    const r = Math.random();
+    this.sleeping = false;
+    if (r < st.walk) {
+      this.state = 'walk';
+      this.stateTimer = Phaser.Math.Between(...st.walkTime);
+      if (Math.random() < 0.5) this.dir = -this.dir;
+    } else if (r < st.walk + (st.sleep ?? 0)) {
+      this.state = 'idle';
+      this.sleeping = true;
+      this.stateTimer = Phaser.Math.Between(...st.sleepTime);
+    } else {
+      this.state = 'idle';
+      this.stateTimer = Phaser.Math.Between(...st.idleTime);
+    }
+    this.updatePose();
+  }
+
+  updatePose() {
+    const key = this.texKey;
+    const has = (m) => this.motions[m];
+    const anim = this.state === 'walk' ? 'walk' : this.sleeping && has('sleep') ? 'sleep' : 'idle';
+    if (has(anim)) {
+      this.setDir(this.dir);
+      this.sprite.play(`${key}_${anim}`, true);
+    } else {
+      this.sprite.stop();
+      this.sprite.setTexture(`${key}_0`);
+      this.sprite.setFlipX(false);
+    }
+  }
+
+  onMapChanged() {
+    if (this.npc?.fixed) {
+      // 고정 NPC(택시)는 발판이 남아 있으면 그 자리 그대로
+      if (CONFIG.floors[this.floorName]) this.y = floorY(this.floor, this.x);
+      return;
+    }
+    super.onMapChanged();
+  }
+
+  tick(delta) {
+    if (!this.npc?.fixed) super.tick(delta);
+    this.effect?.update();
+  }
+}
+
+/** NPC 효과: petals = 늘 꽃가루를 뿌림, bubbles = 서 있으면 비눗방울 / 걸으면 나팔 음표 */
+class NpcEffect {
+  constructor(scene, npc, type) {
+    this.npc = npc;
+    this.type = type;
+    NpcEffect.ensureTextures(scene);
+    const fade = { alpha: { start: 0.95, end: 0 } };
+    if (type === 'petals') {
+      this.emitters = {
+        petals: scene.add.particles(0, 0, 'petal0', {
+          speedX: { min: -40, max: 40 },
+          speedY: { min: -75, max: -30 },
+          gravityY: 80,
+          lifespan: 1500,
+          scale: { min: 0.35, max: 0.55 },
+          rotate: { start: 0, end: 360 },
+          tint: [0xffffff, 0xffe3ec, 0xfff4c8],
+          frequency: 160,
+          ...fade,
+        }),
+      };
+    } else {
+      // 비눗방울은 바라보는 쪽으로 날아가야 해서 방향별로 하나씩
+      const bubble = (sign) =>
+        scene.add.particles(0, 0, 'fx-bubble', {
+          speedX: sign > 0 ? { min: 25, max: 55 } : { min: -55, max: -25 },
+          speedY: { min: -30, max: -8 },
+          gravityY: -10,
+          lifespan: 2600,
+          scale: { min: 0.35, max: 0.9 },
+          frequency: 260,
+          ...fade,
+          emitting: false,
+        });
+      this.emitters = {
+        bubbleL: bubble(-1),
+        bubbleR: bubble(1),
+        notes: scene.add.particles(0, 0, 'fx-note', {
+          speedX: { min: -12, max: 12 },
+          speedY: { min: -45, max: -25 },
+          lifespan: 1400,
+          scale: { min: 0.45, max: 0.7 },
+          tint: [0xff7aa8, 0x7ab8ff, 0xffc93c],
+          frequency: 380,
+          ...fade,
+          emitting: false,
+        }),
+      };
+    }
+  }
+
+  static ensureTextures(scene) {
+    if (!scene.textures.exists('fx-bubble')) {
+      const g = scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xcfefff, 0.35).fillCircle(12, 12, 10);
+      g.lineStyle(2, 0xffffff, 0.95).strokeCircle(12, 12, 10);
+      g.fillStyle(0xffffff, 0.95).fillCircle(8, 8, 2.5);
+      g.generateTexture('fx-bubble', 24, 24);
+      g.destroy();
+    }
+    if (!scene.textures.exists('fx-note')) {
+      const tex = scene.textures.createCanvas('fx-note', 28, 32);
+      const ctx = tex.getContext();
+      ctx.font = 'bold 26px sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(80, 40, 60, .55)';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeText('♪', 4, 26);
+      ctx.fillText('♪', 4, 26);
+      tex.refresh();
+    }
+  }
+
+  /** 매 프레임: 입/손 위치로 따라가고, 상태에 맞는 효과만 켠다 */
+  update() {
+    const npc = this.npc;
+    const h = npc.sprite.displayHeight;
+    const facing = npc.dir; // 이미지가 왼쪽을 보고, setDir로 뒤집으므로 dir = 바라보는 쪽
+    const x = npc.x + facing * npc.sprite.displayWidth * 0.3;
+    const y = npc.y - h * 0.6;
+    const set = (e, on) => {
+      e.setPosition(x, y).setDepth(npc.depth + 1);
+      if (on && !e.emitting) e.start();
+      else if (!on && e.emitting) e.stop();
+    };
+    const visible = npc.visible;
+    if (this.type === 'petals') {
+      set(this.emitters.petals, visible);
+    } else {
+      const walking = npc.state === 'walk';
+      set(this.emitters.bubbleL, visible && !walking && facing < 0);
+      set(this.emitters.bubbleR, visible && !walking && facing > 0);
+      set(this.emitters.notes, visible && walking);
+    }
   }
 }

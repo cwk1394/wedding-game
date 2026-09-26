@@ -32,7 +32,7 @@ class MapScene extends Phaser.Scene {
     this.onSelect = (character) =>
       UI.openGuestbook(
         { ...character.info, avatarUrl: character.getAvatarUrl() },
-        {
+        character.info.npc ? null : {
           controlling: this.control.controlled === character,
           onControl: () => this.control.take(character, { zoom: true }),
           onRelease: () => this.control.release(),
@@ -52,8 +52,11 @@ class MapScene extends Phaser.Scene {
     this.guestIds = new Set();
     guests.forEach((info) => this.addGuest(info));
 
+    // NPC (js/npcs.js): 토끼 푸딩, 얼룩말, 고양이 4마리, 강아지 에쏘, 택시
+    this.npcs = NPCS.map((npc) => new NpcCharacter(this, npc, { onSelect: this.onSelect }));
+
     // 처음 스폰한 캐릭터들의 이미지가 모두 적용되면 로딩 화면을 걷는다
-    const initial = [...this.couple, ...this.guests];
+    const initial = [...this.couple, ...this.guests, ...this.npcs];
     let done = 0;
     const report = () => onProgress?.(1 + done);
     report();
@@ -132,12 +135,14 @@ class MapScene extends Phaser.Scene {
   /** 개발자 모드에서 발판/사다리를 바꾸면 하객들을 새 지도에 맞춘다 */
   refreshMap() {
     for (const guest of this.guests) guest.onMapChanged();
+    for (const n of this.npcs) n.onMapChanged();
   }
 
   update(_time, delta) {
     this.control.update();
     for (const guest of this.guests) guest.tick(delta);
     for (const c of this.couple) c.tick(delta); // 신랑/신부는 개발자 모드에서 조종할 때만 움직임
+    for (const n of this.npcs) n.tick(delta);
   }
 
   // ---------- 임시 맵 그리기 (맵 이미지 준비되면 CONFIG.mapImage로 대체) ----------

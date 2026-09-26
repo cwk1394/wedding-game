@@ -18,7 +18,7 @@
   // 첫 로딩 화면: 배경 1칸 + 캐릭터 1명당 1칸 기준 진행률
   const loading = document.getElementById('loading');
   const bar = loading.querySelector('.loading-bar span');
-  const total = 1 + COUPLE.length + new Set(guests.map((g) => g.id)).size;
+  const total = 1 + COUPLE.length + new Set(guests.map((g) => g.id)).size + NPCS.length;
   let shown = false;
   const showMain = () => {
     if (shown) return;
