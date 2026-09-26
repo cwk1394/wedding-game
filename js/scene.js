@@ -85,6 +85,7 @@ class MapScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    this.dev?.update();
     for (const guest of this.guests) guest.tick(delta);
   }
 

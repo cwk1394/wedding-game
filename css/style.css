@@ -550,3 +550,44 @@ html, body {
 .dev-save.dirty { background: var(--coral-deep); border-color: var(--coral-deep); font-weight: bold; }
 .dev-check { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 .dev-hint { color: rgba(255, 255, 255, .75); font-size: 12px; }
+
+.dev-seg.dim { opacity: .45; }
+/* 개발자 모드 조종: 화면 스틱 + 점프 버튼 */
+.dev-pad { position: fixed; inset: auto 0 0 0; height: 0; z-index: 15; }
+.dev-stick {
+  position: fixed;
+  left: 22px;
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(34, 24, 30, .35);
+  border: 2px solid rgba(255, 255, 255, .7);
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+.dev-knob {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
+  pointer-events: none;
+}
+.dev-jump {
+  position: fixed;
+  right: 22px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  width: 78px;
+  height: 78px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(var(--coral-light), var(--coral-deep));
+  color: #fff;
+  font: bold 16px/1 inherit;
+  font-family: inherit;
+  box-shadow: 0 3px 0 var(--coral-shadow), 0 6px 14px rgba(0, 0, 0, .25);
+  touch-action: none;
+}
+.dev-jump:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--coral-shadow); }

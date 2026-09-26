@@ -22,6 +22,14 @@ const CONFIG = {
     climbChance: 0.45, // 사다리/로프를 지나갈 때 타는 확률
     climbSpeed: 45, // px/s
     climbCooldown: 4000, // 한 번 타고 난 뒤 이 시간 동안은 다시 안 탐 (ms)
+    // 개발자 모드에서 직접 조종할 때
+    control: {
+      walkSpeed: 95, // px/s
+      jumpVelocity: 340, // 점프 시작 속도 (px/s) → 약 58px 높이
+      gravity: 1000, // px/s²
+      climbSpeed: 75, // px/s
+      grabRange: 14, // 사다리/로프를 잡을 수 있는 가로 거리 (px)
+    },
     // 발판 끝에서 가까운 다른 발판으로 점프해 건너가기
     gapJump: {
       chance: 0.5, // 발판 끝에 닿았을 때 건너갈 확률 (아니면 돌아섬)

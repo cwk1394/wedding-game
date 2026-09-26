@@ -95,6 +95,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 사다리/로프 추가: 아래 발판 → 위 발판으로 세로 드래그. 양 끝이 서로 다른 발판 근처(세로 24px)여야 함.
   - 지우기: 선택한 종류만 지움. 발판 중간을 지우면 조각으로 나뉘고, 걸려 있던 사다리/로프는 x를 덮는 조각에 다시 연결(없으면 삭제). stage는 안 지워짐.
   - 편집 도구가 켜져 있으면 한 손가락 드래그는 편집, 두 손가락/휠은 확대. 이동 도구로 바꾸면 드래그로 지도 이동.
+- 조종 도구: 하객을 눌러 선택(▼ 표시) → 직접 조종, 카메라가 따라감. 다른 도구로 바꾸거나 지도를 편집하면 놓아줌(AI로 복귀).
+  - PC: ←→ 걷기, ↑↓ 사다리/로프(아래 끝 발판에서 ↑, 위 끝 발판에서 ↓), Space 점프. 모바일: 왼쪽 아래 스틱 + 오른쪽 아래 점프 버튼.
+  - 물리(`CONFIG.motion.control`): ground / air(중력, 내려올 때만 발판 착지 → 아래에서 위로는 통과) / climb. 발판 끝에서 걸어 나가면 떨어짐. 점프 중 ↑↓ + 사다리 x 근처(grabRange)면 매달림. 사다리에서 ←→+Space로 옆으로 뛰어내림.
+  - 스틱/버튼의 터치·마우스 이벤트는 stopPropagation → Phaser(window 리스너)가 지도 드래그·핀치로 오인하지 않게.
 - 편집은 CONFIG.floors/climbs를 바로 바꾸고 `scene.refreshMap()`으로 하객에게 즉시 적용. 되돌리기 최대 50단계.
 - 저장: 비밀번호(처음 한 번 입력, 탭 닫을 때까지 sessionStorage) → `POST /api/map` → `js/map-data.js` 커밋 → Pages 재배포(1~2분). Vercel은 이 파일만 바뀐 커밋은 재배포 생략.
   - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
@@ -108,6 +112,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 하객 움직임 (`GuestCharacter`, `CONFIG.motion`, `CONFIG.climbs`)
 - 상태: idle / walk / climb. 걷는 중 1초당 `jumpChance` 확률로 점프 (포물선 높이 `jumpHeight`, 이동은 계속). 점프 스트립은 포즈만 있고 높이는 코드가 준다.
+- 이어진 발판(`floorContinuation`): 끝점끼리 가로 6px·세로 10px 이내면 한 길로 보고 끊김 없이 걸어서 넘어감(끝 여유 margin 없음). 개발자 모드에서 직선 여러 개로 그린 길용.
 - 발판 끝 점프(`CONFIG.motion.gapJump`): 발판 끝에 닿으면 가로 틈 ≤ maxGap(60)이고 착지 높이 차가 위 maxUp(50)/아래 maxDown(100) 이내인 다른 발판으로 chance(50%) 확률로 포물선 점프해 건너감(`gapJumpTargets`, state `leap`). 겹친 아래층으로 뛰어내리기도 포함. 연결은 좌표로 자동 계산 → 개발자 모드에 보라 곡선으로 표시.
 - `CONFIG.climbs`: `{type: ladder|rope, x, floors: [층A, 층B]}` — x에서 두 층을 세로로 잇는다. 걷다가 그 x를 지나가면 `climbChance` 확률로 타고 반대 층으로 이동, 이후 `climbCooldown` 동안은 다시 안 탐.
   - 층 끝 근처 사다리도 닿도록 이동 범위(minX/maxX)를 사다리 x까지 넓힌다.

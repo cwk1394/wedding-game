@@ -32,6 +32,7 @@ class Character extends Phaser.GameObjects.Container {
         if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
         if (scene.dev?.editing) return; // 개발자 모드 편집 중
         if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
+        if (scene.dev?.tool === 'control') return scene.dev.selectGuest(this); // 개발자 모드: 조종할 캐릭터 선택
         onSelect?.(this);
       });
     }
@@ -151,6 +152,20 @@ class CoupleCharacter extends Character {
 }
 
 /**
+ * 발판 끝(dir 방향)에 바로 이어지는 다른 발판 이름 (끝점끼리 가로 6px·세로 10px 이내).
+ * 개발자 모드에서 직선 여러 개로 그린 길은 이렇게 이어진 발판들 → 끊김 없이 걸어서 넘어간다.
+ */
+function floorContinuation(fromName, dir) {
+  const end = dir > 0 ? CONFIG.floors[fromName].path.at(-1) : CONFIG.floors[fromName].path[0];
+  for (const [name, f] of Object.entries(CONFIG.floors)) {
+    if (name === fromName || name === 'stage') continue;
+    const start = dir > 0 ? f.path[0] : f.path.at(-1);
+    if (Math.abs(start[0] - end[0]) <= 6 && Math.abs(start[1] - end[1]) <= 10) return name;
+  }
+  return null;
+}
+
+/**
  * 발판 끝(x, dir 방향)에서 점프로 건너갈 수 있는 다른 발판의 착지점들 [{ name, x, y }].
  * 가로 틈이 maxGap 이하이고, 착지 높이 차가 위로 maxUp / 아래로 maxDown 이내인 발판 (stage 제외).
  * 틈이 없이 겹쳐 있는 발판(바로 아래층 등)으로 뛰어내리는 것도 포함.
@@ -162,8 +177,9 @@ function gapJumpTargets(fromName, x, dir) {
   const span = floorSpan(from);
   const edge = dir > 0 ? span.x2 : span.x1;
   const out = [];
+  const next = floorContinuation(fromName, dir); // 이어진 발판은 점프 대신 걸어서 넘어감
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === fromName || name === 'stage') continue;
+    if (name === fromName || name === 'stage' || name === next) continue;
     const { x1, x2 } = floorSpan(f);
     const m = Math.min(CHAR_W / 2, (x2 - x1) / 4);
     const gap = dir > 0 ? x1 - edge : edge - x2;
@@ -209,10 +225,19 @@ class GuestCharacter extends Character {
     this.floor = CONFIG.floors[name];
     const { x1, x2 } = floorSpan(this.floor);
     const margin = Math.min(CHAR_W / 2, (x2 - x1) / 4);
+    // 이어진 발판이 있는 쪽 끝은 여유 없이 끝까지 (그대로 걸어서 넘어감)
+    this.nextFloor = { [-1]: floorContinuation(name, -1), [1]: floorContinuation(name, 1) };
     // 사다리/로프가 층 끝 가까이 있어도 닿을 수 있게 범위를 넓힌다
     const climbXs = climbsOn(name).map((c) => c.x);
-    this.minX = Math.min(x1 + margin, ...climbXs);
-    this.maxX = Math.max(x2 - margin, ...climbXs);
+    this.minX = Math.min(this.nextFloor[-1] ? x1 : x1 + margin, ...climbXs);
+    this.maxX = Math.max(this.nextFloor[1] ? x2 : x2 - margin, ...climbXs);
+  }
+
+  /** 발판 끝에서 이어진 발판으로 넘어가기 (x는 새 발판 안으로) */
+  continueTo(name) {
+    this.setFloor(name);
+    const { x1, x2 } = floorSpan(this.floor);
+    this.x = Phaser.Math.Clamp(this.x, x1, x2);
   }
 
   setDir(dir) {
@@ -331,7 +356,219 @@ class GuestCharacter extends Character {
     this.updatePose();
   }
 
+  // ---------- 개발자 모드: 직접 조종 ----------
+  // phys.mode: ground(발판 위) | air(점프/낙하, 중력) | climb(사다리/로프)
+  // 공중에서는 내려오는 중에만 발판에 착지(아래에서 위로는 통과) — 메이플 방식
+
+  setControlled(on) {
+    this.controlled = on;
+    this.climb = null;
+    this.jump = null;
+    this.leap = null;
+    if (on) {
+      this.phys = { mode: 'ground', vx: 0, vy: 0, climb: null };
+      this.state = 'idle';
+      this.poseKey = null;
+      this.hideBubble();
+      this.marker = this.scene.add
+        .text(0, 0, '▼', { fontSize: '18px', color: '#ffd400', stroke: '#6b4e00', strokeThickness: 3, resolution: TEXT_RESOLUTION })
+        .setOrigin(0.5, 1);
+      this.add(this.marker);
+      this.placeMarker();
+      return;
+    }
+    this.marker?.destroy();
+    this.marker = null;
+    this.sprite.anims.resume();
+    // 공중/사다리에서 놓으면 지금 위치 아래의 가장 가까운 발판으로
+    if (this.phys?.mode !== 'ground') {
+      const below = this.floorBelow(this.x, this.y - 40);
+      if (below) this.floorName = below;
+    }
+    this.phys = null;
+    this.state = 'idle';
+    this.stateTimer = 0;
+    this.onMapChanged();
+  }
+
+  placeMarker() {
+    if (this.marker) this.marker.setY(-this.sprite.displayHeight - 4);
+  }
+
+  /** (x, y) 아래(또는 같은 높이)에 있는 가장 가까운 발판 이름 (stage 제외) */
+  floorBelow(x, y) {
+    let best = null;
+    let bestY = Infinity;
+    for (const [name, f] of Object.entries(CONFIG.floors)) {
+      if (name === 'stage') continue;
+      const { x1, x2 } = floorSpan(f);
+      if (x < x1 || x > x2) continue;
+      const fy = floorY(f, x);
+      if (fy >= y && fy < bestY) {
+        best = name;
+        bestY = fy;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * 잡을 수 있는 사다리/로프. 발판 위(onFloor)면 ↑는 아래쪽 끝 발판에서, ↓는 위쪽 끝 발판에서만.
+   * 공중이면 사다리 x 가까이 + 사다리 높이 범위 안이면 잡는다.
+   */
+  findClimb(vert, onFloor) {
+    const range = CONFIG.motion.control.grabRange;
+    for (const c of CONFIG.climbs) {
+      if (Math.abs(c.x - this.x) > range || !c.floors.every((n) => CONFIG.floors[n])) continue;
+      const [top, bottom] = c.floors
+        .map((name) => ({ name, y: floorY(CONFIG.floors[name], c.x) }))
+        .sort((a, b) => a.y - b.y);
+      const grab = (y) => ({ type: c.type, x: c.x, top, bottom, y });
+      if (onFloor) {
+        if (vert < 0 && onFloor === bottom.name) return grab(bottom.y - 1);
+        if (vert > 0 && onFloor === top.name) return grab(top.y + 1);
+      } else if (this.y > top.y - 6 && this.y < bottom.y + 6) {
+        return grab(Phaser.Math.Clamp(this.y, top.y + 1, bottom.y - 1));
+      }
+    }
+    return null;
+  }
+
+  landOn(name, y) {
+    this.setFloor(name);
+    // 사다리 끝이 발판 끝보다 살짝 밖에 있어도 발판 안쪽에 내려선다 (안 그러면 바로 떨어져서 다시 매달림)
+    const { x1, x2 } = floorSpan(this.floor);
+    if (this.x < x1 || this.x > x2) {
+      this.x = Phaser.Math.Clamp(this.x, x1, x2);
+      y = floorY(this.floor, this.x);
+    }
+    this.y = y;
+    Object.assign(this.phys, { mode: 'ground', vx: 0, vy: 0, climb: null });
+  }
+
+  /** 조종 중 포즈 (바뀔 때만 애니메이션 교체) */
+  setControlPose(key, apply) {
+    if (this.poseKey === key) return;
+    this.poseKey = key;
+    this.sprite.anims.resume();
+    apply();
+    this.placeMarker();
+  }
+
+  tickControlled(delta, input) {
+    const c = CONFIG.motion.control;
+    const dt = Math.min(delta, 50) / 1000;
+    const p = this.phys;
+    const h = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    const v = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+    const jump = input.consumeJump();
+    const key = this.texKey;
+
+    if (p.mode === 'climb') {
+      const cl = p.climb;
+      if (jump && h) {
+        // 사다리에서 옆으로 점프해서 내리기
+        Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity * 0.6, climb: null });
+        this.dir = h;
+      } else {
+        this.y += v * c.climbSpeed * dt;
+        if (this.y <= cl.top.y) this.landOn(cl.top.name, cl.top.y);
+        else if (this.y >= cl.bottom.y) this.landOn(cl.bottom.name, cl.bottom.y);
+      }
+    } else if (p.mode === 'ground') {
+      const grab = v ? this.findClimb(v, this.floorName) : null;
+      if (grab) {
+        Object.assign(p, { mode: 'climb', climb: grab, vx: 0, vy: 0 });
+        this.x = grab.x;
+        this.y = grab.y;
+      } else if (jump) {
+        Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity });
+      } else {
+        this.x += h * c.walkSpeed * dt;
+        const { x1, x2 } = floorSpan(this.floor);
+        const next = this.x < x1 ? this.nextFloor[-1] : this.x > x2 ? this.nextFloor[1] : undefined;
+        if (next) this.continueTo(next); // 이어진 발판으로 걸어서 넘어감
+        if (next === null) Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: 0 }); // 발판 끝에서 떨어짐
+        else this.y = floorY(this.floor, this.x);
+      }
+      if (h) this.dir = h;
+    }
+
+    if (p.mode === 'air') {
+      if (h) {
+        p.vx = h * c.walkSpeed; // 공중에서도 방향 조절
+        this.dir = h;
+      }
+      const prevY = this.y;
+      p.vy += c.gravity * dt;
+      this.x = Phaser.Math.Clamp(this.x + p.vx * dt, 0, CONFIG.width);
+      this.y += p.vy * dt;
+      const grab = v ? this.findClimb(v, null) : null; // 점프 중 ↑↓ + 사다리/로프 가까이 → 매달리기
+      if (grab) {
+        Object.assign(p, { mode: 'climb', climb: grab, vx: 0, vy: 0 });
+        this.x = grab.x;
+        this.y = grab.y;
+      } else if (p.vy > 0) {
+        // 내려오는 중: 이번 프레임에 지나친 발판 중 가장 위에 착지
+        let land = null;
+        for (const [name, f] of Object.entries(CONFIG.floors)) {
+          if (name === 'stage') continue;
+          const { x1, x2 } = floorSpan(f);
+          if (this.x < x1 || this.x > x2) continue;
+          const fy = floorY(f, this.x);
+          if (fy >= prevY - 0.5 && fy <= this.y && (!land || fy < land.y)) land = { name, y: fy };
+        }
+        if (land) {
+          this.landOn(land.name, land.y);
+        } else if (this.y > CONFIG.height + 100) {
+          // 맵 밖으로 떨어지면 다른 발판에서 다시 시작
+          const floor = pickGuestFloor();
+          const name = Object.keys(CONFIG.floors).find((n) => CONFIG.floors[n] === floor);
+          const { x1, x2 } = floorSpan(floor);
+          this.x = (x1 + x2) / 2;
+          this.landOn(name, floorY(floor, this.x));
+        }
+      }
+    }
+
+    // 포즈
+    if (p.mode === 'climb') {
+      const type = p.climb.type;
+      const other = type === 'ladder' ? 'rope' : 'ladder';
+      const anim = this.motions[type] ? type : this.motions[other] ? other : null;
+      this.setControlPose(`climb-${anim}`, () => {
+        this.sprite.setFlipX(false);
+        if (anim) this.sprite.play(`${key}_${anim}`);
+        else this.sprite.stop().setTexture(`${key}_0`);
+      });
+      if (anim) {
+        if (v) this.sprite.anims.resume();
+        else this.sprite.anims.pause(); // 멈춰 있으면 애니메이션도 멈춤
+      }
+    } else if (p.mode === 'air') {
+      this.setControlPose(`air-${this.dir}`, () => {
+        this.setDir(this.dir);
+        if (this.motions.jump) this.sprite.play({ key: `${key}_jump`, frameRate: 8 });
+        else this.sprite.play(`${key}_walk`);
+      });
+    } else if (h) {
+      this.setControlPose(`walk-${this.dir}`, () => {
+        this.setDir(this.dir);
+        this.sprite.play(`${key}_walk`);
+      });
+    } else {
+      this.setControlPose('idle', () => {
+        this.sprite.stop();
+        this.sprite.setTexture(`${key}_0`);
+        this.sprite.setFlipX(false);
+      });
+    }
+    this.setDepth(this.y);
+  }
+
+
   tick(delta) {
+    if (this.controlled) return this.tickControlled(delta, this.scene.dev.input);
     const m = CONFIG.motion;
 
     if (this.state === 'leap') {
@@ -386,14 +623,17 @@ class GuestCharacter extends Character {
       if (this.x <= this.minX || this.x >= this.maxX) {
         const edgeDir = this.x <= this.minX ? -1 : 1;
         this.x = edgeDir < 0 ? this.minX : this.maxX;
-        // 발판 끝: 가까운 발판이 있으면 가끔 점프해서 건너가고, 아니면 돌아선다
-        if (!this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
+        const next = this.nextFloor[edgeDir];
+        // 발판 끝: 이어진 발판이면 그대로 걸어가고, 가까운 발판이 있으면 가끔 점프, 아니면 돌아선다
+        if (next) {
+          this.continueTo(next);
+        } else if (!this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
           const targets = gapJumpTargets(this.floorName, this.x, edgeDir);
           if (targets.length && Math.random() < m.gapJump.chance) {
             return this.startLeap(Phaser.Utils.Array.GetRandom(targets));
           }
         }
-        this.setDir(-edgeDir);
+        if (!next) this.setDir(-edgeDir);
       }
 
       if (!this.jump) {

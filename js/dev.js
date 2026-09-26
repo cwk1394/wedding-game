@@ -1,6 +1,7 @@
 // 개발자 모드 (페이지를 ?dev 로 열기): 이동 가능 영역(발판·사다리·로프) 편집기.
 // - 종류(걷기/사다리/로프)와 도구(이동/추가/지우기)를 고르고 지도 위를 드래그해서 편집
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
+// - 조종 도구: 하객을 눌러 선택하고 방향키+스페이스(PC) 또는 화면 스틱+점프 버튼(모바일)으로 직접 움직여 본다
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
@@ -16,9 +17,16 @@ class DevMode {
     this.dirty = false;
     this.stroke = null; // 드래그 중인 점들 (월드 좌표)
 
+    this.controlled = null; // 조종 중인 하객
+    this.keys = { left: false, right: false, up: false, down: false };
+    this.stick = { left: false, right: false, up: false, down: false };
+    this.jumpQueued = false;
+
     this.gfx = scene.add.graphics().setDepth(20000);
     this.preview = scene.add.graphics().setDepth(20001);
+    this.buildPad();
     this.buildToolbar();
+    this.bindKeys();
     this.draw();
 
     const input = scene.input;
@@ -35,7 +43,121 @@ class DevMode {
 
   /** 편집 도구가 켜져 있으면 드래그는 지도 이동 대신 편집 (MapView, 캐릭터 클릭이 참고) */
   get editing() {
-    return this.tool !== 'move';
+    return this.tool === 'add' || this.tool === 'erase';
+  }
+
+  // ---------- 조종 ----------
+
+  /** 조종 입력 (키보드 + 화면 스틱). 하객의 tickControlled가 매 프레임 읽는다 */
+  get input() {
+    const k = this.keys;
+    const s = this.stick;
+    return {
+      left: k.left || s.left,
+      right: k.right || s.right,
+      up: k.up || s.up,
+      down: k.down || s.down,
+      consumeJump: () => {
+        const j = this.jumpQueued;
+        this.jumpQueued = false;
+        return j;
+      },
+    };
+  }
+
+  selectGuest(guest) {
+    if (this.controlled === guest) return;
+    this.controlled?.setControlled(false);
+    this.controlled = guest;
+    guest.setControlled(true);
+    this.updateToolbar();
+  }
+
+  releaseGuest() {
+    this.controlled?.setControlled(false);
+    this.controlled = null;
+  }
+
+  /** 매 프레임: 조종 중인 하객을 카메라가 따라간다 (지도를 드래그하는 중엔 멈춤) */
+  update() {
+    const g = this.controlled;
+    const view = this.scene.view;
+    if (!g || view.drag || view.pinch) return;
+    view.center.x += (g.x - view.center.x) * 0.12;
+    view.center.y += (g.y - 40 - view.center.y) * 0.12;
+    view.apply();
+  }
+
+  bindKeys() {
+    const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+    const active = () => this.tool === 'control' && document.querySelector('.modal:not([hidden])') === null;
+    window.addEventListener('keydown', (e) => {
+      if (!active()) return;
+      if (map[e.key]) {
+        this.keys[map[e.key]] = true;
+        e.preventDefault();
+      } else if (e.code === 'Space') {
+        if (!e.repeat) this.jumpQueued = true;
+        e.preventDefault();
+        document.activeElement?.blur?.(); // 툴바 버튼에 포커스가 있으면 스페이스가 버튼을 누르지 않게
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (map[e.key]) this.keys[map[e.key]] = false;
+    });
+    window.addEventListener('blur', () => Object.keys(this.keys).forEach((k) => (this.keys[k] = false)));
+  }
+
+  /** 모바일용 화면 스틱(왼쪽 아래) + 점프 버튼(오른쪽 아래). 조종 도구일 때만 보임 */
+  buildPad() {
+    const pad = document.createElement('div');
+    pad.className = 'dev-pad';
+    pad.hidden = true;
+    pad.innerHTML = `
+      <div class="dev-stick"><div class="dev-knob"></div></div>
+      <button type="button" class="dev-jump">점프</button>`;
+    document.body.append(pad);
+    this.pad = pad;
+
+    // Phaser가 window에서 받는 터치/마우스로 새지 않게 (지도 드래그·핀치로 오인 방지)
+    for (const type of ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'mousemove']) {
+      pad.addEventListener(type, (e) => e.stopPropagation());
+    }
+
+    const stick = pad.querySelector('.dev-stick');
+    const knob = pad.querySelector('.dev-knob');
+    let active = null;
+    const setStick = (dx, dy) => {
+      const len = Math.hypot(dx, dy);
+      const max = stick.clientWidth / 2;
+      const k = len > max ? max / len : 1;
+      knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+      const nx = dx / max;
+      const ny = dy / max;
+      Object.assign(this.stick, { left: nx < -0.35, right: nx > 0.35, up: ny < -0.5, down: ny > 0.5 });
+    };
+    stick.addEventListener('pointerdown', (e) => {
+      active = e.pointerId;
+      stick.setPointerCapture(e.pointerId);
+      const r = stick.getBoundingClientRect();
+      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+    });
+    stick.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== active) return;
+      const r = stick.getBoundingClientRect();
+      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+    });
+    const end = (e) => {
+      if (e.pointerId !== active) return;
+      active = null;
+      setStick(0, 0);
+    };
+    stick.addEventListener('pointerup', end);
+    stick.addEventListener('pointercancel', end);
+    pad.querySelector('.dev-jump').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.jumpQueued = true;
+    });
   }
 
   // ---------- 툴바 ----------
@@ -55,6 +177,7 @@ class DevMode {
           <button type="button" data-v="move">이동</button>
           <button type="button" data-v="add">추가</button>
           <button type="button" data-v="erase">지우기</button>
+          <button type="button" data-v="control">조종</button>
         </div>
       </div>
       <div class="dev-row">
@@ -83,9 +206,12 @@ class DevMode {
   }
 
   updateToolbar() {
+    if (this.tool !== 'control') this.releaseGuest();
+    this.pad.hidden = this.tool !== 'control';
     this.bar.querySelectorAll('.dev-seg').forEach((seg) =>
       seg.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === this[seg.dataset.group]))
     );
+    this.bar.querySelector('[data-group="type"]').classList.toggle('dim', this.tool === 'move' || this.tool === 'control');
     this.bar.querySelector('[data-act="undo"]').disabled = !this.history.length;
     this.bar.querySelector('.dev-save').classList.toggle('dirty', this.dirty);
     const label = DEV_TYPES[this.type];
@@ -96,6 +222,9 @@ class DevMode {
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
           : `아래 발판에서 위 발판까지 세로로 드래그해서 ${label} 추가`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
+      control: this.controlled
+        ? `${this.controlled.info.name} 조종 중 · ←→ 걷기 · ↑↓ 사다리/로프 · Space 점프 (점프 중 ↑↓로 매달리기)`
+        : '움직여 볼 하객을 눌러서 선택하세요',
     };
     this.bar.querySelector('.dev-hint').textContent = hints[this.tool];
   }
@@ -214,6 +343,7 @@ class DevMode {
   }
 
   changed() {
+    this.releaseGuest();
     this.dirty = this.snapshot() !== this.savedSnap;
     this.draw();
     this.updateToolbar();
