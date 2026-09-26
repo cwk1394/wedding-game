@@ -28,8 +28,9 @@ class Character extends Phaser.GameObjects.Container {
 
     for (const target of [this.sprite, this.tag]) {
       target.setInteractive({ useHandCursor: true });
-      target.on('pointerup', () => {
+      target.on('pointerup', (pointer) => {
         if (scene.view?.dragMoved) return; // 맵을 드래그하다 손을 뗀 경우는 클릭 아님
+        if (pointer.event?.target !== scene.game.canvas) return; // 팝업 등 캔버스 밖을 누른 경우
         onSelect?.(this);
       });
     }

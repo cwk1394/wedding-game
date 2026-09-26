@@ -4,26 +4,28 @@ const UI = (() => {
   const toast = document.getElementById('toast');
   let toastTimer = null;
 
+  /** 팝업이 하나라도 떠 있는지 → UI.onModalChange로 알림 (그동안 맵 입력을 막는 데 사용) */
+  function notifyModalChange() {
+    UI.onModalChange?.(Boolean(document.querySelector('.modal:not([hidden])')));
+  }
+
   /** 모달 공통 동작: 배경/닫기 버튼/ESC로 닫기 */
   function setupModal(el) {
     let openedAt = 0;
+    const setOpen = (open) => {
+      el.hidden = !open;
+      if (open) openedAt = Date.now();
+      notifyModalChange();
+    };
     // 모바일에서 캐릭터 터치 직후 따라오는 click 이벤트가 배경에 맞아 바로 닫히는 것 방지
     el.addEventListener('click', (e) => {
       if (Date.now() - openedAt < 400) return;
-      if (e.target === el || e.target.closest('[data-close]')) el.hidden = true;
+      if (e.target === el || e.target.closest('[data-close]')) setOpen(false);
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') el.hidden = true;
+      if (e.key === 'Escape' && !el.hidden) setOpen(false);
     });
-    return {
-      open() {
-        el.hidden = false;
-        openedAt = Date.now();
-      },
-      close() {
-        el.hidden = true;
-      },
-    };
+    return { open: () => setOpen(true), close: () => setOpen(false) };
   }
 
   // ---------- 방명록 보기 ----------
@@ -240,5 +242,5 @@ const UI = (() => {
     toastTimer = setTimeout(() => (toast.hidden = true), duration);
   }
 
-  return { openGuestbook, showToast, onGuestCreated: null };
+  return { openGuestbook, showToast, onGuestCreated: null, onModalChange: null };
 })();

@@ -45,6 +45,13 @@
     setTimeout(() => UI.showToast('두 손가락으로 확대, 드래그로 이동할 수 있어요', 3500), 1200);
   }
 
+  // 팝업이 떠 있는 동안은 맵 입력을 끈다.
+  // Phaser는 손을 뗄 때(mouseup/touchend)를 window에서도 받아서, 팝업 안을 눌러도 뒤의 캐릭터가 클릭되기 때문.
+  UI.onModalChange = (open) => {
+    const s = scene();
+    if (s?.input) s.input.enabled = !open;
+  };
+
   // 방금 등록한 하객은 배포를 기다리지 않고 바로 맵에 등장시킨다
   UI.onGuestCreated = (info) => {
     const guest = scene().addGuest(info);
