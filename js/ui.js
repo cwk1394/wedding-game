@@ -46,23 +46,30 @@ const UI = (() => {
   const preview = form.querySelector('.preview');
   const errorBox = form.querySelector('.form-error');
   const submitBtn = form.querySelector('[type="submit"]');
-  let prepared = null; // 처리된 이미지 { front, walk } (data URL)
-  let preparing = null; // 이미지 처리 중인 Promise
+  const generateBtn = form.querySelector('.generate-btn');
+  const genStatus = form.querySelector('.gen-status');
+
+  let sources = { front: null, walk: null }; // 캐릭터 원본 (File 또는 data URL)
+  let preparing = null; // 업로드용 이미지 처리 Promise → { front, walk } | null
+  let generating = false;
+  let generationCount = 0;
 
   function showError(message) {
     errorBox.textContent = message || '';
     errorBox.hidden = !message;
   }
 
-  async function updatePreview() {
-    showError('');
-    prepared = null;
-    preparing = prepareSpriteImages(fields.front.files[0], fields.walk.files[0]);
+  /** sources가 바뀌면 배경 제거·축소를 다시 하고 미리보기를 갱신 */
+  async function setSources(next) {
+    sources = next;
+    const current = (preparing = prepareSpriteImages(sources.front, sources.walk));
+    let prepared = null;
     try {
-      prepared = await preparing;
+      prepared = await current;
     } catch (err) {
       showError(err.message);
     }
+    if (current !== preparing) return; // 그 사이 다른 이미지로 바뀜
     preview.hidden = !prepared;
     const [frontImg, walkImg] = preview.querySelectorAll('img');
     frontImg.toggleAttribute('src', Boolean(prepared?.front));
@@ -71,11 +78,71 @@ const UI = (() => {
     if (prepared?.walk) walkImg.src = prepared.walk;
   }
 
-  fields.front.addEventListener('change', updatePreview);
-  fields.walk.addEventListener('change', updatePreview);
+  // 직접 올리기
+  const onManualChange = () => {
+    showError('');
+    setSources({ front: fields.front.files[0] || null, walk: fields.walk.files[0] || null });
+  };
+  fields.front.addEventListener('change', onManualChange);
+  fields.walk.addEventListener('change', onManualChange);
+
+  // AI 생성
+  function setBusy(busy, text = '') {
+    generating = busy;
+    generateBtn.disabled = busy;
+    submitBtn.disabled = busy;
+    genStatus.hidden = !busy;
+    genStatus.querySelector('.gen-text').textContent = text;
+  }
+
+  function updateGenerateLabel() {
+    const left = CONFIG.ai.maxGenerations - generationCount;
+    generateBtn.textContent = generationCount === 0 ? '캐릭터 생성' : `다시 만들기 (${left}회 남음)`;
+    if (left <= 0) generateBtn.disabled = true;
+  }
+
+  /** 경과 시간을 붙여서 진행 문구를 보여준다 (오래 걸려도 멈춘 게 아니라는 표시) */
+  async function withProgress(text, task) {
+    const started = Date.now();
+    const render = () => setBusy(true, `${text} ${Math.floor((Date.now() - started) / 1000)}초`);
+    render();
+    const timer = setInterval(render, 1000);
+    try {
+      return await task();
+    } finally {
+      clearInterval(timer);
+    }
+  }
+
+  generateBtn.addEventListener('click', async () => {
+    showError('');
+    const photo = fields.photo.files[0];
+    if (!photo) return showError('사진을 먼저 골라 주세요.');
+    if (generationCount >= CONFIG.ai.maxGenerations) return showError('생성 가능 횟수를 모두 썼어요.');
+    generationCount++;
+
+    try {
+      const front = await withProgress('캐릭터 도트 찍는 중... (1/2)', async () =>
+        generateCharacter('front', await resizePhoto(photo))
+      );
+      await setSources({ front, walk: null });
+      try {
+        const walk = await withProgress('걷는 모션 만드는 중... (2/2)', () => generateCharacter('walk', front));
+        await setSources({ front, walk });
+      } catch (err) {
+        showError(`걷는 모션은 만들지 못했어요. 이대로 등록하거나 다시 만들어 주세요. (${err.message})`);
+      }
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setBusy(false);
+      updateGenerateLabel();
+    }
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (generating) return;
     showError('');
     const name = fields.name.value.trim();
     const shortMsg = fields.shortMsg.value.trim();
@@ -94,7 +161,8 @@ const UI = (() => {
         walkUrl: images?.walk ?? null,
       });
       form.reset();
-      prepared = preparing = null;
+      sources = { front: null, walk: null };
+      preparing = null;
       preview.hidden = true;
       writeModal.close();
       showToast('방명록이 등록되었어요! 🎉');

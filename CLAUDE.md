@@ -7,7 +7,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 - [x] 1단계: Phaser 껍데기 (맵, 더미 캐릭터, 이동/네임태그/말풍선, 클릭 팝업)
 - [x] 2단계: GitHub Discussions 읽기 (Actions → `guests.json` 방식)
 - [x] 3단계: Vercel Serverless Functions로 방명록 쓰기 (`api/guestbook.js`). Cloudflare는 사용 안 함
-- [ ] 4단계: AI 스프라이트 생성 파이프라인 — 이미지 저장(저장소 커밋)은 완료, AI 생성만 남음 (지금은 폼에서 이미지 파일 직접 업로드)
+- [x] 4단계: AI 스프라이트 생성 파이프라인 (`api/character.js`, 폼에서 사진 → 정면 → 걷기 순서로 생성)
 - [ ] 5단계: 모바일 최적화, 로딩 UI
 
 ## 기술 스택 / 구조
@@ -21,7 +21,7 @@ js/config.js            CONFIG: 월드 크기(1280x720), 층(floors) 좌표, 속
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
-js/api.js               prepareSpriteImages()(업로드용 이미지 처리), submitGuestbook()(API 호출)
+js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
 js/ui.js                방명록 팝업, 작성 폼, 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
@@ -29,9 +29,11 @@ scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실�
 .github/workflows/deploy.yml  Pages 배포 워크플로
 img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, character1 = 예시 하객). *_move.png = 걷기 4프레임
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
+api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
+api/character.js        Vercel 함수: POST {type: front|walk, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
-vercel.json             ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
+vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
 ```
 
@@ -49,6 +51,10 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
 ## 데이터 흐름 (쓰기)
+0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸로 `{type:'walk'}` → 걷기 스트립.
+   - 각 호출 최대 ~2분. 모델은 `OPENAI_IMAGE_MODEL`(쉼표 구분, 기본 gpt-image-2 → 1.5 → 1 순으로 시도, 없는 모델이면 다음으로), 품질 `OPENAI_IMAGE_QUALITY`(기본 medium).
+   - 걷기 생성만 실패하면 정면만으로 등록 가능. 한 접속당 생성 3회 제한(`CONFIG.ai.maxGenerations`, 클라이언트 측).
+   - 걷기 스트립 프레임 분할: 투명 세로줄 기준으로 캐릭터 덩어리를 찾아 정확히 4개면 사용, 아니면 균등 분할(`findFrameCells`).
 1. 브라우저: 폼 입력 + 이미지 파일 → 배경 제거·크롭·높이 128로 축소 → PNG data URL (한 장 수십 KB)
 2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름·멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
 3. API가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)

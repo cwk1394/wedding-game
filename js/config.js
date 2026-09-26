@@ -23,6 +23,12 @@ const CONFIG = {
   // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
   apiUrl: new URLSearchParams(location.search).get('api') || 'https://guestbook-nine-drab.vercel.app',
 
+  // AI 캐릭터 생성
+  ai: {
+    photoMaxSize: 1024, // 서버로 보낼 사진의 긴 변 (px)
+    maxGenerations: 3, // 한 번 접속에서 생성 가능한 횟수 (비용 보호)
+  },
+
   // 이미지 스프라이트 처리
   sprite: {
     height: 64, // 화면에 표시할 캐릭터 높이 (px)

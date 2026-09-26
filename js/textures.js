@@ -215,22 +215,70 @@ function buildSpriteCanvases(frontImg, walkImg, height) {
   const result = { front: cropScale(front, fb, height / fb.h), walkFrames: [] };
 
   if (walkImg) {
-    // 모든 프레임을 같은 영역으로 잘라야 발 위치가 흔들리지 않는다 → 프레임별 경계 박스의 합집합 사용
+    // 모든 프레임을 같은 크기로 잘라야 발 위치가 흔들리지 않는다
+    // → 프레임별 경계 박스를 구한 뒤 가장 큰 폭/공통 세로 범위로 맞춰 자른다
     const walk = removeBackground(walkImg);
-    const n = CONFIG.sprite.walkFrames;
-    const cw = Math.floor(walk.width / n);
-    const boxes = [...Array(n)].map((_, i) => contentBounds(walk, i * cw, 0, cw, walk.height));
-    const x0 = Math.min(...boxes.map((b) => b.x));
+    const cells = findFrameCells(walk, CONFIG.sprite.walkFrames);
+    const boxes = cells.map((c) => {
+      const b = contentBounds(walk, c.x, 0, c.w, walk.height);
+      return { ...b, x: b.x + c.x };
+    });
+    const w = Math.max(...boxes.map((b) => b.w));
     const y0 = Math.min(...boxes.map((b) => b.y));
-    const x1 = Math.max(...boxes.map((b) => b.x + b.w));
-    const y1 = Math.max(...boxes.map((b) => b.y + b.h));
-    const scale = height / (y1 - y0);
-    for (let i = 0; i < n; i++) {
-      const rect = { x: i * cw + x0, y: y0, w: x1 - x0, h: y1 - y0 };
-      result.walkFrames.push(cropScale(walk, rect, scale));
+    const h = Math.max(...boxes.map((b) => b.y + b.h)) - y0;
+    const scale = height / h;
+    for (const b of boxes) {
+      // 자기 프레임 영역만 잘라서 공통 폭 캔버스 가운데에 놓는다 (옆 프레임이 섞이지 않게)
+      const frame = document.createElement('canvas');
+      frame.width = Math.round(w * scale);
+      frame.height = height;
+      const ctx = frame.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(walk, b.x, y0, b.w, h, ((w - b.w) / 2) * scale, 0, b.w * scale, height);
+      result.walkFrames.push(frame);
     }
   }
   return result;
+}
+
+/**
+ * 가로 스트립에서 프레임 n개의 가로 구간을 찾는다.
+ * AI 이미지는 프레임 간격이 일정하지 않을 수 있어서, 비어 있는 세로줄(투명)을 경계로 캐릭터 덩어리를 찾고
+ * 정확히 n개가 나오면 그 구간을 쓰고, 아니면 균등 분할로 대체한다.
+ */
+function findFrameCells(canvas, n) {
+  const { width, height } = canvas;
+  const d = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const filled = new Uint8Array(width);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      if (d[(y * width + x) * 4 + 3] > 20) {
+        filled[x] = 1;
+        break;
+      }
+    }
+  }
+
+  let runs = [];
+  for (let x = 0; x < width; x++) {
+    if (!filled[x]) continue;
+    const start = x;
+    while (x < width && filled[x]) x++;
+    runs.push({ x: start, w: x - start });
+  }
+  // 머리카락 끝 같은 작은 조각은 가까운 덩어리에 합친다
+  const minGap = width * 0.01;
+  runs = runs.reduce((acc, r) => {
+    const last = acc[acc.length - 1];
+    if (last && r.x - (last.x + last.w) < minGap) last.w = r.x + r.w - last.x;
+    else acc.push({ ...r });
+    return acc;
+  }, []);
+  runs = runs.filter((r) => r.w > width * 0.02);
+
+  if (runs.length === n) return runs;
+  const cw = Math.floor(width / n);
+  return [...Array(n)].map((_, i) => ({ x: i * cw, w: cw }));
 }
 
 /** 같은 크기의 프레임들을 가로 한 줄 스트립으로 합친다 (업로드용) */

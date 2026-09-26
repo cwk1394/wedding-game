@@ -7,7 +7,9 @@
 // GET /api/guestbook → 상태 확인용 { ok: true }
 //
 // 환경변수(Vercel): GITHUB_TOKEN(필수)
-//   선택: GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, DISCUSSION_CATEGORY, ALLOWED_ORIGINS(쉼표 구분)
+//   선택: GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, DISCUSSION_CATEGORY, ALLOWED_ORIGINS(쉼표 구분, _lib/http.js)
+
+import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 
 const ENV = {
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
@@ -15,9 +17,6 @@ const ENV = {
   GITHUB_REPO: process.env.GITHUB_REPO || 'guestbook',
   GITHUB_BRANCH: process.env.GITHUB_BRANCH || 'main',
   DISCUSSION_CATEGORY: process.env.DISCUSSION_CATEGORY || '방명록',
-  // 로컬 테스트용 주소 포함
-  ALLOWED_ORIGINS:
-    process.env.ALLOWED_ORIGINS || 'https://kobe-kang.github.io,http://localhost:8765,http://127.0.0.1:8765',
 };
 
 const LIMITS = {
@@ -27,60 +26,17 @@ const LIMITS = {
   imageBytes: 512 * 1024, // 브라우저에서 축소해서 보내므로 넉넉한 상한
 };
 
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-export function OPTIONS(request) {
-  return new Response(null, { status: 204, headers: corsHeaders(request, ENV) });
-}
+export const OPTIONS = preflight;
 
 export function GET(request) {
-  return json({ ok: true, configured: Boolean(ENV.GITHUB_TOKEN) }, 200, corsHeaders(request, ENV));
+  return json({ ok: true, configured: Boolean(ENV.GITHUB_TOKEN) }, 200, corsHeaders(request));
 }
 
-export async function POST(request) {
-  const cors = corsHeaders(request, ENV);
-  try {
-    if (!cors['Access-Control-Allow-Origin']) throw new HttpError(403, '허용되지 않은 출처입니다.');
+export function POST(request) {
+  return handlePost(request, async (body) => {
     if (!ENV.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN 환경변수가 설정되지 않았습니다.');
-    const guest = await createGuest(await readJson(request), ENV);
-    return json({ guest }, 201, cors);
-  } catch (err) {
-    const status = err instanceof HttpError ? err.status : 500;
-    if (status === 500) console.error(err);
-    return json({ error: status === 500 ? '서버 오류가 발생했습니다.' : err.message }, status, cors);
-  }
-}
-
-function corsHeaders(request, env) {
-  const origin = request.headers.get('Origin') || '';
-  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
-  const headers = {
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    Vary: 'Origin',
-  };
-  if (allowed.includes(origin)) headers['Access-Control-Allow-Origin'] = origin;
-  return headers;
-}
-
-function json(data, status, headers) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8' },
+    return { status: 201, body: { guest: await createGuest(body, ENV) } };
   });
-}
-
-async function readJson(request) {
-  try {
-    return await request.json();
-  } catch {
-    throw new HttpError(400, '잘못된 요청 형식입니다.');
-  }
 }
 
 // ---------- 입력 검증 ----------

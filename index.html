@@ -54,18 +54,28 @@
           <span>방명록</span>
           <textarea name="longMsg" maxlength="500" rows="4" required></textarea>
         </label>
-        <label class="field">
-          <span>캐릭터 정면 이미지 <small>(선택)</small></span>
-          <input name="front" type="file" accept="image/png,image/jpeg,image/webp" />
-        </label>
-        <label class="field">
-          <span>캐릭터 걷기 이미지 <small>(선택, 가로 4프레임)</small></span>
-          <input name="walk" type="file" accept="image/png,image/jpeg,image/webp" />
-        </label>
+        <div class="field">
+          <span>내 캐릭터 만들기 <small>(선택, 사진을 메이플 캐릭터로 바꿔드려요)</small></span>
+          <input name="photo" type="file" accept="image/*" />
+          <button type="button" class="btn btn-secondary generate-btn">캐릭터 생성</button>
+          <p class="gen-status" hidden><span class="spinner" aria-hidden="true"></span><span class="gen-text"></span></p>
+          <small class="note">사진은 캐릭터를 만드는 데만 쓰이고 저장되지 않아요. 생성에 1~3분 정도 걸려요.</small>
+        </div>
         <div class="preview" hidden>
           <img class="preview-front" alt="정면 미리보기" />
           <img class="preview-walk" alt="걷기 미리보기" />
         </div>
+        <details class="manual">
+          <summary>캐릭터 이미지 직접 올리기</summary>
+          <label class="field">
+            <span>정면 이미지</span>
+            <input name="front" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+          <label class="field">
+            <span>걷기 이미지 <small>(가로 4프레임, 왼쪽을 바라보게)</small></span>
+            <input name="walk" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+        </details>
         <p class="form-error" role="alert" hidden></p>
       </div>
       <div class="modal-footer">
