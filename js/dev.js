@@ -1,5 +1,5 @@
-// 개발자 모드 (페이지를 ?dev 로 열기): 이동 가능 영역(발판·사다리·로프) 편집기.
-// - 종류(걷기/사다리/로프)와 도구(이동/추가/지우기)를 고르고 지도 위를 드래그해서 편집
+// 개발자 모드 (페이지를 ?dev 로 열기): 이동 가능 영역(발판·사다리·로프·무대) 편집기.
+// - 종류(걷기/사다리/로프/무대)와 도구(이동/추가/지우기)를 고르고 지도 위를 드래그해서 편집
 // - 저장하면 /api/map 이 js/map-data.js 를 저장소에 커밋 → 1~2분 뒤 사이트에 반영
 // - 조종: 캐릭터 팝업의 "조종하기" (개발자 모드에선 신랑·신부도). 조종 자체는 js/control.js의 Controller
 // - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
@@ -8,7 +8,7 @@
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
-const DEV_TYPES = { walk: '걷기', ladder: '사다리', rope: '로프' };
+const DEV_TYPES = { walk: '걷기', ladder: '사다리', rope: '로프', stage: '무대' };
 
 class DevMode {
   constructor(scene) {
@@ -110,7 +110,9 @@ class DevMode {
     const hints = {
       move: '드래그로 지도 이동 · 캐릭터를 끌면 그 자리로 (신랑·신부 자리는 저장) · 두 손가락/휠로 확대 · 보라 곡선 = 자동 점프',
       add:
-        this.type === 'walk'
+        this.type === 'stage'
+          ? '시작점에서 누르고 끝점에서 떼면 직선 무대 추가 (신랑·신부만 다니는 곳, 조각끼리 끝을 붙이면 이어짐)'
+          : this.type === 'walk'
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
           : `위 발판에서 세로로 드래그해서 ${label} 추가 (아래 끝이 발판이면 연결, 허공이면 매달린 ${label})`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
@@ -128,7 +130,7 @@ class DevMode {
   draw() {
     const g = this.gfx.clear();
     for (const [name, f] of Object.entries(CONFIG.floors)) {
-      const color = name === 'stage' ? DEV_COLORS.stage : DEV_COLORS.walk;
+      const color = isStage(name) ? DEV_COLORS.stage : DEV_COLORS.walk;
       g.lineStyle(6, color, 0.9).strokePoints(f.path.map(([x, y]) => ({ x, y })));
       g.fillStyle(0xffffff, 1);
       f.path.forEach(([x, y]) => g.fillCircle(x, y, 3.5));
@@ -151,7 +153,6 @@ class DevMode {
     // 점프로 건너갈 수 있는 곳 (보라 곡선, 발판 양 끝에서) — CONFIG.motion.gapJump 기준 자동 계산
     g.lineStyle(2.5, DEV_COLORS.gapJump, 0.95);
     for (const [name, f] of Object.entries(CONFIG.floors)) {
-      if (name === 'stage') continue;
       const { x1, x2 } = floorSpan(f);
       const m = Math.min(CHAR_W / 2, (x2 - x1) / 4);
       for (const [dir, x] of [[-1, x1 + m], [1, x2 - m]]) {
@@ -181,7 +182,7 @@ class DevMode {
       pts.forEach((p) => g.fillCircle(p.x, p.y, r));
       const last = pts[pts.length - 1];
       g.strokeCircle(last.x, last.y, r);
-    } else if (this.type === 'walk') {
+    } else if (this.type === 'walk' || this.type === 'stage') {
       const last = pts[pts.length - 1];
       g.lineStyle(5, color, 0.6).lineBetween(pts[0].x, pts[0].y, last.x, last.y);
     } else {
@@ -247,7 +248,7 @@ class DevMode {
     this.drawPreview();
   }
 
-  /** 신랑신부 도구: 누른 곳 가까운 발판(stage 포함) 위에 신랑(왼쪽)·신부(오른쪽)를 나란히 */
+  /** 신랑신부 도구: 누른 곳 가까운 발판(무대 포함) 위에 신랑(왼쪽)·신부(오른쪽)를 나란히 */
   setCouple(pointer) {
     if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
     const p = this.worldPoint(pointer);
@@ -317,7 +318,7 @@ class DevMode {
     this.stroke = null;
     this.preview.clear();
     if (this.tool === 'erase') this.erase(stroke.points);
-    else if (this.type === 'walk') this.addFloor(stroke.points);
+    else if (this.type === 'walk' || this.type === 'stage') this.addFloor(stroke.points);
     else this.addClimb(stroke.points);
   }
 
@@ -339,9 +340,9 @@ class DevMode {
     CONFIG.spawn = relocatePoint(CONFIG.spawn);
     if (CONFIG.couple) {
       for (const id of Object.keys(CONFIG.couple)) {
-        const p = relocatePoint(CONFIG.couple[id]);
+        const p = relocatePoint(CONFIG.couple[id], true);
         if (p) CONFIG.couple[id] = p;
-        else delete CONFIG.couple[id]; // 기본 자리(stage 가운데)로
+        else delete CONFIG.couple[id]; // 기본 자리(무대 가운데)로
       }
     }
     this.dirty = this.snapshot() !== this.savedSnap;
@@ -366,7 +367,8 @@ class DevMode {
     const [a, b] = [points[0], points[points.length - 1]].sort((p, q) => p.x - q.x);
     if (b.x - a.x < 20) return UI.showToast('조금 더 길게 옆으로 드래그해 주세요');
     this.checkpoint();
-    CONFIG.floors[uniqueFloorName('f')] = {
+    const name = this.type === 'stage' ? (CONFIG.floors.stage ? uniqueFloorName('stage') : 'stage') : uniqueFloorName('f');
+    CONFIG.floors[name] = {
       path: [a, b].map((p) => [Math.round(p.x), Math.round(p.y)]),
     };
     this.changed();
@@ -402,12 +404,12 @@ class DevMode {
     const hit = (x, y) => points.some((p) => (p.x - x) ** 2 + (p.y - y) ** 2 <= r * r);
     const before = this.snapshot();
 
-    if (this.type === 'walk') {
+    if (this.type === 'walk' || this.type === 'stage') {
       const floors = {};
       const renamed = {}; // 원래 이름 → 잘리고 남은 조각 이름들
       for (const [name, f] of Object.entries(CONFIG.floors)) {
-        if (name === 'stage') {
-          floors[name] = f;
+        if (isStage(name) !== (this.type === 'stage')) {
+          floors[name] = f; // 걷기는 일반 발판만, 무대는 무대만 지운다
           continue;
         }
         const pieces = eraseFromPath(f.path, hit);
@@ -429,6 +431,7 @@ class DevMode {
         if (ends.every(Boolean)) climbs.push({ ...c, floors: ends });
       }
       if (JSON.stringify({ ...mapData(), floors, climbs }) === before) return;
+      if (!Object.keys(floors).some(isStage)) return UI.showToast('무대는 조금이라도 남겨 주세요');
       this.checkpoint();
       CONFIG.floors = floors;
       CONFIG.climbs = climbs;
@@ -499,22 +502,22 @@ function coupleData() {
   );
 }
 
-/** 발판이 지워져 없어진 지점 { floor, x } → 그 x를 덮는 다른 발판으로 옮김 (없으면 null) */
-function relocatePoint(pt) {
+/** 발판이 지워져 없어진 지점 { floor, x } → 그 x를 덮는 다른 발판으로 옮김 (없으면 null). 무대는 allowStage일 때만 */
+function relocatePoint(pt, allowStage = false) {
   if (!pt || CONFIG.floors[pt.floor]) return pt;
-  const f = Object.entries(CONFIG.floors).find(([n, fl]) => n !== 'stage' && pt.x >= floorSpan(fl).x1 && pt.x <= floorSpan(fl).x2);
+  const f = Object.entries(CONFIG.floors).find(([n, fl]) => (allowStage || !isStage(n)) && pt.x >= floorSpan(fl).x1 && pt.x <= floorSpan(fl).x2);
   return f ? { ...pt, floor: f[0] } : null;
 }
 
 /**
  * 캐릭터를 놓을 발판: x를 덮는 발판 중 발 아래(위로 30px 여유)에서 가장 가까운 것, 없으면 위아래 가장 가까운 것.
- * stage(신랑·신부 자리)는 allowStage일 때만
+ * 무대(stage*)는 allowStage일 때만
  */
 function floorForDrop(x, y, allowStage) {
   let below = null;
   let near = null;
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === 'stage' && !allowStage) continue;
+    if (isStage(name) && !allowStage) continue;
     const { x1, x2 } = floorSpan(f);
     if (x < x1 || x > x2) continue;
     const fy = floorY(f, x);
@@ -530,12 +533,12 @@ function uniqueFloorName(prefix, taken = CONFIG.floors) {
   return `${prefix}${i}`;
 }
 
-/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (stage는 allowStage일 때만) */
+/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (무대는 allowStage일 때만) */
 function floorNear(x, y, allowStage = false) {
   let best = null;
   let bestDist = 24;
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === 'stage' && !allowStage) continue;
+    if (isStage(name) && !allowStage) continue;
     const { x1, x2 } = floorSpan(f);
     if (x < x1 - 6 || x > x2 + 6) continue;
     const d = Math.abs(floorY(f, x) - y);

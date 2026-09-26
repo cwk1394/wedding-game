@@ -9,13 +9,13 @@ const CONFIG = {
   mapImage: 'img/background/background.webp',
 
   // 발판(층)·사다리·로프 = js/map-data.js (개발자 모드 ?dev 에서 편집·저장)
-  // floors: path = 캐릭터 발이 지나가는 꺾은선 [[x, y], ...] (x 오름차순, 점 사이 직선 보간). stage = 신랑/신부 전용
+  // floors: path = 캐릭터 발이 지나가는 꺾은선 [[x, y], ...] (x 오름차순, 점 사이 직선 보간). stage* = 신랑/신부 무대 (isStage)
   // climbs: x 위치에서 두 층을 세로로 잇는 사다리/로프. 하객이 걷다가 지나가면 가끔 타고 오르내림
   //   floors가 하나 + end(아래 끝 y)면 위쪽만 발판에 걸려 아래가 허공에 매달린 사다리/로프
   floors: MAP_DATA.floors,
   climbs: MAP_DATA.climbs,
   spawn: MAP_DATA.spawn ?? null, // { floor, x } — 방명록 등록 직후 새 캐릭터가 나타나는 곳 (개발자 모드 시작점 도구)
-  couple: MAP_DATA.couple ?? null, // { groom: { floor, x }, bride: { floor, x } } — 없으면 stage 가운데 (개발자 모드에서 끌어서 지정)
+  couple: MAP_DATA.couple ?? null, // { groom: { floor, x }, bride: { floor, x } } — 없으면 무대 가운데 (개발자 모드 신랑신부 도구·끌기로 지정). 무대 위면 무대 안에서 돌아다님
 
   // 하객 움직임
   motion: {
@@ -122,6 +122,17 @@ const CONFIG = {
   fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
 };
 
+/** 신랑·신부 무대 발판인지 (이름이 stage로 시작: stage, stage1, stage_2 …). 하객은 못 가고, 신랑·신부는 여기서만 돌아다닌다 */
+function isStage(name) {
+  return name.startsWith('stage');
+}
+
+/** 기본 무대 발판 이름 (stage가 있으면 그것, 없으면 첫 무대 조각, 무대가 없으면 첫 발판) */
+function mainStageName() {
+  const names = Object.keys(CONFIG.floors);
+  return CONFIG.floors.stage ? 'stage' : names.find(isStage) ?? names[0];
+}
+
 /** 발판 꺾은선의 x 범위 */
 function floorSpan(floor) {
   const { path } = floor;
@@ -161,14 +172,14 @@ function spawnPoint() {
   return { floor: sp.floor, x, y: floorY(floor, x) };
 }
 
-/** 신랑(groom)/신부(bride) 자리 { floor, x, y }. 지정이 없거나 발판이 사라졌으면 stage 가운데 ±30 */
+/** 신랑(groom)/신부(bride) 자리 { floor, x, y }. 지정이 없거나 발판이 사라졌으면 무대 가운데 ±30 */
 function couplePoint(id) {
   const p = CONFIG.couple?.[id];
   let name = p && CONFIG.floors[p.floor] ? p.floor : null;
   let x = p?.x;
   if (!name) {
-    name = 'stage';
-    const { x1, x2 } = floorSpan(CONFIG.floors.stage);
+    name = mainStageName();
+    const { x1, x2 } = floorSpan(CONFIG.floors[name]);
     x = (x1 + x2) / 2 + (id === 'groom' ? -30 : 30);
   }
   const floor = CONFIG.floors[name];

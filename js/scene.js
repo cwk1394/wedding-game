@@ -195,7 +195,7 @@ class MapScene extends Phaser.Scene {
   drawFloorGuides() {
     const g = this.add.graphics().setDepth(10000);
     for (const [name, f] of Object.entries(CONFIG.floors)) {
-      g.lineStyle(3, name === 'stage' ? 0xffd700 : 0xff0000, 0.9);
+      g.lineStyle(3, isStage(name) ? 0xffd700 : 0xff0000, 0.9);
       g.strokePoints(f.path.map(([x, y]) => ({ x, y })));
       g.fillStyle(0xff0000, 1);
       f.path.forEach(([x, y]) => g.fillCircle(x, y, 4));
@@ -266,7 +266,7 @@ class MapScene extends Phaser.Scene {
   }
 
   drawWeddingArch() {
-    const stage = CONFIG.floors.stage;
+    const stage = CONFIG.floors[mainStageName()];
     const { x1, x2 } = floorSpan(stage);
     const cx = (x1 + x2) / 2;
     const baseY = floorY(stage, cx);
@@ -295,12 +295,12 @@ class MapScene extends Phaser.Scene {
   }
 }
 
-/** 하객 층(stage 제외)을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
+/** 하객 층(무대 제외)을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
 function pickGuestFloor() {
   const floors = Object.entries(CONFIG.floors)
-    .filter(([name]) => name !== 'stage')
+    .filter(([name]) => !isStage(name))
     .map(([, f]) => f);
-  if (!floors.length) return CONFIG.floors.stage; // 발판을 다 지운 경우 (개발자 모드)
+  if (!floors.length) return CONFIG.floors[mainStageName()]; // 발판을 다 지운 경우 (개발자 모드)
   const length = (f) => floorSpan(f).x2 - floorSpan(f).x1;
   let r = Math.random() * floors.reduce((sum, f) => sum + length(f), 0);
   for (const f of floors) {

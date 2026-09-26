@@ -179,7 +179,7 @@ class Character extends Phaser.GameObjects.Container {
 function floorContinuation(fromName, dir) {
   const end = dir > 0 ? CONFIG.floors[fromName].path.at(-1) : CONFIG.floors[fromName].path[0];
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === fromName || name === 'stage') continue;
+    if (name === fromName || isStage(name) !== isStage(fromName)) continue; // 무대와 일반 발판은 서로 안 이어짐
     const start = dir > 0 ? f.path[0] : f.path.at(-1);
     if (Math.abs(start[0] - end[0]) <= 6 && Math.abs(start[1] - end[1]) <= 10) return name;
   }
@@ -188,7 +188,7 @@ function floorContinuation(fromName, dir) {
 
 /**
  * 발판 끝(x, dir 방향)에서 점프로 건너갈 수 있는 다른 발판의 착지점들 [{ name, x, y }].
- * 가로 틈이 maxGap 이하이고, 착지 높이 차가 위로 maxUp / 아래로 maxDown 이내인 발판 (stage 제외).
+ * 가로 틈이 maxGap 이하이고, 착지 높이 차가 위로 maxUp / 아래로 maxDown 이내인 발판 (무대 ↔ 일반 발판끼리는 제외).
  * 틈이 없이 겹쳐 있는 발판(바로 아래층 등)으로 뛰어내리는 것도 포함.
  */
 function gapJumpTargets(fromName, x, dir) {
@@ -200,7 +200,7 @@ function gapJumpTargets(fromName, x, dir) {
   const out = [];
   const next = floorContinuation(fromName, dir); // 이어진 발판은 점프 대신 걸어서 넘어감
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === fromName || name === 'stage' || name === next) continue;
+    if (name === fromName || isStage(name) !== isStage(fromName) || name === next) continue;
     const { x1, x2 } = floorSpan(f);
     const m = Math.min(CHAR_W / 2, (x2 - x1) / 4);
     const gap = dir > 0 ? x1 - edge : edge - x2;
@@ -259,6 +259,11 @@ class GuestCharacter extends Character {
     this.setFloor(name);
     const { x1, x2 } = floorSpan(this.floor);
     this.x = Phaser.Math.Clamp(this.x, x1, x2);
+  }
+
+  /** 설 수 있는 발판: 하객·NPC는 무대(stage*) 제외. 신랑·신부는 어디든 */
+  canStandOn(name) {
+    return !isStage(name);
   }
 
   setDir(dir) {
@@ -323,7 +328,7 @@ class GuestCharacter extends Character {
     this.leap = null;
     if (this.state === 'climb' || this.state === 'leap') this.state = 'idle';
     let name = this.floorName;
-    if (!CONFIG.floors[name] || name === 'stage') {
+    if (!CONFIG.floors[name] || !this.canStandOn(name)) {
       const floor = pickGuestFloor();
       name = Object.keys(CONFIG.floors).find((n) => CONFIG.floors[n] === floor);
       const { x1, x2 } = floorSpan(floor);
@@ -473,12 +478,12 @@ class GuestCharacter extends Character {
     if (this.marker) this.marker.setY(-this.sprite.displayHeight - 4);
   }
 
-  /** (x, y) 아래(또는 같은 높이)에 있는 가장 가까운 발판 이름 (stage 제외) */
+  /** (x, y) 아래(또는 같은 높이)에 있는 가장 가까운 발판 이름 (설 수 없는 발판 제외) */
   floorBelow(x, y) {
     let best = null;
     let bestY = Infinity;
     for (const [name, f] of Object.entries(CONFIG.floors)) {
-      if (name === 'stage') continue;
+      if (!this.canStandOn(name)) continue;
       const { x1, x2 } = floorSpan(f);
       if (x < x1 || x > x2) continue;
       const fy = floorY(f, x);
@@ -517,7 +522,7 @@ class GuestCharacter extends Character {
   /** 지금 서 있는 발판 아래에 다른 발판이 있는지 (엎드려 뛰어내리기 가능 여부) */
   hasFloorBelow() {
     return Object.entries(CONFIG.floors).some(([name, f]) => {
-      if (name === 'stage' || name === this.floorName) return false;
+      if (!this.canStandOn(name) || name === this.floorName) return false;
       const { x1, x2 } = floorSpan(f);
       return this.x >= x1 && this.x <= x2 && floorY(f, this.x) > this.y + 2;
     });
@@ -618,7 +623,7 @@ class GuestCharacter extends Character {
         // 내려오는 중: 이번 프레임에 지나친 발판 중 가장 위에 착지
         let land = null;
         for (const [name, f] of Object.entries(CONFIG.floors)) {
-          if (name === 'stage' || name === p.dropFrom) continue; // 엎드려 뛰어내린 발판은 통과
+          if (!this.canStandOn(name) || name === p.dropFrom) continue; // 엎드려 뛰어내린 발판은 통과
           const { x1, x2 } = floorSpan(f);
           if (this.x < x1 || this.x > x2) continue;
           const fy = floorY(f, this.x);
@@ -771,13 +776,15 @@ class GuestCharacter extends Character {
 }
 
 /**
- * 신랑/신부: 평소엔 제자리(couplePoint, 기본은 무대 가운데)에 고정, 살짝 통통 튀는 대기 모션.
+ * 신랑/신부: 제자리(couplePoint, 기본은 무대 가운데)에서 시작해 무대(stage*) 발판 안에서만 돌아다닌다. 살짝 통통 튀는 모션.
+ * 무대 밖 발판에 세워 두면 그 자리에 고정.
  * 개발자 모드에서는 팝업의 "조종하기"로 하객처럼 직접 움직일 수 있고, 놓으면 제자리로 돌아간다.
  */
 class CoupleCharacter extends GuestCharacter {
   constructor(scene, info, opts) {
     const home = couplePoint(info.id);
     super(scene, CONFIG.floors[home.floor], info, { ...opts, x: home.x, tagColor: '#ffe066' });
+    this.canClimb = false; // 스스로 돌아다닐 땐 사다리/로프를 안 탄다 (조종할 땐 가능)
     if (info.id === 'bride') this.sprite.setFlipX(true); // 신랑 쪽 바라보기
     this.bob = scene.tweens.add({
       targets: this.sprite,
@@ -827,7 +834,8 @@ class CoupleCharacter extends GuestCharacter {
   }
 
   tick(delta) {
-    if (this.controlled) super.tick(delta); // 평소엔 움직이지 않음
+    // 조종 중이 아니면 무대 위에서만 돌아다닌다 (이어진 무대 조각끼리만 걷거나 점프로 건너감). 무대 밖에 세워 두면 제자리
+    if (this.controlled || isStage(this.floorName)) super.tick(delta);
   }
 }
 

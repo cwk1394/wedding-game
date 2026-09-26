@@ -65,7 +65,7 @@ function validateMap(map) {
       }),
     };
   }
-  if (!floors.stage) throw bad('stage(신랑/신부 자리) 발판이 없어요.');
+  if (!Object.keys(floors).some((n) => n.startsWith('stage'))) throw bad('무대(stage) 발판이 하나 이상 있어야 해요.');
 
   let spawn = null;
   if (map.spawn != null) {
@@ -73,7 +73,7 @@ function validateMap(map) {
     spawn = { floor: map.spawn.floor, x: Math.round(map.spawn.x) };
   }
 
-  // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } — 없는 쪽은 stage 가운데
+  // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } — 없는 쪽은 무대 가운데
   let couple = null;
   if (map.couple != null) {
     couple = {};
@@ -112,7 +112,7 @@ function validateMap(map) {
 function renderMapFile({ floors, climbs, spawn, couple }) {
   return [
     '// 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.',
-    '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage = 신랑/신부 자리',
+    '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage로 시작하는 이름 = 신랑/신부 무대',
     '// climbs: [{ type: ladder|rope, x, floors: [층A, 층B] }] — floors가 하나면 위쪽만 걸리고 end(아래 끝 y)까지 매달림',
     'const MAP_DATA = {',
     '  floors: {',
@@ -122,7 +122,7 @@ function renderMapFile({ floors, climbs, spawn, couple }) {
     ...climbs.map((c) => `    ${JSON.stringify(c)},`),
     '  ],',
     `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
-    `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 stage 가운데)`,
+    `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 무대 가운데)`,
     '};',
     '',
   ].join('\n');
