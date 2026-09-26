@@ -1,0 +1,374 @@
+# MapleStory Character Jumping Sprite Sheet Prompt
+
+You are a professional pixel art director specializing in converting MapleStory player avatars into jumping animation sprite sheets.
+
+[Input]  
+Reference Image:  
+The previously generated MapleStory player avatar sprite.
+
+[Task]
+1. Maintain the exact character design, proportions, face, hairstyle, hair color, hair volume, outfit, accessories, equipment, and gear layers from the reference image.
+2. Create a 4-frame jumping animation sprite sheet of the character performing a single natural jump.
+3. The output must consist of exactly 4 sequential horizontal frames in a single row.
+4. The four frames must represent the POSE progression of one continuous jump:
+   - Frame 1: Takeoff Pose
+   - Frame 2: Rising Pose
+   - Frame 3: Jump Apex Pose
+   - Frame 4: Falling / Pre-Landing Pose
+5. IMPORTANT: Do NOT represent the jump by moving the character vertically between frames. The actual vertical movement will be controlled separately by the game source code.
+6. The style must strictly match the original MapleStory player sprite specifications:
+   chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, and no smooth gradients.
+
+────────────────────
+[JUMPING ANIMATION SPEC]
+────────────────────
+
+* Direction: Left-facing profile / three-quarter view
+* Total Frames: Exactly 4 frames arranged horizontally side-by-side
+* Action: Four sequential POSES representing one jump
+* Character Orientation: The character must face LEFT consistently in all 4 frames.
+* Proportions: Keep the exact 2.0–2.3-head chibi proportions of the reference sprite.
+* Hair: Preserve the exact oversized MapleStory-style hair volume and silhouette.
+* Limbs: Preserve the short, compact, cylindrical MapleStory-style arms and legs.
+
+The jump must look like a classic MapleStory player-character jump rather than a realistic human jump.
+
+The animation must communicate jumping ONLY through changes in body pose.
+
+DO NOT simulate vertical movement by changing the character's position inside each frame.
+
+────────────────────
+[CRITICAL FRAME ALIGNMENT]
+────────────────────
+
+THIS IS EXTREMELY IMPORTANT.
+
+The actual jumping trajectory and vertical movement will be handled by the game engine / source code.
+
+Therefore, the character must remain at EXACTLY THE SAME X AND Y POSITION inside every frame.
+
+All four frames must use an identical fixed character anchor point.
+
+The character must NOT move upward or downward between frames.
+
+The character must NOT move left or right between frames.
+
+The character's overall sprite placement must remain perfectly fixed.
+
+Use the SAME:
+
+- horizontal center axis
+- vertical center axis
+- sprite anchor point
+- character baseline
+- character bounding-box center
+- character scale
+- head position reference
+- torso position reference
+
+across all four frames.
+
+When the four frame cells are overlaid on top of each other, the character's main body and anchor point should remain aligned.
+
+Only the arms, legs, and subtle body posture may change to communicate the jump animation.
+
+DO NOT encode jump height into the sprite sheet.
+
+DO NOT create an upward or downward trajectory.
+
+DO NOT vertically offset any frame.
+
+DO NOT horizontally offset any frame.
+
+────────────────────
+[FRAME-BY-FRAME POSE]
+────────────────────
+
+FRAME 1 — TAKEOFF POSE
+
+The character is preparing to leave the ground.
+
+Pose:
+- torso mostly upright
+- knees slightly bent
+- legs beginning to compress
+- feet positioned naturally for takeoff
+- arms beginning to move into the jumping pose
+- compact body posture
+
+IMPORTANT:
+The character remains at the exact same fixed X/Y anchor position as every other frame.
+
+FRAME 2 — RISING POSE
+
+The character visually appears to be airborne through POSE ONLY.
+
+Pose:
+- knees bent slightly backward
+- legs naturally tucked
+- feet pulled slightly toward the body
+- arms lifted slightly for balance
+- torso upright or very slightly tilted
+- compact airborne silhouette
+
+IMPORTANT:
+Do NOT move the entire character upward.
+
+The apparent upward motion must be communicated ONLY through limb posture.
+
+FRAME 3 — JUMP APEX POSE
+
+The character shows the most compact airborne pose.
+
+Pose:
+- knees noticeably bent
+- feet tucked underneath or slightly behind the body
+- legs compact
+- arms slightly raised or spread for balance
+- torso stable
+- strong recognizable MapleStory-style airborne silhouette
+
+IMPORTANT:
+This is the apex POSE, not an elevated sprite position.
+
+The character must remain at exactly the same X/Y anchor position as Frames 1, 2, and 4.
+
+FRAME 4 — FALLING / PRE-LANDING POSE
+
+The character is preparing to land.
+
+Pose:
+- legs beginning to extend
+- feet moving toward the landing posture
+- knees slightly bent
+- arms returning toward a neutral position
+- torso upright
+- body posture clearly suggesting preparation for landing
+
+IMPORTANT:
+Do NOT move the character downward.
+
+Descending motion will be handled entirely by the game source code.
+
+────────────────────
+[FIXED POSITION RULE]
+────────────────────
+
+All four frames MUST have identical character positioning.
+
+Frame 1: Fixed X/Y position
+Frame 2: Same fixed X/Y position
+Frame 3: Same fixed X/Y position
+Frame 4: Same fixed X/Y position
+
+There must be ZERO artificial vertical displacement between frames.
+
+There must be ZERO artificial horizontal displacement between frames.
+
+The sprite sheet represents ANIMATION POSES ONLY.
+
+The game engine will independently control:
+
+- jump height
+- upward movement
+- downward movement
+- gravity
+- trajectory
+- world position
+
+Do not encode any of these movements into the sprite frames.
+
+────────────────────
+[CHARACTER CONSISTENCY]
+────────────────────
+
+The reference character must remain IDENTICAL across all four frames.
+
+Preserve exactly:
+
+- hairstyle
+- hair color
+- hair volume
+- face
+- eye design
+- skin tone
+- outfit
+- clothing colors
+- accessories
+- weapons
+- equipment
+- shoes
+- body proportions
+- head size
+- overall silhouette
+
+Only change the body pose required for the jumping animation.
+
+Do NOT alter the character design.
+
+Do NOT add or remove equipment.
+
+Do NOT simplify important accessories.
+
+Do NOT change hairstyle between frames.
+
+Do NOT mirror individual frames.
+
+────────────────────
+[PIXEL RENDERING SPEC]
+────────────────────
+
+Important:
+
+- Authentic classic MapleStory player sprite aesthetic
+- Low-resolution game sprite aesthetic
+- Chunky pixel structure
+- Grid-aligned pixel art
+- Clearly visible pixel blocks
+- Clean 1px pixel outline
+- Limited color palette
+- Flat color shading
+- Hard-edged pixel highlights
+- Crisp sprite silhouette
+- Consistent pixel density across all frames
+- Consistent sprite scale across all frames
+- No dithering
+- No anti-aliasing
+- No smooth gradients
+- No airbrush effects
+- No painterly rendering
+
+Do NOT increase the visual detail beyond the reference image.
+
+The result must look like an actual in-game MapleStory player sprite animation rather than modern high-resolution pixel artwork.
+
+────────────────────
+[SPRITE SHEET LAYOUT]
+────────────────────
+
+Create exactly FOUR equally sized frame cells.
+
+Layout:
+
+[ Frame 1 ] [ Frame 2 ] [ Frame 3 ] [ Frame 4 ]
+
+All frames must be:
+
+- arranged horizontally
+- evenly spaced
+- identical in cell dimensions
+- visually aligned
+- isolated from one another
+- fully visible
+
+Each frame must contain exactly ONE instance of the character.
+
+The character must occupy exactly the SAME fixed location inside every frame cell.
+
+If all four frame cells were stacked directly on top of each other, the character's central body anchor should overlap at the same coordinates.
+
+────────────────────
+[Output Conditions]
+────────────────────
+
+Canvas Size:
+Horizontal widescreen format suitable for a 4-frame sprite sheet
+(e.g. 1080 × 270 or another proportional 4:1 row layout)
+
+Background:
+Pure White (#FFFFFF)
+
+Requirements:
+
+- Exactly 4 frames
+- Exactly 1 horizontal row
+- Single Character Only
+- Full Body Visible in all 4 frames
+- Same character scale in every frame
+- Same X position in every frame
+- Same Y position in every frame
+- Same fixed sprite anchor in every frame
+- No vertical trajectory inside the sprite sheet
+- No horizontal movement inside the sprite sheet
+- No Cropping
+- No Additional Characters
+- No Pets
+- No Environment
+- No Background Objects
+- No Ground
+- No Platform
+- No Shadow
+- No Motion Lines
+- No Jump Effects
+- No Dust Effects
+- No Text
+- No Frame Numbers
+- No Logo
+- No Watermark
+- No UI
+
+────────────────────
+[Absolute Prohibitions]
+────────────────────
+
+Pokemon Style,
+Terraria Style,
+Stardew Valley Style,
+Ragnarok Online Style,
+JRPG Battle Sprite,
+Octopath Traveler Style,
+Western Cartoon,
+Disney Style,
+Realistic,
+Semi Realistic,
+3D Render,
+Illustration,
+Concept Art,
+Splash Art,
+Poster,
+Wallpaper,
+Anime Illustration,
+Digital Painting,
+Cinematic Lighting,
+Ultra Detailed Sprite,
+High Definition Pixel Art,
+Fine-Grained Pixel Art,
+Smooth Gradient Shading,
+Airbrush Shading,
+Anti-Aliasing,
+Vertical stacking of frames,
+Diagonal frame arrangement,
+Character redesign,
+Character scale changes between frames,
+Vertical character displacement,
+Horizontal character displacement,
+Jump trajectory inside the sprite sheet,
+Different anchor points between frames,
+Different hairstyles between frames,
+Different equipment between frames,
+Multiple characters,
+Ground or platform.
+
+────────────────────
+[FINAL INSTRUCTION]
+────────────────────
+
+Generate exactly ONE 4-frame horizontal jumping animation sprite sheet using the character from the reference image.
+
+The POSE sequence must clearly read:
+
+TAKEOFF POSE → RISING POSE → APEX POSE → FALLING / PRE-LANDING POSE
+
+IMPORTANT:
+
+This sprite sheet contains POSE ANIMATION ONLY.
+
+DO NOT move the character vertically to represent jumping.
+
+The character must occupy the EXACT SAME X/Y anchor position in all four frames.
+
+Jump height, gravity, upward movement, falling movement, and world-space trajectory will be controlled separately by the game source code.
+
+Only the character's limb positions and body posture should change between frames.
+
+Preserve the reference character's exact visual identity, scale, proportions, and MapleStory player-sprite appearance throughout all four frames.

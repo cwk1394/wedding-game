@@ -1,0 +1,464 @@
+You are a professional pixel art director specializing in creating MapleStory-style rope-climbing animation sprite sheets from a reference character image.
+
+[Input]
+Reference Image:
+The previously generated MapleStory player avatar sprite.
+
+[Task]
+Create a 4-frame rope-climbing animation sprite sheet using the character from the reference image.
+
+Preserve the exact:
+
+- hairstyle
+- hair color
+- hair volume
+- outfit
+- accessories
+- equipment
+- body proportions
+- overall silhouette
+- pixel-art style
+
+The character must be shown FROM BEHIND.
+
+The character must perform a simple up-and-down rope-climbing motion.
+
+IMPORTANT:
+DO NOT draw the rope.
+
+The character should look as if they are holding an invisible rope directly in front of their body.
+
+────────────────────
+[BACK VIEW]
+────────────────────
+
+The character must be shown strictly FROM BEHIND.
+
+The viewer sees:
+
+- back of the head
+- back of the hair
+- back of the torso
+- back of the clothing
+- back of the legs
+- rear side of equipment
+
+The character faces directly away from the viewer.
+
+Do NOT show:
+
+- face
+- eyes
+- nose
+- mouth
+- side profile
+- three-quarter view
+- character looking backward
+
+All four frames must use the same rear-facing orientation.
+
+────────────────────
+[CENTERED CHARACTER]
+────────────────────
+
+Keep the character centered in every frame.
+
+The character must NOT move left or right.
+
+The head, torso, and overall body must remain visually centered.
+
+Only subtle vertical climbing movement is allowed.
+
+Do NOT create:
+
+- sideways movement
+- left/right body shifting
+- diagonal climbing
+- body rotation
+
+────────────────────
+[CRITICAL HAND POSE]
+────────────────────
+
+THIS IS THE MOST IMPORTANT POSE REQUIREMENT:
+
+KEEP BOTH HANDS CLOSE TOGETHER IN THE CENTER.
+
+The character must climb with BOTH HANDS GATHERED CLOSE TOGETHER directly in front of the center of the upper body.
+
+DO NOT spread the hands apart.
+
+DO NOT extend one hand toward the left side.
+
+DO NOT extend one hand toward the right side.
+
+DO NOT create a wide climbing pose.
+
+Instead:
+
+Bring BOTH HANDS inward toward the center of the body.
+
+The hands should remain very close together throughout the entire animation.
+
+Think of the character as:
+
+"holding one narrow invisible rope with both hands close together."
+
+The hands should visually form ONE compact central gripping area.
+
+From the rear view, the arms should bend inward from both shoulders and meet near the middle:
+
+     shoulder       shoulder
+          \         /
+           \       /
+            \     /
+             HANDS
+           TOGETHER
+               │
+             BODY
+
+The hands should NEVER look widely separated.
+
+The distance between the two hands should remain minimal.
+
+Both hands should stay approximately in front of:
+
+- the center of the chest
+- the center of the neck
+- or the center of the upper torso
+
+depending on the climbing frame.
+
+────────────────────
+[HAND MOVEMENT]
+────────────────────
+
+Keep the hand movement SIMPLE.
+
+The hands should move mostly UP AND DOWN.
+
+Do NOT create exaggerated alternating left/right reaching motions.
+
+Instead, create a compact climbing motion where both hands remain close together.
+
+The animation should feel like:
+
+HANDS TOGETHER → PULL UP → HANDS TOGETHER → PULL UP
+
+The hands may slightly change their vertical relationship to suggest climbing, but they must remain close enough to look like one compact grip.
+
+IMPORTANT:
+
+Do NOT create:
+
+left hand far above and left
++
+right hand far below and right.
+
+Instead create:
+
+two hands close together
++
+small vertical difference
++
+central gripping pose.
+
+The character should look as if both hands are gripping the same narrow invisible rope.
+
+────────────────────
+[4-FRAME CLIMBING CYCLE]
+────────────────────
+
+Create exactly 4 frames.
+
+Frame 1 — Reach
+
+- Back view.
+- Both hands close together.
+- Hands positioned slightly higher.
+- Arms bent inward.
+- One knee slightly raised.
+- Character centered.
+
+Frame 2 — Pull
+
+- Back view.
+- Both hands remain close together.
+- Character pulls upward.
+- Elbows bend slightly.
+- Hands move slightly downward relative to the body.
+- Legs transition.
+- Character centered.
+
+Frame 3 — Reach
+
+- Back view.
+- Both hands close together again.
+- Hands positioned slightly higher.
+- Opposite knee slightly raised.
+- Arms remain compact and inward.
+- Character centered.
+
+Frame 4 — Pull
+
+- Back view.
+- Both hands remain close together.
+- Character pulls upward.
+- Elbows bend inward.
+- Legs return toward passing position.
+- Character centered.
+
+The animation should loop:
+
+1 → 2 → 3 → 4 → 1
+
+Forward playback:
+Climbing upward.
+
+Reverse playback:
+Climbing downward.
+
+────────────────────
+[COMPACT CLIMBING SILHOUETTE]
+────────────────────
+
+The climbing silhouette must remain narrow and compact.
+
+The arms must NOT spread outward dramatically.
+
+The elbows may move slightly outward, but the forearms must converge toward the middle.
+
+The hands must remain gathered together.
+
+Preferred silhouette:
+
+       HEAD
+        │
+     \ HANDS /
+        │
+      TORSO
+      /   \
+     LEGS
+
+NOT:
+
+       HEAD
+        │
+   HAND       HAND
+      \       /
+       \     /
+       TORSO
+
+The second pose is prohibited.
+
+────────────────────
+[NO VISIBLE ROPE]
+────────────────────
+
+DO NOT draw any rope.
+
+The rope is imaginary.
+
+Do NOT draw:
+
+- rope
+- rope fragments
+- rope pixels
+- rope outlines
+- rope shadows
+- rope silhouettes
+- vines
+- chains
+- poles
+- ladders
+
+The character's compact hand pose must imply that both hands are holding the same invisible rope.
+
+────────────────────
+[CHARACTER CONSISTENCY]
+────────────────────
+
+The character must remain visually identical in all four frames.
+
+Preserve:
+
+- hairstyle
+- hair silhouette
+- hair color
+- hair volume
+- outfit
+- clothing colors
+- accessories
+- equipment
+- weapon
+- cape
+- backpack
+- shoes
+- gloves
+- proportions
+
+Reconstruct the character naturally from behind.
+
+Do NOT change equipment between frames.
+
+Do NOT change hairstyle between frames.
+
+Do NOT change character size between frames.
+
+────────────────────
+[PIXEL RENDERING SPEC]
+────────────────────
+
+Use classic MapleStory-style player sprite proportions and pixel rendering.
+
+- oversized head
+- large hair volume
+- compact torso
+- short limbs
+- tiny hands and feet
+- approximately 2.0–2.3 heads tall
+- compact sprite silhouette
+
+Rendering:
+
+- low-resolution game sprite aesthetic
+- chunky pixels
+- grid-aligned pixel art
+- visible pixel blocks
+- crisp pixel edges
+- clean 1px outline
+- limited color palette
+- flat color shading
+- no anti-aliasing
+- no smooth gradients
+- no airbrush
+- no painterly rendering
+
+────────────────────
+[SPRITE SHEET LAYOUT]
+────────────────────
+
+Exactly 4 frames.
+
+Arrange horizontally:
+
+[ FRAME 1 ] [ FRAME 2 ] [ FRAME 3 ] [ FRAME 4 ]
+
+All frames must have identical dimensions.
+
+Recommended canvas:
+
+1080 × 270
+
+Pure White Background (#FFFFFF).
+
+The character must be centered inside every individual frame.
+
+Full character visible.
+
+No cropping.
+
+────────────────────
+[ABSOLUTE PROHIBITIONS]
+────────────────────
+
+NO visible rope.
+
+NO hands spread far apart.
+
+NO wide arm pose.
+
+NO one hand reaching far left.
+
+NO one hand reaching far right.
+
+NO exaggerated alternating arm positions.
+
+NO sideways hand reaching.
+
+NO horizontal character movement.
+
+NO diagonal climbing.
+
+NO front view.
+
+NO face.
+
+NO side view.
+
+NO three-quarter view.
+
+NO extra arms.
+
+NO extra hands.
+
+NO duplicated limbs.
+
+NO malformed hands.
+
+NO additional characters.
+
+NO environment.
+
+NO ground.
+
+NO platforms.
+
+NO text.
+
+NO logo.
+
+NO watermark.
+
+NO UI.
+
+────────────────────
+[FINAL INSTRUCTION]
+────────────────────
+
+Generate exactly ONE 4-frame horizontal climbing animation sprite sheet using the character from the reference image.
+
+The character must be shown FROM BEHIND in all four frames.
+
+DO NOT DRAW THE ROPE.
+
+The character should appear to be climbing an invisible rope.
+
+MOST IMPORTANT:
+
+KEEP BOTH HANDS CLOSE TOGETHER AT THE CENTER OF THE CHARACTER'S UPPER BODY.
+
+DO NOT SPREAD THE HANDS APART.
+
+DO NOT MAKE THE HANDS REACH LEFT AND RIGHT.
+
+The two hands should form ONE SMALL, COMPACT CENTRAL GRIPPING AREA.
+
+The arms should bend inward naturally toward the hands.
+
+Keep the climbing movement simple:
+
+Frame 1:
+Hands together near center → reach upward.
+
+Frame 2:
+Hands together near center → pull body upward.
+
+Frame 3:
+Hands together near center → reach upward with opposite leg movement.
+
+Frame 4:
+Hands together near center → pull body upward.
+
+Throughout ALL FOUR FRAMES:
+
+HANDS STAY TOGETHER.
+HANDS STAY CENTERED.
+ARMS STAY COMPACT.
+CHARACTER STAYS CENTERED.
+CHARACTER FACES AWAY FROM VIEWER.
+NO ROPE IS VISIBLE.
+
+The hands may move vertically, but they should remain gathered closely together throughout the entire animation.
+
+The final result must clearly look like a classic MapleStory-style character climbing an invisible rope with both hands held closely together in front of the body.

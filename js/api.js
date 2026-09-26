@@ -11,23 +11,19 @@ function toImage(source) {
 }
 
 /**
- * 캐릭터 원본 이미지(정면, 걷기) → 업로드용 PNG data URL { front, walk }.
+ * 캐릭터 원본 이미지 { front, walk?, jump?, ladder?, rope? } → 업로드용 PNG data URL (같은 키).
  * 배경 제거·크롭·축소를 거친다. 정면이 없으면 null.
  */
-async function prepareSpriteImages(frontSource, walkSource) {
-  if (!frontSource) {
-    if (walkSource) throw new Error('걷기 이미지를 쓰려면 정면 이미지도 함께 올려 주세요.');
-    return null;
+async function prepareSpriteImages(sources) {
+  if (!sources.front) return null;
+  const height = CONFIG.sprite.uploadHeight;
+  const result = { front: buildFrontCanvas(await toImage(sources.front), height).toDataURL('image/png') };
+  for (const m of CONFIG.sprite.motions) {
+    result[m] = sources[m]
+      ? joinFrames(buildStripFrames(await toImage(sources[m]), height)).toDataURL('image/png')
+      : null;
   }
-  const [frontImg, walkImg] = await Promise.all([
-    toImage(frontSource),
-    walkSource ? toImage(walkSource) : null,
-  ]);
-  const { front, walkFrames } = buildSpriteCanvases(frontImg, walkImg, CONFIG.sprite.uploadHeight);
-  return {
-    front: front.toDataURL('image/png'),
-    walk: walkFrames.length ? joinFrames(walkFrames).toDataURL('image/png') : null,
-  };
+  return result;
 }
 
 /** 하객 사진을 긴 변 maxSize 이하 JPEG data URL로 줄인다 (서버 요청 크기 제한 대응) */

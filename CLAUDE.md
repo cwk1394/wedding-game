@@ -32,10 +32,10 @@ scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/guests
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부). *_move = 걷기 4프레임. 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
-img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
+img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope.png(투명 배경, 4프레임, 높이 128, 모두 선택)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
-api/character.js        Vercel 함수: POST {type: front|walk, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
+api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
@@ -48,14 +48,16 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - Discussion 본문 형식 (```json 코드블록으로 감싸도 됨):
   ```json
   { "id": "<uuid>", "name": "이름", "shortMsg": "10자 이하", "longMsg": "방명록 내용",
-    "spriteUrl": "img/guests/<uuid>/front.png", "walkUrl": "img/guests/<uuid>/walk.png" }
+    "spriteUrl": "img/guests/<uuid>/front.png", "walkUrl": "img/guests/<uuid>/walk.png",
+    "jumpUrl": "…/jump.png", "ladderUrl": "…/ladder.png", "ropeUrl": "…/rope.png" }
   ```
-- `guests.json` 항목: `{ id, name, shortMsg, longMsg, spriteUrl, walkUrl, createdAt }`. name 없거나 JSON 파싱 실패 글은 건너뜀.
+- `guests.json` 항목: `{ id, name, shortMsg, longMsg, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }`. name 없거나 JSON 파싱 실패 글은 건너뜀.
 - **id**: 본문의 UUID. UUID가 없는 옛 수동 글은 `d<discussion번호>`. 이름은 중복 가능하므로 식별·이미지 매핑은 항상 id로 한다.
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
 ## 데이터 흐름 (쓰기)
-0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸로 `{type:'walk'}` → 걷기 스트립.
+0. (선택) AI 캐릭터 생성: 사진을 긴 변 1024px JPEG로 축소 → `POST /api/character {type:'front'}` → 정면 webp → 그걸 기준으로 `walk`(왼쪽 걷기), `jump`(왼쪽 점프 포즈, 제자리), `ladder`/`rope`(뒷모습 오르기)를 **2개씩 동시에** 생성 (OpenAI 속도 제한 대비).
+   - 동작 하나가 실패해도 나머지로 등록 가능. 프롬프트는 `prompt/create-character-{walk,jump,ladder-climbing,rope-climbing}.txt`.
    - 각 호출 최대 ~2분. 모델은 `OPENAI_IMAGE_MODEL`(쉼표 구분, 기본 gpt-image-2 → 1.5 → 1 순으로 시도, 없는 모델이면 다음으로), 품질 `OPENAI_IMAGE_QUALITY`(기본 medium).
    - 걷기 생성만 실패하면 정면만으로 등록 가능. 한 접속당 생성 3회 제한(`CONFIG.ai.maxGenerations`, 클라이언트 측).
    - 걷기 스트립 프레임 분할: 투명 세로줄 기준으로 캐릭터 덩어리를 찾아 정확히 4개면 사용, 아니면 균등 분할(`findFrameCells`).
@@ -78,6 +80,13 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 진행률 = 배경 1칸 + 캐릭터 1명당 1칸. 20초가 지나면 로딩이 덜 끝나도 메인 화면을 보여준다. 이후 재조회로 추가되는 하객은 기다리지 않음.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 4단계 스프라이트 예시(`img/characters/*_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
+
+## 하객 움직임 (`GuestCharacter`, `CONFIG.motion`, `CONFIG.climbs`)
+- 상태: idle / walk / climb. 걷는 중 1초당 `jumpChance` 확률로 점프 (포물선 높이 `jumpHeight`, 이동은 계속). 점프 스트립은 포즈만 있고 높이는 코드가 준다.
+- `CONFIG.climbs`: `{type: ladder|rope, x, floors: [층A, 층B]}` — x에서 두 층을 세로로 잇는다. 걷다가 그 x를 지나가면 `climbChance` 확률로 타고 반대 층으로 이동, 이후 `climbCooldown` 동안은 다시 안 탐.
+  - 층 끝 근처 사다리도 닿도록 이동 범위(minX/maxX)를 사다리 x까지 넓힌다.
+  - 사다리/로프 이미지가 없으면 서로 대신 쓰고, 둘 다 없으면 정면 이미지로 오른다. 점프 이미지가 없으면 걷기 모습으로 점프.
+- `?debug`에서 사다리는 초록, 로프는 파랑 세로선.
 
 ## 화면 / 확대·축소
 - 캔버스 = 화면 전체 × 기기 픽셀 비율(DPR, 최대 3). `Scale.NONE` + `zoom: 1/DPR`로 CSS 축소 표시 → 고해상도 폰에서도 선명. 창 크기 바뀌면 `game.scale.resize`.

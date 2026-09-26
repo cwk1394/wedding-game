@@ -149,7 +149,15 @@ class CoupleCharacter extends Character {
   }
 }
 
-/** 하객: 자기 층 범위 안에서 랜덤하게 걷다 멈췄다 한다 */
+/** 층에 붙은 사다리/로프 목록 */
+function climbsOn(floorName) {
+  return CONFIG.climbs.filter((c) => c.floors.includes(floorName));
+}
+
+/**
+ * 하객: 층 위를 걷다 멈췄다 하고, 가끔 점프하거나 사다리/로프를 타고 다른 층으로 간다.
+ * state: idle | walk | climb (점프는 걷는 도중 겹쳐서 일어남)
+ */
 class GuestCharacter extends Character {
   constructor(scene, floor, info, opts) {
     const { x1, x2 } = floorSpan(floor);
@@ -157,13 +165,26 @@ class GuestCharacter extends Character {
     const x = Phaser.Math.Between(x1 + margin, x2 - margin);
     super(scene, x, floorY(floor, x), info, opts);
 
-    this.floor = floor;
-    this.minX = x1 + margin;
-    this.maxX = x2 - margin;
+    this.motions = {}; // 이미지 스프라이트 로드 후 { walk, jump, ladder, rope } 사용 가능 여부
     this.speed = Phaser.Math.Between(CONFIG.walkSpeed.min, CONFIG.walkSpeed.max);
     this.dir = Math.random() < 0.5 ? -1 : 1;
-    this.walking = false;
+    this.state = 'idle';
     this.stateTimer = 0;
+    this.jump = null; // { t, duration }
+    this.climb = null; // { targetFloor, toY, dir }
+    this.climbReadyAt = 0;
+    this.setFloor(Object.keys(CONFIG.floors).find((name) => CONFIG.floors[name] === floor));
+  }
+
+  setFloor(name) {
+    this.floorName = name;
+    this.floor = CONFIG.floors[name];
+    const { x1, x2 } = floorSpan(this.floor);
+    const margin = Math.min(CHAR_W / 2, (x2 - x1) / 4);
+    // 사다리/로프가 층 끝 가까이 있어도 닿을 수 있게 범위를 넓힌다
+    const climbXs = climbsOn(name).map((c) => c.x);
+    this.minX = Math.min(x1 + margin, ...climbXs);
+    this.maxX = Math.max(x2 - margin, ...climbXs);
   }
 
   setDir(dir) {
@@ -173,42 +194,132 @@ class GuestCharacter extends Character {
 
   applySprite(sprite) {
     super.applySprite(sprite);
+    this.motions = sprite.motions ?? {};
     this.updatePose();
   }
 
   pickState() {
-    this.walking = Math.random() < 0.65;
+    this.state = Math.random() < 0.65 ? 'walk' : 'idle';
     this.stateTimer = Phaser.Math.Between(1200, 4000);
-    if (this.walking && Math.random() < 0.5) this.dir = -this.dir;
+    if (this.state === 'walk' && Math.random() < 0.5) this.dir = -this.dir;
     this.updatePose();
   }
 
+  /** 현재 상태에 맞는 애니메이션/텍스처 */
   updatePose() {
-    if (this.walking) {
+    const key = this.texKey;
+    if (this.state === 'climb') {
+      // 사다리/로프 이미지가 없으면 서로 대신 쓰고, 둘 다 없으면 정면 그대로
+      const type = this.climb.type;
+      const other = type === 'ladder' ? 'rope' : 'ladder';
+      const anim = this.motions[type] ? type : this.motions[other] ? other : null;
+      this.sprite.setFlipX(false);
+      if (anim) this.sprite.play(`${key}_${anim}`, true);
+      else {
+        this.sprite.stop();
+        this.sprite.setTexture(`${key}_0`);
+      }
+      return;
+    }
+    if (this.jump && this.motions.jump) {
       this.setDir(this.dir);
-      this.sprite.play(`${this.texKey}_walk`, true);
+      this.sprite.play({ key: `${key}_jump`, frameRate: (4 * 1000) / this.jump.duration }, true);
+      return;
+    }
+    if (this.state === 'walk') {
+      this.setDir(this.dir);
+      this.sprite.play(`${key}_walk`, true);
     } else {
       this.sprite.stop();
-      this.sprite.setTexture(`${this.texKey}_0`);
+      this.sprite.setTexture(`${key}_0`);
       if (this.facesLeft) this.sprite.setFlipX(false); // 정면 이미지는 뒤집지 않음
     }
   }
 
-  tick(delta) {
-    this.stateTimer -= delta;
-    if (this.stateTimer <= 0) this.pickState();
-    if (!this.walking) return;
+  startJump() {
+    this.jump = { t: 0, duration: CONFIG.motion.jumpDuration };
+    this.updatePose();
+  }
 
-    this.x += (this.dir * this.speed * delta) / 1000;
-    if (this.x <= this.minX) {
-      this.x = this.minX;
-      this.setDir(1);
-    } else if (this.x >= this.maxX) {
-      this.x = this.maxX;
-      this.setDir(-1);
+  /** x 위치의 사다리/로프를 타고 반대편 층으로 */
+  startClimb(climb) {
+    const targetName = climb.floors.find((f) => f !== this.floorName);
+    const target = CONFIG.floors[targetName];
+    const toY = floorY(target, climb.x);
+    this.jump = null;
+    this.state = 'climb';
+    this.climb = { type: climb.type, targetName, toY, dir: Math.sign(toY - this.y) };
+    this.x = climb.x;
+    this.hideBubble();
+    this.updatePose();
+  }
+
+  finishClimb() {
+    this.setFloor(this.climb.targetName);
+    this.y = this.climb.toY;
+    this.climb = null;
+    this.climbReadyAt = this.scene.time.now + CONFIG.motion.climbCooldown;
+    this.state = 'walk';
+    this.stateTimer = Phaser.Math.Between(1500, 3500);
+    this.dir = Math.random() < 0.5 ? -1 : 1;
+    this.updatePose();
+  }
+
+  tick(delta) {
+    const m = CONFIG.motion;
+
+    if (this.state === 'climb') {
+      const step = (m.climbSpeed * delta) / 1000;
+      this.y += this.climb.dir * step;
+      this.setDepth(this.y);
+      if ((this.climb.dir > 0 && this.y >= this.climb.toY) || (this.climb.dir <= 0 && this.y <= this.climb.toY)) {
+        this.finishClimb();
+      }
+      return;
     }
+
+    this.stateTimer -= delta;
+    if (this.stateTimer <= 0 && !this.jump) this.pickState();
+
+    let jumpOffset = 0;
+    if (this.jump) {
+      this.jump.t += delta;
+      const p = this.jump.t / this.jump.duration;
+      if (p >= 1) {
+        this.jump = null;
+        this.updatePose();
+      } else {
+        jumpOffset = m.jumpHeight * 4 * p * (1 - p); // 포물선
+      }
+    }
+
+    if (this.state === 'walk') {
+      const prevX = this.x;
+      this.x += (this.dir * this.speed * delta) / 1000;
+      if (this.x <= this.minX) {
+        this.x = this.minX;
+        this.setDir(1);
+      } else if (this.x >= this.maxX) {
+        this.x = this.maxX;
+        this.setDir(-1);
+      }
+
+      if (!this.jump) {
+        // 사다리/로프를 지나가면 가끔 탄다
+        const crossed = climbsOn(this.floorName).find(
+          (c) => Math.min(prevX, this.x) <= c.x && c.x <= Math.max(prevX, this.x)
+        );
+        if (crossed && this.scene.time.now >= this.climbReadyAt) {
+          this.climbReadyAt = this.scene.time.now + 1500; // 같은 사다리를 지나는 동안 한 번만 판정
+          if (Math.random() < m.climbChance) return this.startClimb(crossed);
+        }
+        if (Math.random() < (m.jumpChance * delta) / 1000) this.startJump();
+      }
+    }
+
     // 기울어진 구간(계단, 출렁다리)은 x에 맞춰 발 높이를 따라간다. 아래쪽 캐릭터가 앞에 그려지도록 depth도 갱신
-    this.y = floorY(this.floor, this.x);
-    this.setDepth(this.y);
+    const groundY = floorY(this.floor, this.x);
+    this.y = groundY - jumpOffset;
+    this.setDepth(groundY);
   }
 }

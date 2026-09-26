@@ -12,30 +12,52 @@ const CONFIG = {
   // path = 캐릭터 발이 지나가는 꺾은선 [[x, y], ...] (x 오름차순). 점 사이는 직선 보간이라
   // 계단·출렁다리처럼 기울어진 구간도 점을 찍어 표현한다. 하늘을 나는 웨딩 비행선(오른쪽 위)은 제외.
   floors: {
-    balloon: { path: [[118, 276], [272, 276]] }, // 왼쪽 위 열기구 바구니
-    topLedge: { path: [[8, 362], [150, 362]] }, // 왼쪽 위 작은 테라스
-    welcomeLeft: { path: [[545, 322], [712, 322]] }, // 웰컴 아치 무대 (왼쪽)
-    welcomeRight: { path: [[838, 322], [1068, 322]] }, // 웰컴 아치 무대 (오른쪽)
-    // 왼쪽 섬 → 계단 내려감 → 가운데 → 나무다리 → 오른쪽 테라스
-    upperRoute: { path: [[182, 392], [382, 392], [440, 460], [650, 462], [700, 480], [800, 484], [860, 496], [1040, 496]] },
+    balloon: { path: [[118, 276], [294, 276]] }, // 왼쪽 위 열기구 바구니
+    welcome: { path: [[545, 322], [1068, 322]] }, // 웰컴 아치 무대 (가운데에 신랑/신부)
+    // 왼쪽 위 테라스 → 비탈 → 왼쪽 섬 → 계단 내려감 → 가운데 → 나무다리 → 오른쪽 테라스
+    upperRoute: {
+      path: [[8, 362], [150, 362], [182, 392], [382, 392], [440, 460], [650, 462], [700, 480], [800, 484], [860, 496], [1040, 496]],
+    },
     rightStairs: { path: [[792, 500], [872, 612], [1100, 618]] }, // 오른쪽 흰 계단 → 아래 테라스
-    cherry: { path: [[168, 553], [305, 553]] }, // 벚꽃나무 옆 작은 발판
+    cherry: { path: [[168, 553], [320, 553]] }, // 벚꽃나무 옆 작은 발판
     // 가운데 긴 길 → 나무 계단 올라감 → 오른쪽 섬
     middleRoute: { path: [[12, 692], [560, 692], [615, 638], [828, 632]] },
-    gazebo: { path: [[840, 822], [1108, 822]] }, // 오른쪽 정자 테라스
+    gazebo: { path: [[845, 842], [1108, 842]] }, // 오른쪽 정자 테라스
     // 왼쪽 난간 → 다리 → 폭포 위 길 → 출렁다리 → 오른쪽 섬
-    lowerRoute: { path: [[72, 862], [165, 864], [180, 877], [255, 881], [322, 893], [700, 895], [790, 928], [1008, 945]] },
-    heartBridge: { path: [[642, 1088], [850, 1085], [1110, 1066]] }, // 하트 발코니 → 다리 → 오른쪽 섬
+    lowerRoute: {
+      path: [[72, 862], [165, 864], [180, 877], [255, 881], [322, 893], [640, 897], [700, 925], [745, 935], [790, 931], [1008, 940]],
+    },
+    heartBridge: { path: [[612, 1090], [850, 1085], [1110, 1066]] }, // 하트 발코니 → 다리 → 오른쪽 섬
     boat: { path: [[150, 1176], [410, 1180], [452, 1202], [660, 1206]] }, // 왼쪽 아래 배 갑판 → 선착장
     plaza: { path: [[692, 1290], [1100, 1300]] }, // 오른쪽 아래 광장
     stage: { path: [[742, 318], [808, 318]] }, // 웰컴 아치 아래 (신랑/신부 전용)
   },
 
   // 하객이 스폰될 수 있는 층 (층 길이에 비례해서 랜덤 배치)
-  guestFloors: [
-    'balloon', 'topLedge', 'welcomeLeft', 'welcomeRight', 'upperRoute', 'rightStairs', 'cherry',
-    'middleRoute', 'gazebo', 'lowerRoute', 'heartBridge', 'boat', 'plaza',
+  guestFloors: ['balloon', 'welcome', 'upperRoute', 'rightStairs', 'cherry', 'middleRoute', 'gazebo', 'lowerRoute', 'heartBridge', 'boat', 'plaza'],
+
+  // 사다리/로프: x 위치에서 두 층을 세로로 잇는다. 하객이 걷다가 지나가면 가끔 타고 오르내림
+  climbs: [
+    { type: 'ladder', x: 767, floors: ['welcome', 'upperRoute'] }, // 웰컴 무대 ↔ 나무다리
+    { type: 'ladder', x: 767, floors: ['upperRoute', 'middleRoute'] }, // 나무다리 ↔ 가운데 오른쪽 섬
+    { type: 'ladder', x: 439, floors: ['upperRoute', 'middleRoute'] }, // 가운데 섬 ↔ 가운데 긴 길
+    { type: 'ladder', x: 406, floors: ['middleRoute', 'lowerRoute'] }, // 가운데 긴 길 ↔ 아랫길
+    { type: 'ladder', x: 1033, floors: ['gazebo', 'heartBridge'] }, // 정자 ↔ 하트 다리 오른쪽 섬
+    { type: 'ladder', x: 618, floors: ['heartBridge', 'boat'] }, // 하트 발코니 ↔ 선착장
+    { type: 'rope', x: 289, floors: ['balloon', 'upperRoute'] }, // 열기구 밧줄
+    { type: 'rope', x: 316, floors: ['upperRoute', 'cherry'] }, // 왼쪽 섬 ↔ 벚꽃 발판 (덩굴)
+    { type: 'rope', x: 280, floors: ['cherry', 'middleRoute'] }, // 벚꽃 발판 ↔ 가운데 긴 길 (덩굴)
   ],
+
+  // 하객 움직임
+  motion: {
+    jumpChance: 0.12, // 걷는 중 1초당 점프할 확률
+    jumpHeight: 26, // px
+    jumpDuration: 620, // ms
+    climbChance: 0.45, // 사다리/로프를 지나갈 때 타는 확률
+    climbSpeed: 45, // px/s
+    climbCooldown: 4000, // 한 번 타고 난 뒤 이 시간 동안은 다시 안 탐 (ms)
+  },
 
   // 화면 확대/축소
   view: {
@@ -59,7 +81,10 @@ const CONFIG = {
     height: 72, // 화면에 표시할 캐릭터 높이 (월드 px)
     textureScale: 2, // 확대해도 선명하도록 텍스처는 표시 크기의 2배로 만들어 축소 표시
     uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
-    walkFrames: 4, // walkUrl 이미지의 가로 프레임 수
+    frames: 4, // 동작 스트립(walkUrl 등) 한 장의 가로 프레임 수
+    // 정면 외 동작 스트립. 데이터 필드는 `${motion}Url`, 업로드 파일은 `${motion}.png`
+    //   walk/jump: 왼쪽을 바라봄, ladder/rope: 뒷모습
+    motions: ['walk', 'jump', 'ladder', 'rope'],
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
   },
 

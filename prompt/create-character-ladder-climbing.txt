@@ -1,0 +1,384 @@
+You are a professional pixel art director specializing in converting MapleStory player avatars into ladder-climbing animation sprite sheets.
+
+[Input]
+Reference Image:
+The previously generated MapleStory player avatar sprite.
+
+[Task]
+1. Maintain the exact character design, proportions, hairstyle, hair color, hair volume, outfit, accessories, equipment, and gear layers from the reference image.
+2. Create a 4-frame ladder-climbing animation sprite sheet of the character climbing up and down an invisible ladder.
+3. The character must be shown strictly FROM BEHIND while climbing.
+4. The output must consist of exactly 4 sequential horizontal frames in a single row.
+5. The ladder itself must NOT be drawn.
+6. The character's hands must NOT be visible. Both arms must reach inward toward the back/inside area of the head so that the hands are completely hidden behind the character's head and hair.
+7. The style must strictly match the original MapleStory player sprite specifications: chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, and no smooth gradients.
+
+────────────────────
+[LADDER CLIMBING ANIMATION SPEC]
+────────────────────
+
+Direction:
+Strict rear / back view.
+
+The character faces directly away from the viewer toward an invisible ladder.
+
+The viewer must see:
+- back of the head
+- back of the hairstyle
+- back of the torso
+- back of the clothing
+- back of the legs
+- rear side of equipment and accessories
+
+Do NOT show:
+- face
+- eyes
+- nose
+- mouth
+- front of torso
+- side profile
+- three-quarter front view
+
+Total Frames:
+Exactly 4 frames arranged horizontally side-by-side.
+
+Pose Cycle:
+
+Frame 1:
+- Left arm reaches upward and inward toward the center of the head.
+- Right arm is positioned slightly lower.
+- BOTH HANDS MUST BE COMPLETELY HIDDEN BEHIND THE HEAD / HAIR.
+- Right knee and foot move upward.
+- Left leg remains lower.
+
+Frame 2:
+- Arms transition toward a neutral climbing position.
+- Arms remain directed inward toward the head.
+- BOTH HANDS REMAIN COMPLETELY HIDDEN BEHIND THE HEAD / HAIR.
+- Legs pass through a compact neutral climbing position.
+
+Frame 3:
+- Right arm reaches upward and inward toward the center of the head.
+- Left arm is positioned slightly lower.
+- BOTH HANDS MUST BE COMPLETELY HIDDEN BEHIND THE HEAD / HAIR.
+- Left knee and foot move upward.
+- Right leg remains lower.
+
+Frame 4:
+- Arms transition toward the neutral climbing position.
+- BOTH HANDS REMAIN COMPLETELY HIDDEN BEHIND THE HEAD / HAIR.
+- Legs return toward the middle transition position.
+- Prepare naturally to loop back into Frame 1.
+
+────────────────────
+[CRITICAL ARM AND HAND POSITION]
+────────────────────
+
+THIS IS EXTREMELY IMPORTANT:
+
+THE HANDS MUST NEVER BE VISIBLE.
+
+The character is viewed from behind.
+
+Both arms must extend UPWARD AND INWARD toward the back of the character's head.
+
+The forearms should visually converge toward the inner area of the head / hair silhouette.
+
+Imagine that the character's hands extend forward beyond the head and grip an invisible ladder located directly in front of the character.
+
+Because the character is viewed from behind:
+
+- the head and hair must occlude the hands
+- the hands must be located behind the head from the viewer's perspective
+- the hands must NOT extend outside the hair silhouette
+- the hands must NOT appear above the head
+- the hands must NOT appear beside the head
+- the hands must NOT appear between the arms
+- no fingers or palms should be visible
+
+The arms may be visible from the shoulders toward the head, but they must visually disappear INTO / BEHIND the hair silhouette before reaching the hands.
+
+Correct visual structure:
+
+shoulders
+→ upper arms angled upward and inward
+→ forearms approaching the head
+→ forearms disappear behind the hair
+→ hands completely hidden
+
+The large MapleStory-style head and hair should naturally cover the hand positions.
+
+DO NOT draw visible fists gripping imaginary ladder rungs.
+
+DO NOT place the hands outside the character's head silhouette.
+
+DO NOT spread the hands to the left and right sides.
+
+DO NOT place the hands above the hair.
+
+DO NOT show even a small portion of the hands.
+
+────────────────────
+[INVISIBLE LADDER ALIGNMENT]
+────────────────────
+
+Do NOT draw the ladder.
+
+Imagine a fixed vertical ladder positioned directly in front of the character.
+
+The character must remain centered on the same vertical ladder axis in every frame.
+
+The torso, head center, and overall body center must remain aligned to the same central vertical axis.
+
+The invisible ladder is in FRONT of the character and therefore hidden from the viewer.
+
+The character's hands extend toward this invisible ladder but remain completely occluded behind the character's oversized head and hair.
+
+Only the visible portions of the arms and the legs should communicate the climbing motion.
+
+────────────────────
+[FIXED CHARACTER POSITION]
+────────────────────
+
+IMPORTANT FOR GAME ANIMATION:
+
+The actual vertical movement of the character will be controlled separately by the game engine.
+
+Therefore, DO NOT move the entire character upward or downward between frames.
+
+All four frames must have the character at the SAME vertical position.
+
+Keep identical:
+- head height
+- torso center
+- character center X
+- character center Y
+- overall bounding box
+- sprite scale
+
+Animation must come from LIMB MOVEMENT ONLY.
+
+No vertical translation.
+No horizontal translation.
+No frame-to-frame positional drift.
+
+────────────────────
+[LEG MOVEMENT]
+────────────────────
+
+The legs should clearly communicate ladder climbing.
+
+Frame 1:
+Right knee / foot raised, left leg lower.
+
+Frame 2:
+Compact neutral transition.
+
+Frame 3:
+Left knee / foot raised, right leg lower.
+
+Frame 4:
+Compact neutral transition.
+
+The legs should alternate naturally as if stepping between invisible ladder rungs.
+
+Do NOT create:
+- walking poses
+- running poses
+- jumping poses
+- standing poses
+
+────────────────────
+[PROPORTIONS & STYLE]
+────────────────────
+
+Keep the exact MapleStory-style chibi proportions from the reference sprite:
+
+- approximately 2.0–2.3 head-to-body proportion
+- oversized head
+- giant hairstyle volume
+- tiny compact torso
+- short cylindrical arms
+- short cylindrical legs
+- small hands and feet
+
+The oversized head and hairstyle are especially important because they must naturally conceal BOTH HANDS during the climbing animation.
+
+Preserve the original character silhouette, hairstyle, hair volume, clothing, equipment, and accessories.
+
+────────────────────
+[SEAMLESS LOOP]
+────────────────────
+
+The four frames must form ONE continuous repeating ladder-climbing cycle:
+
+Frame 1
+→ Frame 2
+→ Frame 3
+→ Frame 4
+→ Frame 1
+
+The animation must also work naturally when played in reverse for descending.
+
+────────────────────
+[PIXEL RENDERING SPEC]
+────────────────────
+
+- Low-resolution game sprite aesthetic
+- Chunky pixel structure
+- Grid-aligned pixel art
+- Visible pixel blocks
+- Clean 1px outline
+- Limited color palette
+- Flat color shading
+- Crisp pixel edges
+- No anti-aliasing
+- No dithering
+- No smooth gradients
+- No airbrush effects
+- No painterly rendering
+
+Preserve the exact pixel-art density and rendering style of the reference character.
+
+────────────────────
+[Output Conditions]
+────────────────────
+
+Canvas Size:
+Horizontal widescreen format suitable for a 4-frame sprite sheet
+(e.g. 1080 × 270 or proportional horizontal row layout)
+
+Background:
+Pure White (#FFFFFF)
+
+Output Requirements:
+
+- Exactly 4 frames
+- Exactly one horizontal row
+- Single character only
+- Strict rear view in every frame
+- Full body visible
+- Hands completely invisible in EVERY frame
+- Arms extending inward behind the head
+- Identical character scale
+- Identical character X position
+- Identical character Y position
+- Equal spacing between frames
+- No cropping
+- No ladder
+- No ladder rungs
+- No ropes
+- No additional characters
+- No pets
+- No environment
+- No background objects
+- No platforms
+- No ground
+- No shadows
+- No text
+- No frame numbers
+- No separators
+- No logo
+- No watermark
+- No UI
+
+────────────────────
+[Absolute Prohibitions]
+────────────────────
+
+ABSOLUTELY NO VISIBLE HANDS.
+
+Do NOT draw:
+- hands
+- fists
+- palms
+- fingers
+- visible ladder grip
+
+Do NOT place hands:
+- above the head
+- beside the head
+- outside the hair silhouette
+- between the head and arms where they can be seen
+
+Both hands MUST be fully occluded by the head and hair.
+
+Do NOT draw the ladder.
+
+Do NOT draw ladder rails or ladder rungs.
+
+Do NOT move the entire character vertically between frames.
+
+Do NOT move the entire character horizontally between frames.
+
+Do NOT show the character's face.
+
+Do NOT use side view or front view.
+
+Do NOT create walking or jumping poses.
+
+Do NOT change:
+- hairstyle
+- hair volume
+- outfit
+- accessories
+- equipment
+- character proportions
+- sprite scale
+
+Avoid:
+Pokemon Style,
+Terraria Style,
+Stardew Valley Style,
+Ragnarok Online Style,
+JRPG Battle Sprite,
+Octopath Traveler Style,
+Western Cartoon,
+Disney Style,
+Realistic,
+Semi Realistic,
+3D Render,
+Illustration,
+Concept Art,
+Splash Art,
+Poster,
+Wallpaper,
+Anime Illustration,
+Digital Painting,
+Cinematic Lighting,
+Ultra Detailed Sprite,
+High Definition Pixel Art,
+Fine-Grained Pixel Art,
+Smooth Gradient Shading,
+Airbrush Shading,
+Vertical stacking of frames.
+
+────────────────────
+[FINAL INSTRUCTION]
+────────────────────
+
+Generate exactly ONE 4-frame horizontal ladder-climbing animation sprite sheet using the character from the reference image.
+
+STRICT REAR VIEW ONLY.
+
+The ladder must be completely invisible.
+
+MOST IMPORTANT:
+BOTH ARMS MUST REACH UPWARD AND INWARD TOWARD THE BACK OF THE HEAD.
+
+THE FOREARMS MUST DISAPPEAR BEHIND THE HAIR.
+
+BOTH HANDS MUST BE COMPLETELY OCCLUDED BY THE CHARACTER'S HEAD AND HAIR IN ALL FOUR FRAMES.
+
+NO PART OF EITHER HAND MAY BE VISIBLE.
+
+Keep the character perfectly centered at the same X and Y position in all four frames.
+
+Animate the alternating climbing motion primarily through the visible arm angles and leg positions:
+
+LEFT ARM HIGH + RIGHT LEG HIGH
+→ NEUTRAL
+→ RIGHT ARM HIGH + LEFT LEG HIGH
+→ NEUTRAL
+
+The resulting four frames must form a seamless repeating MapleStory-style ladder-climbing cycle that can also be played in reverse for descending.

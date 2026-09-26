@@ -30,6 +30,9 @@ function toGuest(discussion) {
     longMsg: str(data.longMsg, 1000),
     spriteUrl: imageUrl(data.spriteUrl),
     walkUrl: imageUrl(data.walkUrl),
+    jumpUrl: imageUrl(data.jumpUrl),
+    ladderUrl: imageUrl(data.ladderUrl),
+    ropeUrl: imageUrl(data.ropeUrl),
     createdAt: discussion.createdAt,
   };
 }

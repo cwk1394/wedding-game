@@ -1,9 +1,12 @@
 // 캐릭터 이미지 생성 API (Vercel Serverless Function)
-// POST /api/character { type: 'front' | 'walk', image: <data URL> }
-//   front: 하객 사진 + prompt/create-character.txt      → 정면 캐릭터 (1024x1024)
-//   walk : 정면 캐릭터 + prompt/create-character-walk.txt → 왼쪽으로 걷는 4프레임 스트립 (1536x1024)
+// POST /api/character { type, image: <data URL> }
+//   front : 하객 사진 + prompt/create-character.txt                → 정면 캐릭터 (1024x1024)
+//   walk  : 정면 캐릭터 + prompt/create-character-walk.txt           → 왼쪽으로 걷는 4프레임 스트립 (1536x1024)
+//   jump  : 정면 캐릭터 + prompt/create-character-jump.txt           → 점프 4프레임 (왼쪽, 제자리 포즈만)
+//   ladder: 정면 캐릭터 + prompt/create-character-ladder-climbing.txt → 사다리 타기 4프레임 (뒷모습)
+//   rope  : 정면 캐릭터 + prompt/create-character-rope-climbing.txt   → 로프 타기 4프레임 (뒷모습)
 //   → { image: <data URL (webp)> }
-// 한 번에 둘 다 만들면 오래 걸리므로(각 최대 ~2분) 브라우저가 front → walk 순서로 두 번 호출한다.
+// 한 번에 다 만들면 오래 걸리므로(각 최대 ~2분) 브라우저가 front를 먼저 만들고 나머지를 따로 호출한다.
 // 생성된 이미지는 저장하지 않는다. 저장은 방명록 등록(/api/guestbook) 때 브라우저가 후처리한 PNG로.
 //
 // 환경변수(Vercel): OPENAI_API_KEY(필수)
@@ -23,6 +26,9 @@ const MAX_INPUT_BYTES = 3 * 1024 * 1024; // Vercel 요청 본문 상한(4.5MB) �
 const TYPES = {
   front: { prompt: 'create-character.txt', size: '1024x1024' },
   walk: { prompt: 'create-character-walk.txt', size: '1536x1024' },
+  jump: { prompt: 'create-character-jump.txt', size: '1536x1024' },
+  ladder: { prompt: 'create-character-ladder-climbing.txt', size: '1536x1024' },
+  rope: { prompt: 'create-character-rope-climbing.txt', size: '1536x1024' },
 };
 
 let workingModel = null; // 한 번 성공한 모델은 기억해 두고 계속 사용
@@ -37,7 +43,7 @@ export function POST(request) {
   return handlePost(request, async (body) => {
     if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
     const spec = TYPES[body.type];
-    if (!spec) throw new HttpError(400, 'type은 front 또는 walk여야 합니다.');
+    if (!spec) throw new HttpError(400, `type은 ${Object.keys(TYPES).join(', ')} 중 하나여야 합니다.`);
     const input = decodeImage(body.image);
     const prompt = await readFile(join(process.cwd(), 'prompt', spec.prompt), 'utf8');
     const image = await generate({ prompt, size: spec.size, input });

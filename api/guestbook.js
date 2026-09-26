@@ -1,7 +1,7 @@
 // 방명록 쓰기 API (Vercel Serverless Function)
-// POST /api/guestbook  { name, shortMsg, longMsg, images?: { front, walk } }  (이미지는 PNG base64)
+// POST /api/guestbook  { name, shortMsg, longMsg, images?: { front, walk, jump, ladder, rope } }  (이미지는 PNG base64)
 //   1) UUID 발급
-//   2) 이미지를 img/guests/<uuid>/front.png, walk.png 로 저장소에 한 커밋으로 올림
+//   2) 이미지를 img/guests/<uuid>/front.png, walk.png, jump.png, ladder.png, rope.png 로 저장소에 한 커밋으로 올림
 //   3) GitHub Discussion(방명록 카테고리)에 JSON 본문으로 글 작성
 //   4) 생성된 guest 객체 반환
 // GET /api/guestbook → 상태 확인용 { ok: true }
@@ -25,6 +25,9 @@ const LIMITS = {
   longMsg: 500,
   imageBytes: 512 * 1024, // 브라우저에서 축소해서 보내므로 넉넉한 상한
 };
+
+// 정면 외의 동작 스트립 (모두 선택). 파일명 = <motion>.png, 본문 필드 = <motion>Url
+const MOTIONS = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프' };
 
 export const OPTIONS = preflight;
 
@@ -75,23 +78,25 @@ async function createGuest(body, env) {
   const shortMsg = text(body.shortMsg, '한줄 멘트', LIMITS.shortMsg);
   const longMsg = text(body.longMsg, '방명록', LIMITS.longMsg);
   const front = pngBase64(body.images?.front, '정면');
-  const walk = pngBase64(body.images?.walk, '걷기');
-  if (walk && !front) throw new HttpError(400, '걷기 이미지만 올릴 수는 없습니다. 정면 이미지도 함께 올려 주세요.');
+  const motions = Object.fromEntries(
+    Object.entries(MOTIONS).map(([motion, label]) => [motion, pngBase64(body.images?.[motion], label)])
+  );
+  if (!front && Object.values(motions).some(Boolean)) {
+    throw new HttpError(400, '동작 이미지만 올릴 수는 없습니다. 정면 이미지도 함께 올려 주세요.');
+  }
 
   const id = crypto.randomUUID();
   const dir = `img/guests/${id}`;
   const files = [];
-  if (front) files.push({ path: `${dir}/front.png`, content: front });
-  if (walk) files.push({ path: `${dir}/walk.png`, content: walk });
-
-  const guest = {
-    id,
-    name,
-    shortMsg,
-    longMsg,
-    spriteUrl: front ? `${dir}/front.png` : null,
-    walkUrl: walk ? `${dir}/walk.png` : null,
-  };
+  const guest = { id, name, shortMsg, longMsg, spriteUrl: null };
+  if (front) {
+    files.push({ path: `${dir}/front.png`, content: front });
+    guest.spriteUrl = `${dir}/front.png`;
+  }
+  for (const [motion, content] of Object.entries(motions)) {
+    guest[`${motion}Url`] = content ? `${dir}/${motion}.png` : null;
+    if (content) files.push({ path: `${dir}/${motion}.png`, content });
+  }
 
   const github = new GitHub(env);
   if (files.length) await github.commitFiles(files, `Add guest sprite ${id} (${name})`);

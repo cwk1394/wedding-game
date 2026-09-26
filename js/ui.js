@@ -115,9 +115,9 @@ const UI = (() => {
     setPhoto(fields.photo.files[0] || null);
   });
 
-  /** 캐릭터 원본이 바뀌면 배경 제거·축소를 다시 하고 미리보기를 갱신 */
-  async function setSources(front, walk) {
-    const current = (preparing = prepareSpriteImages(front, walk));
+  /** 캐릭터 원본 { front, walk, jump, ladder, rope }이 바뀌면 배경 제거·축소를 다시 하고 미리보기를 갱신 */
+  async function setSources(sources) {
+    const current = (preparing = prepareSpriteImages(sources));
     let prepared = null;
     try {
       prepared = await current;
@@ -148,7 +148,8 @@ const UI = (() => {
   /** 경과 시간을 붙여서 진행 문구를 보여준다 (오래 걸려도 멈춘 게 아니라는 표시) */
   async function withProgress(text, task) {
     const started = Date.now();
-    const render = () => setBusy(true, `${text} ${Math.floor((Date.now() - started) / 1000)}초`);
+    const label = typeof text === 'function' ? text : () => text;
+    const render = () => setBusy(true, `${label()} ${Math.floor((Date.now() - started) / 1000)}초`);
     render();
     const timer = setInterval(render, 1000);
     try {
@@ -169,12 +170,37 @@ const UI = (() => {
       const front = await withProgress('캐릭터 도트 찍는 중... (1/2)', async () =>
         generateCharacter('front', await resizePhoto(photo))
       );
-      await setSources(front, null);
-      try {
-        const walk = await withProgress('걷는 모션 만드는 중... (2/2)', () => generateCharacter('walk', front));
-        await setSources(front, walk);
-      } catch (err) {
-        showError(`걷는 모션은 만들지 못했어요. 이대로 등록하거나 다시 만들어 주세요. (${err.message})`);
+      const sources = { front };
+      await setSources(sources);
+
+      // 나머지 동작(걷기·점프·사다리·로프)은 정면 캐릭터를 기준으로 2개씩 동시에 만든다 (API 속도 제한 대비).
+      // 하나가 실패해도 나머지로 등록할 수 있다.
+      const queue = [...CONFIG.sprite.motions];
+      const failed = [];
+      let done = 0;
+      const total = queue.length;
+      const worker = async () => {
+        while (queue.length) {
+          const motion = queue.shift();
+          try {
+            sources[motion] = await generateCharacter(motion, front);
+          } catch (err) {
+            failed.push({ motion, err });
+          }
+          done++;
+        }
+      };
+      await withProgress(
+        () => `움직임 만드는 중... (2/2, ${done}/${total})`,
+        () => Promise.all([worker(), worker()])
+      );
+      await setSources({ ...sources });
+      if (failed.length) {
+        const labels = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프' };
+        showError(
+          `${failed.map((f) => labels[f.motion]).join(', ')} 동작은 만들지 못했어요. ` +
+            `이대로 등록해도 되고, 다시 만들 수도 있어요. (${failed[0].err.message})`
+        );
       }
     } catch (err) {
       showError(err.message);
@@ -215,7 +241,7 @@ const UI = (() => {
       UI.onGuestCreated?.({
         ...guest,
         spriteUrl: images?.front ?? null,
-        walkUrl: images?.walk ?? null,
+        ...Object.fromEntries(CONFIG.sprite.motions.map((m) => [`${m}Url`, images?.[m] ?? null])),
       });
       resetForm();
       writeModal.close();
