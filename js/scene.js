@@ -1,0 +1,133 @@
+class MapScene extends Phaser.Scene {
+  constructor() {
+    super('MapScene');
+  }
+
+  preload() {
+    if (CONFIG.mapImage) this.load.image('map', CONFIG.mapImage);
+  }
+
+  create() {
+    if (CONFIG.mapImage) {
+      this.add.image(0, 0, 'map').setOrigin(0).setDisplaySize(CONFIG.width, CONFIG.height);
+    } else {
+      this.drawBackground();
+      this.drawPlatforms();
+    }
+    this.drawWeddingArch();
+
+    const onSelect = (character) =>
+      UI.openGuestbook({ ...character.info, avatarUrl: character.getAvatarUrl() });
+
+    // 신랑/신부: 무대 가운데 고정
+    const stage = CONFIG.floors.stage;
+    const centerX = (stage.x1 + stage.x2) / 2;
+    this.couple = COUPLE.map(
+      (info, i) => new CoupleCharacter(this, centerX + (i === 0 ? -24 : 24), stage.y, info, { onSelect })
+    );
+
+    // 하객: 층을 랜덤으로 골라 스폰
+    this.guests = GUESTS.map((info) => {
+      const floorName = Phaser.Utils.Array.GetRandom(CONFIG.guestFloors);
+      return new GuestCharacter(this, CONFIG.floors[floorName], info, { onSelect });
+    });
+  }
+
+  update(_time, delta) {
+    for (const guest of this.guests) guest.tick(delta);
+  }
+
+  // ---------- 임시 맵 그리기 (맵 이미지 준비되면 CONFIG.mapImage로 대체) ----------
+
+  drawBackground() {
+    const { width, height } = CONFIG;
+    const sky = this.add.graphics();
+    sky.fillGradientStyle(0x7ec8ff, 0x7ec8ff, 0xd6f0ff, 0xd6f0ff, 1);
+    sky.fillRect(0, 0, width, height);
+
+    // 먼 산
+    const hills = this.add.graphics();
+    hills.fillStyle(0xa8d8a0, 1);
+    hills.fillCircle(150, 720, 320);
+    hills.fillCircle(640, 780, 380);
+    hills.fillCircle(1150, 720, 330);
+    hills.fillStyle(0x8cc98a, 1);
+    hills.fillCircle(400, 800, 300);
+    hills.fillCircle(950, 820, 320);
+
+    // 흘러가는 구름
+    for (let i = 0; i < 6; i++) {
+      const cloud = this.add.container(Phaser.Math.Between(0, width), Phaser.Math.Between(40, 220));
+      const g = this.add.graphics();
+      g.fillStyle(0xffffff, 0.9);
+      g.fillEllipse(0, 0, 90, 36);
+      g.fillEllipse(-30, 6, 60, 28);
+      g.fillEllipse(32, 6, 64, 28);
+      g.fillEllipse(8, -12, 56, 34);
+      cloud.add(g).setScale(Phaser.Math.FloatBetween(0.7, 1.3));
+
+      const speed = Phaser.Math.Between(8, 20); // px/s
+      const drift = () => {
+        const distance = width + 200 - cloud.x;
+        this.tweens.add({
+          targets: cloud,
+          x: width + 100,
+          duration: (distance / speed) * 1000,
+          onComplete: () => {
+            cloud.x = -100;
+            drift();
+          },
+        });
+      };
+      drift();
+    }
+  }
+
+  drawPlatforms() {
+    const g = this.add.graphics();
+    for (const [name, f] of Object.entries(CONFIG.floors)) {
+      const w = f.x2 - f.x1;
+      const thick = name === 'ground' ? CONFIG.height - f.y : 26;
+      const radius = name === 'ground' ? 0 : 8;
+
+      g.fillStyle(0x8b5a2b, 1); // 흙
+      g.fillRoundedRect(f.x1, f.y, w, thick, radius);
+      g.fillStyle(0x6e4420, 1); // 흙 점박이
+      for (let x = f.x1 + 14; x < f.x2 - 10; x += 34) {
+        g.fillCircle(x, f.y + 16 + ((x / 34) % 2) * 6, 3);
+      }
+      g.fillStyle(0x5cb85c, 1); // 잔디
+      g.fillRoundedRect(f.x1, f.y - 2, w, 10, radius ? 5 : 0);
+      g.fillStyle(0x7ed67e, 1);
+      g.fillRect(f.x1 + 4, f.y - 2, w - 8, 3);
+    }
+  }
+
+  drawWeddingArch() {
+    const stage = CONFIG.floors.stage;
+    const cx = (stage.x1 + stage.x2) / 2;
+    const baseY = stage.y;
+    const r = 75;
+    const g = this.add.graphics().setDepth(stage.y - 1);
+
+    g.lineStyle(8, 0xffffff, 1);
+    g.beginPath();
+    g.arc(cx, baseY - 40, r, Math.PI, 0);
+    g.strokePath();
+    g.lineBetween(cx - r, baseY - 40, cx - r, baseY);
+    g.lineBetween(cx + r, baseY - 40, cx + r, baseY);
+
+    const colors = [0xff7eb6, 0xffc0da, 0xffffff, 0xffd166];
+    for (let a = Math.PI; a <= Math.PI * 2 + 0.01; a += Math.PI / 12) {
+      g.fillStyle(Phaser.Utils.Array.GetRandom(colors), 1);
+      g.fillCircle(cx + Math.cos(a) * r, baseY - 40 + Math.sin(a) * r, 7);
+    }
+
+    // 하트
+    const heart = this.add
+      .text(cx, baseY - 40 - r - 4, '❤', { fontSize: '26px', color: '#ff4d88', resolution: 2 })
+      .setOrigin(0.5)
+      .setDepth(stage.y - 1);
+    this.tweens.add({ targets: heart, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
+  }
+}

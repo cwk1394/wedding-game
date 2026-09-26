@@ -1,0 +1,108 @@
+// 임시 캐릭터 텍스처를 코드로 그려서 생성한다. (4단계에서 AI 스프라이트로 교체 예정)
+// 프레임 0 = 서있기, 프레임 1 = 걷기(다리 벌림). 오른쪽을 바라보는 모습으로 그린다.
+
+const CHAR_W = 40;
+const CHAR_H = 60;
+const SKIN = 0xffe0bd;
+const OUTLINE = 0x3b2410;
+
+function drawHead(g, hair) {
+  g.fillStyle(hair);
+  g.fillCircle(20, 18, 15);
+  g.fillStyle(SKIN);
+  g.fillEllipse(21, 23, 22, 20);
+  g.fillStyle(hair);
+  g.fillRect(8, 8, 24, 7); // 앞머리
+  g.fillStyle(0x222222);
+  g.fillRect(19, 21, 3, 5); // 눈
+  g.fillRect(27, 21, 3, 5);
+  g.fillStyle(0xff9f9f, 0.7);
+  g.fillCircle(16, 28, 2); // 볼터치
+  g.fillCircle(31, 28, 2);
+}
+
+function drawLegs(g, color, frame) {
+  g.fillStyle(color);
+  if (frame === 0) {
+    g.fillRect(14, 46, 5, 9);
+    g.fillRect(21, 46, 5, 9);
+  } else {
+    g.fillRect(11, 46, 5, 8);
+    g.fillRect(24, 46, 5, 8);
+  }
+  g.fillStyle(0x5a3a22); // 신발
+  if (frame === 0) {
+    g.fillRect(13, 55, 7, 4);
+    g.fillRect(21, 55, 7, 4);
+  } else {
+    g.fillRect(9, 54, 7, 4);
+    g.fillRect(24, 54, 7, 4);
+  }
+}
+
+function drawGuest(g, look, frame) {
+  drawLegs(g, look.bottom, frame);
+  g.fillStyle(look.top);
+  g.fillRoundedRect(12, 34, 16, 14, 3);
+  g.fillStyle(SKIN);
+  g.fillRect(frame === 0 ? 9 : 8, 37, 4, 8); // 팔
+  g.fillRect(frame === 0 ? 27 : 28, 37, 4, 8);
+  drawHead(g, look.hair);
+}
+
+function drawGroom(g, look, frame) {
+  drawLegs(g, 0x1a1a1a, frame);
+  g.fillStyle(0x1a1a1a); // 턱시도
+  g.fillRoundedRect(11, 34, 18, 14, 3);
+  g.fillStyle(0xffffff); // 셔츠
+  g.fillTriangle(16, 34, 24, 34, 20, 44);
+  g.fillStyle(0xc0392b); // 보타이
+  g.fillTriangle(17, 34, 20, 36, 17, 38);
+  g.fillTriangle(23, 34, 20, 36, 23, 38);
+  drawHead(g, look.hair);
+}
+
+function drawBride(g, look, frame) {
+  const sway = frame === 0 ? 0 : 1;
+  g.fillStyle(SKIN);
+  g.fillRect(16, 52, 3, 5);
+  g.fillRect(21, 52, 3, 5);
+  g.fillStyle(0xffffff); // 드레스
+  g.fillTriangle(20, 32, 6 - sway, 57, 34 + sway, 57);
+  g.fillRoundedRect(13, 33, 14, 10, 3);
+  g.lineStyle(1, 0xd8d8e8);
+  g.strokeTriangle(20, 32, 6 - sway, 57, 34 + sway, 57);
+  g.fillStyle(0xff7eb6); // 부케
+  g.fillCircle(24, 42, 3);
+  g.fillCircle(27, 40, 3);
+  drawHead(g, look.hair);
+  g.fillStyle(0xffffff, 0.75); // 베일
+  g.fillTriangle(8, 10, 3, 46, 14, 20);
+  g.fillStyle(0xffd700); // 티아라
+  g.fillRect(12, 5, 16, 3);
+}
+
+/** 캐릭터 한 명의 텍스처(프레임 2장)와 걷기 애니메이션을 생성하고 텍스처 키를 반환한다. */
+function createCharacterTexture(scene, info) {
+  const key = `char_${info.id}`;
+  if (scene.textures.exists(`${key}_0`)) return key;
+
+  const look = info.look || { hair: 0x333333, top: 0x888888, bottom: 0x444444 };
+  const draw = look.type === 'groom' ? drawGroom : look.type === 'bride' ? drawBride : drawGuest;
+
+  for (const frame of [0, 1]) {
+    const g = scene.make.graphics({ add: false });
+    draw(g, look, frame);
+    g.generateTexture(`${key}_${frame}`, CHAR_W, CHAR_H);
+    g.destroy();
+  }
+
+  scene.anims.create({
+    key: `${key}_walk`,
+    frames: [{ key: `${key}_1` }, { key: `${key}_0` }],
+    frameRate: 6,
+    repeat: -1,
+  });
+
+  return key;
+}
