@@ -76,6 +76,7 @@ function parseBody(body) {
 }
 
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const httpsUrl = (v) => (typeof v === 'string' && v.startsWith('https://') ? v : null);
 
 function toGuest(discussion) {
   const data = parseBody(discussion.body);
@@ -89,7 +90,8 @@ function toGuest(discussion) {
     name,
     shortMsg: str(data.shortMsg, 10),
     longMsg: str(data.longMsg, 1000),
-    spriteUrl: typeof data.spriteUrl === 'string' && data.spriteUrl.startsWith('https://') ? data.spriteUrl : null,
+    spriteUrl: httpsUrl(data.spriteUrl),
+    walkUrl: httpsUrl(data.walkUrl),
     createdAt: discussion.createdAt,
   };
 }

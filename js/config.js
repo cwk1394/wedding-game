@@ -19,6 +19,13 @@ const CONFIG = {
   // 하객이 스폰될 수 있는 층
   guestFloors: ['ground', 'midLeft', 'midRight', 'top'],
 
+  // 이미지 스프라이트 처리
+  sprite: {
+    height: 64, // 화면에 표시할 캐릭터 높이 (px)
+    walkFrames: 4, // walkUrl 이미지의 가로 프레임 수
+    bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
+  },
+
   refreshInterval: 60000, // guests.json 재조회 주기 (ms)
 
   walkSpeed: { min: 35, max: 70 }, // px/s

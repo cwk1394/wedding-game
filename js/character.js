@@ -30,8 +30,23 @@ class Character extends Phaser.GameObjects.Container {
       target.on('pointerup', () => onSelect && onSelect(this));
     }
 
+    this.facesLeft = false; // 원본 이미지가 왼쪽을 바라보는지 (걷기 방향 뒤집기용)
     this.setDepth(y);
     this.scheduleBubble(Phaser.Math.Between(500, CONFIG.bubble.maxGap));
+
+    // 이미지 스프라이트가 있으면 로드되는 동안은 임시 캐릭터를 보여주고, 로드되면 교체
+    if (info.spriteUrl) {
+      loadSpriteTextures(scene, info)
+        .then((sprite) => this.active && this.applySprite(sprite))
+        .catch((err) => console.warn(`${info.name} 스프라이트 로드 실패:`, err));
+    }
+  }
+
+  applySprite({ key, facesLeft }) {
+    this.texKey = key;
+    this.facesLeft = facesLeft;
+    this.sprite.setTexture(`${key}_0`);
+    this.sprite.input.hitArea.setTo(0, 0, this.sprite.width, this.sprite.height);
   }
 
   /** 스프라이트 이미지를 data URL로 반환 (팝업 프로필용) */
@@ -64,7 +79,7 @@ class Character extends Phaser.GameObjects.Container {
 
     const w = text.width + 18;
     const h = text.height + 10;
-    const cy = -CHAR_H - 14 - h / 2; // 말풍선 중심 y
+    const cy = -this.sprite.height - 14 - h / 2; // 말풍선 중심 y
     const bottom = cy + h / 2;
     text.setY(cy);
 
@@ -140,19 +155,29 @@ class GuestCharacter extends Character {
 
   setDir(dir) {
     this.dir = dir;
-    this.sprite.setFlipX(dir < 0);
+    this.sprite.setFlipX(this.facesLeft ? dir > 0 : dir < 0);
+  }
+
+  applySprite(sprite) {
+    super.applySprite(sprite);
+    this.updatePose();
   }
 
   pickState() {
     this.walking = Math.random() < 0.65;
     this.stateTimer = Phaser.Math.Between(1200, 4000);
+    if (this.walking && Math.random() < 0.5) this.dir = -this.dir;
+    this.updatePose();
+  }
+
+  updatePose() {
     if (this.walking) {
-      if (Math.random() < 0.5) this.dir = -this.dir;
       this.setDir(this.dir);
       this.sprite.play(`${this.texKey}_walk`, true);
     } else {
       this.sprite.stop();
       this.sprite.setTexture(`${this.texKey}_0`);
+      if (this.facesLeft) this.sprite.setFlipX(false); // 정면 이미지는 뒤집지 않음
     }
   }
 

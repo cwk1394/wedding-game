@@ -118,3 +118,137 @@ function createCharacterTexture(scene, info) {
 
   return key;
 }
+
+// ---------- 이미지 스프라이트 (spriteUrl = 정면, walkUrl = 걷기 프레임 가로 스트립) ----------
+// AI가 만든 이미지는 흰 배경 + 고해상도라서, 테두리에서 이어진 흰색만 투명 처리(흰 옷은 보존)하고
+// 캐릭터 영역만 잘라 CONFIG.sprite.height 높이로 축소해 캔버스 텍스처로 등록한다.
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`이미지 로드 실패: ${url}`));
+    img.src = url;
+  });
+}
+
+/** 이미지 테두리에서 flood fill로 흰 배경을 투명하게 만든 캔버스를 반환 */
+function removeBackground(img) {
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+  const T = CONFIG.sprite.bgThreshold;
+  const isBg = (p) => d[p * 4 + 3] < 10 || (d[p * 4] >= T && d[p * 4 + 1] >= T && d[p * 4 + 2] >= T);
+
+  const visited = new Uint8Array(w * h);
+  const stack = [];
+  const seed = (p) => {
+    if (!visited[p]) {
+      visited[p] = 1;
+      stack.push(p);
+    }
+  };
+  for (let x = 0; x < w; x++) {
+    seed(x);
+    seed((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    seed(y * w);
+    seed(y * w + w - 1);
+  }
+  while (stack.length) {
+    const p = stack.pop();
+    if (!isBg(p)) continue;
+    d[p * 4 + 3] = 0;
+    const x = p % w;
+    if (x > 0) seed(p - 1);
+    if (x < w - 1) seed(p + 1);
+    if (p >= w) seed(p - w);
+    if (p < w * (h - 1)) seed(p + w);
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+/** 캔버스의 (x, y, w, h) 영역에서 불투명 픽셀의 경계 박스 (영역 기준 좌표) */
+function contentBounds(canvas, x, y, w, h) {
+  const d = canvas.getContext('2d').getImageData(x, y, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let yy = 0; yy < h; yy++) {
+    for (let xx = 0; xx < w; xx++) {
+      if (d[(yy * w + xx) * 4 + 3] > 20) {
+        if (xx < x0) x0 = xx;
+        if (xx > x1) x1 = xx;
+        if (yy < y0) y0 = yy;
+        if (yy > y1) y1 = yy;
+      }
+    }
+  }
+  if (x1 < 0) return { x: 0, y: 0, w, h };
+  return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+function cropScale(src, rect, scale) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(rect.w * scale));
+  canvas.height = Math.max(1, Math.round(rect.h * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+/**
+ * spriteUrl/walkUrl 이미지로 텍스처(`${key}_0`, `${key}_w0..`)와 걷기 애니메이션을 만든다.
+ * 반환: { key, facesLeft } — 걷기 이미지는 왼쪽을 바라본다고 가정.
+ */
+async function loadSpriteTextures(scene, info) {
+  const key = `sprite_${info.id}`;
+  const height = CONFIG.sprite.height;
+  const walkFrameKeys = [];
+
+  if (!scene.textures.exists(`${key}_0`)) {
+    const [front, walk] = await Promise.all([
+      loadImage(info.spriteUrl).then(removeBackground),
+      info.walkUrl ? loadImage(info.walkUrl).then(removeBackground) : null,
+    ]);
+
+    const fb = contentBounds(front, 0, 0, front.width, front.height);
+    scene.textures.addCanvas(`${key}_0`, cropScale(front, fb, height / fb.h));
+
+    if (walk) {
+      // 모든 프레임을 같은 영역으로 잘라야 발 위치가 흔들리지 않는다 → 프레임별 경계 박스의 합집합 사용
+      const n = CONFIG.sprite.walkFrames;
+      const cw = Math.floor(walk.width / n);
+      const boxes = [...Array(n)].map((_, i) => contentBounds(walk, i * cw, 0, cw, walk.height));
+      const x0 = Math.min(...boxes.map((b) => b.x));
+      const y0 = Math.min(...boxes.map((b) => b.y));
+      const x1 = Math.max(...boxes.map((b) => b.x + b.w));
+      const y1 = Math.max(...boxes.map((b) => b.y + b.h));
+      const scale = height / (y1 - y0);
+      for (let i = 0; i < n; i++) {
+        const rect = { x: i * cw + x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        scene.textures.addCanvas(`${key}_w${i}`, cropScale(walk, rect, scale));
+        walkFrameKeys.push(`${key}_w${i}`);
+      }
+    }
+
+    if (!scene.anims.exists(`${key}_walk`)) {
+      scene.anims.create({
+        key: `${key}_walk`,
+        frames: (walkFrameKeys.length ? walkFrameKeys : [`${key}_0`]).map((k) => ({ key: k })),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+  }
+
+  return { key, facesLeft: Boolean(info.walkUrl) };
+}
