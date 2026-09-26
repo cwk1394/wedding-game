@@ -30,11 +30,12 @@ class MapScene extends Phaser.Scene {
 
     // 신랑/신부: 무대 가운데 고정
     const stage = CONFIG.floors.stage;
-    const centerX = (stage.x1 + stage.x2) / 2;
-    this.couple = COUPLE.map(
-      (info, i) =>
-        new CoupleCharacter(this, centerX + (i === 0 ? -30 : 30), stage.y, info, { onSelect: this.onSelect })
-    );
+    const { x1, x2 } = floorSpan(stage);
+    const centerX = (x1 + x2) / 2;
+    this.couple = COUPLE.map((info, i) => {
+      const x = centerX + (i === 0 ? -30 : 30);
+      return new CoupleCharacter(this, x, floorY(stage, x), info, { onSelect: this.onSelect });
+    });
 
     this.guests = [];
     this.guestIds = new Set();
@@ -86,10 +87,12 @@ class MapScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(10000);
     for (const [name, f] of Object.entries(CONFIG.floors)) {
       g.lineStyle(3, name === 'stage' ? 0xffd700 : 0xff0000, 0.9);
-      g.lineBetween(f.x1, f.y, f.x2, f.y);
-      g.fillStyle(0xff0000, 1).fillCircle(f.x1, f.y, 5).fillCircle(f.x2, f.y, 5);
+      g.strokePoints(f.path.map(([x, y]) => ({ x, y })));
+      g.fillStyle(0xff0000, 1);
+      f.path.forEach(([x, y]) => g.fillCircle(x, y, 4));
+      const [x, y] = f.path[0];
       this.add
-        .text(f.x1, f.y + 4, `${name} y=${f.y}`, { fontSize: '14px', color: '#fff', backgroundColor: '#c00' })
+        .text(x, y + 4, name, { fontSize: '12px', color: '#fff', backgroundColor: '#c00' })
         .setDepth(10000);
     }
   }
@@ -140,30 +143,21 @@ class MapScene extends Phaser.Scene {
 
   drawPlatforms() {
     const g = this.add.graphics();
-    for (const [name, f] of Object.entries(CONFIG.floors)) {
-      const w = f.x2 - f.x1;
-      const thick = name === 'ground' ? CONFIG.height - f.y : 26;
-      const radius = name === 'ground' ? 0 : 8;
-
-      g.fillStyle(0x8b5a2b, 1); // 흙
-      g.fillRoundedRect(f.x1, f.y, w, thick, radius);
-      g.fillStyle(0x6e4420, 1); // 흙 점박이
-      for (let x = f.x1 + 14; x < f.x2 - 10; x += 34) {
-        g.fillCircle(x, f.y + 16 + ((x / 34) % 2) * 6, 3);
-      }
-      g.fillStyle(0x5cb85c, 1); // 잔디
-      g.fillRoundedRect(f.x1, f.y - 2, w, 10, radius ? 5 : 0);
-      g.fillStyle(0x7ed67e, 1);
-      g.fillRect(f.x1 + 4, f.y - 2, w - 8, 3);
+    // 발판 꺾은선을 따라 흙 + 잔디 띠를 그린다
+    for (const f of Object.values(CONFIG.floors)) {
+      const points = f.path.map(([x, y]) => ({ x, y }));
+      g.lineStyle(22, 0x8b5a2b, 1).strokePoints(points.map((p) => ({ x: p.x, y: p.y + 11 })));
+      g.lineStyle(8, 0x5cb85c, 1).strokePoints(points.map((p) => ({ x: p.x, y: p.y + 2 })));
     }
   }
 
   drawWeddingArch() {
     const stage = CONFIG.floors.stage;
-    const cx = (stage.x1 + stage.x2) / 2;
-    const baseY = stage.y;
+    const { x1, x2 } = floorSpan(stage);
+    const cx = (x1 + x2) / 2;
+    const baseY = floorY(stage, cx);
     const r = 75;
-    const g = this.add.graphics().setDepth(stage.y - 1);
+    const g = this.add.graphics().setDepth(baseY - 1);
 
     g.lineStyle(8, 0xffffff, 1);
     g.beginPath();
@@ -182,7 +176,7 @@ class MapScene extends Phaser.Scene {
     const heart = this.add
       .text(cx, baseY - 40 - r - 4, '❤', { fontSize: '26px', color: '#ff4d88', resolution: 2 })
       .setOrigin(0.5)
-      .setDepth(stage.y - 1);
+      .setDepth(baseY - 1);
     this.tweens.add({ targets: heart, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
   }
 }
@@ -190,9 +184,10 @@ class MapScene extends Phaser.Scene {
 /** 하객 층을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
 function pickGuestFloor() {
   const floors = CONFIG.guestFloors.map((name) => CONFIG.floors[name]);
-  let r = Math.random() * floors.reduce((sum, f) => sum + (f.x2 - f.x1), 0);
+  const length = (f) => floorSpan(f).x2 - floorSpan(f).x1;
+  let r = Math.random() * floors.reduce((sum, f) => sum + length(f), 0);
   for (const f of floors) {
-    r -= f.x2 - f.x1;
+    r -= length(f);
     if (r <= 0) return f;
   }
   return floors[floors.length - 1];

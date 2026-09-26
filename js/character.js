@@ -152,12 +152,14 @@ class CoupleCharacter extends Character {
 /** 하객: 자기 층 범위 안에서 랜덤하게 걷다 멈췄다 한다 */
 class GuestCharacter extends Character {
   constructor(scene, floor, info, opts) {
-    const margin = CHAR_W / 2;
-    const x = Phaser.Math.Between(floor.x1 + margin, floor.x2 - margin);
-    super(scene, x, floor.y, info, opts);
+    const { x1, x2 } = floorSpan(floor);
+    const margin = Math.min(CHAR_W / 2, (x2 - x1) / 4); // 짧은 발판에서도 범위가 뒤집히지 않게
+    const x = Phaser.Math.Between(x1 + margin, x2 - margin);
+    super(scene, x, floorY(floor, x), info, opts);
 
-    this.minX = floor.x1 + margin;
-    this.maxX = floor.x2 - margin;
+    this.floor = floor;
+    this.minX = x1 + margin;
+    this.maxX = x2 - margin;
     this.speed = Phaser.Math.Between(CONFIG.walkSpeed.min, CONFIG.walkSpeed.max);
     this.dir = Math.random() < 0.5 ? -1 : 1;
     this.walking = false;
@@ -205,5 +207,8 @@ class GuestCharacter extends Character {
       this.x = this.maxX;
       this.setDir(-1);
     }
+    // 기울어진 구간(계단, 출렁다리)은 x에 맞춰 발 높이를 따라간다. 아래쪽 캐릭터가 앞에 그려지도록 depth도 갱신
+    this.y = floorY(this.floor, this.x);
+    this.setDepth(this.y);
   }
 }
