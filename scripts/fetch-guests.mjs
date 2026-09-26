@@ -50,6 +50,7 @@ function toGuest(discussion) {
     ladderUrl: imageUrl(data.ladderUrl),
     ropeUrl: imageUrl(data.ropeUrl),
     proneUrl: imageUrl(data.proneUrl),
+    number: discussion.number, // 수정/삭제 요청용 (본문의 pw 해시는 guests.json에 넣지 않음)
     createdAt: discussion.createdAt,
   };
 }

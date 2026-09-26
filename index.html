@@ -102,6 +102,7 @@
         <p id="modal-long" class="modal-long"></p>
       </div>
       <div class="modal-footer modal-footer-end">
+        <button type="button" class="btn btn-ghost edit-btn" hidden>수정</button>
         <button type="button" class="btn btn-primary control-btn">조종하기</button>
       </div>
     </div>
@@ -133,6 +134,10 @@
             <span>방명록</span>
             <textarea name="longMsg" maxlength="500" rows="5" required></textarea>
           </label>
+          <label class="field">
+            <span>비밀번호 <small>(4자 이상, 나중에 방명록을 수정·삭제할 때 필요해요)</small></span>
+            <input name="password" type="password" minlength="4" maxlength="30" required autocomplete="new-password" />
+          </label>
         </div>
 
         <!-- 2단계: 캐릭터 -->
@@ -161,6 +166,43 @@
         <button type="button" class="btn btn-ghost prev-btn" hidden>이전</button>
         <button type="button" class="btn btn-primary next-btn">다음</button>
         <button type="submit" class="btn btn-primary submit-btn" hidden>등록하기</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 방명록 수정/삭제: 비밀번호 확인 → 수정 폼 -->
+  <div id="edit-modal" class="modal" hidden>
+    <form id="edit-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-title" novalidate>
+      <div class="modal-header">
+        <span id="edit-title" class="modal-title">방명록 수정</span>
+        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body form-body">
+        <div class="edit-step" data-edit-step="password">
+          <label class="field">
+            <span>비밀번호 <small>(방명록을 등록할 때 정한 비밀번호)</small></span>
+            <input name="password" type="password" maxlength="30" autocomplete="current-password" />
+          </label>
+        </div>
+        <div class="edit-step" data-edit-step="form" hidden>
+          <label class="field">
+            <span>이름 <small>(15자 이하)</small></span>
+            <input name="name" maxlength="15" required />
+          </label>
+          <label class="field">
+            <span>한줄 멘트 <small>(10자 이하)</small></span>
+            <input name="shortMsg" maxlength="10" required />
+          </label>
+          <label class="field">
+            <span>방명록</span>
+            <textarea name="longMsg" maxlength="500" rows="5" required></textarea>
+          </label>
+        </div>
+        <p class="form-error" role="alert" hidden></p>
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <button type="button" class="btn btn-danger delete-btn" hidden>캐릭터 삭제</button>
+        <button type="submit" class="btn btn-primary edit-submit">확인</button>
       </div>
     </form>
   </div>

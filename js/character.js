@@ -19,12 +19,13 @@ class Character extends Phaser.GameObjects.Container {
         fontFamily: CONFIG.fontFamily,
         fontSize: '15px',
         color: tagColor,
-        backgroundColor: 'rgba(0,0,0,0.6)',
         padding: { x: 5, y: 2 },
         resolution: TEXT_RESOLUTION,
       })
       .setOrigin(0.5, 0);
-    this.add([this.sprite, this.tag]);
+    this.tagBg = scene.add.graphics(); // 이름표 배경 (모서리 살짝 둥글게)
+    this.drawTagBg();
+    this.add([this.sprite, this.tagBg, this.tag]);
 
     // 누르는 영역: 발(원점) 기준 고정 사각형 + 네임태그.
     // 스프라이트 자체에 걸면 걷기·사다리 프레임마다 크기가 달라 가장자리를 눌러도 안 잡히는 경우가 생긴다.
@@ -64,6 +65,19 @@ class Character extends Phaser.GameObjects.Container {
     const w = Math.max(CHAR_W, width) * 1.3;
     const tagH = this.tag.height + 6;
     this.input.hitArea.setTo(-w / 2, -height, w, height + tagH);
+  }
+
+  drawTagBg() {
+    const { width: w, height: h } = this.tag;
+    this.tagBg.clear().fillStyle(0x000000, 0.6).fillRoundedRect(-w / 2, 4, w, h, 3);
+  }
+
+  /** 방명록을 수정했을 때: 이름표·말풍선 문구 갱신 */
+  updateInfo(info) {
+    Object.assign(this.info, info);
+    this.tag.setText(this.info.name);
+    this.drawTagBg();
+    this.updateHitArea(this.sprite.displayWidth || CHAR_W, this.sprite.displayHeight || CHAR_H);
   }
 
   /** 스프라이트 이미지를 data URL로 반환 (팝업 프로필용) */
@@ -834,6 +848,13 @@ class NpcCharacter extends GuestCharacter {
     this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
     this.y = floorY(this.floor, this.x);
     this.effect = npc.effect ? new NpcEffect(scene, this, npc.effect) : null;
+    if (npc.fixed) this.alignToFloor();
+  }
+
+  /** 고정 NPC(택시)는 발판 기울기에 맞춰 살짝 기울인다 */
+  alignToFloor() {
+    const slope = (floorY(this.floor, this.x + 8) - floorY(this.floor, this.x - 8)) / 16;
+    this.sprite.setRotation(Math.atan(slope));
   }
 
   setFloor(name) {
@@ -886,7 +907,10 @@ class NpcCharacter extends GuestCharacter {
   onMapChanged() {
     if (this.npc?.fixed) {
       // 고정 NPC(택시)는 발판이 남아 있으면 그 자리 그대로
-      if (CONFIG.floors[this.floorName]) this.y = floorY(this.floor, this.x);
+      if (CONFIG.floors[this.floorName]) {
+        this.y = floorY(this.floor, this.x);
+        this.alignToFloor();
+      }
       return;
     }
     super.onMapChanged();

@@ -29,15 +29,30 @@ class MapScene extends Phaser.Scene {
     if (params.has('dev')) this.dev = new DevMode(this);
     else if (params.has('debug')) this.drawFloorGuides();
 
-    this.onSelect = (character) =>
+    this.onSelect = (character) => {
+      const isCouple = character instanceof CoupleCharacter;
+      // 조종: 하객은 누구나, 신랑·신부는 개발자 모드에서만, NPC는 불가
+      const canControl = !character.info.npc && (!isCouple || this.dev);
+      // 수정/삭제: 등록된 하객만 (방명록 번호가 있을 때)
+      const canManage = !character.info.npc && !isCouple && character.info.number;
       UI.openGuestbook(
         { ...character.info, avatarUrl: character.getAvatarUrl() },
-        character.info.npc ? null : {
-          controlling: this.control.controlled === character,
-          onControl: () => this.control.take(character, { zoom: true }),
-          onRelease: () => this.control.release(),
-        }
+        canControl
+          ? {
+              controlling: this.control.controlled === character,
+              onControl: () => this.control.take(character, { zoom: true }),
+              onRelease: () => this.control.release(),
+            }
+          : null,
+        canManage
+          ? {
+              info: character.info,
+              onUpdated: (guest) => character.updateInfo(guest),
+              onDeleted: () => this.removeGuest(character),
+            }
+          : null
       );
+    };
 
     // 신랑/신부: 무대 가운데 고정
     const stage = CONFIG.floors.stage;
@@ -91,6 +106,13 @@ class MapScene extends Phaser.Scene {
     const guest = new GuestCharacter(this, floor, info, { onSelect: this.onSelect, x: spawn?.x });
     this.guests.push(guest);
     return guest;
+  }
+
+  /** 하객 삭제: 맵에서 지운다 (id는 guestIds에 남겨 재조회 때 다시 생기지 않게) */
+  removeGuest(character) {
+    if (this.control.controlled === character) this.control.release();
+    this.guests = this.guests.filter((g) => g !== character);
+    character.destroy();
   }
 
   /** 맵 전체에 꽃잎이 조금씩 흩날리는 효과 (위에서 천천히 떨어지며 좌우로 흔들림) */

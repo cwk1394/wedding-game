@@ -41,18 +41,27 @@ const UI = (() => {
   const viewModal = setupModal(document.getElementById('modal'));
 
   const controlBtn = document.querySelector('#modal .control-btn');
+  const editBtn = document.querySelector('#modal .edit-btn');
   let controlAction = null;
+  let manageTarget = null;
   controlBtn.addEventListener('click', () => {
     viewModal.close();
     controlAction?.();
   });
+  editBtn.addEventListener('click', () => {
+    viewModal.close();
+    openEdit(manageTarget);
+  });
 
   /**
-   * 방명록 보기. control: { controlling, onControl, onRelease } — 오른쪽 아래 버튼이
-   * 이 캐릭터를 조종 중이면 "조종 끝내기", 아니면 "조종하기"
+   * 방명록 보기.
+   * control: { controlling, onControl, onRelease } — 오른쪽 아래 버튼이 조종 중이면 "조종 끝내기", 아니면 "조종하기"
+   * manage: { info, onUpdated(guest), onDeleted() } — 있으면 조종하기 왼쪽에 "수정" 버튼 (하객만)
    */
-  function openGuestbook({ name, shortMsg, longMsg, avatarUrl }, control = null) {
+  function openGuestbook({ name, shortMsg, longMsg, avatarUrl }, control = null, manage = null) {
     controlBtn.hidden = !control;
+    editBtn.hidden = !manage;
+    manageTarget = manage;
     if (control) {
       controlBtn.textContent = control.controlling ? '조종 끝내기' : '조종하기';
       controlBtn.classList.toggle('btn-ghost', control.controlling);
@@ -66,6 +75,96 @@ const UI = (() => {
     if (avatarUrl) avatar.src = avatarUrl;
     viewModal.open();
   }
+
+  // ---------- 방명록 수정/삭제 ----------
+  const editModal = setupModal(document.getElementById('edit-modal'));
+  const editForm = document.getElementById('edit-form');
+  const ef = editForm.elements;
+  const editError = editForm.querySelector('.form-error');
+  const editSubmit = editForm.querySelector('.edit-submit');
+  const deleteBtn = editForm.querySelector('.delete-btn');
+  let editing = null; // { target, password, verified }
+
+  const setEditError = (msg) => {
+    editError.textContent = msg || '';
+    editError.hidden = !msg;
+  };
+  function showEditStep(step) {
+    editForm.querySelectorAll('[data-edit-step]').forEach((el) => (el.hidden = el.dataset.editStep !== step));
+    deleteBtn.hidden = step !== 'form';
+    editSubmit.textContent = step === 'form' ? '저장' : '확인';
+    document.getElementById('edit-title').textContent = step === 'form' ? '방명록 수정' : '비밀번호 확인';
+  }
+
+  function openEdit(target) {
+    if (!target) return;
+    editing = { target, password: '', verified: false };
+    editForm.reset();
+    setEditError('');
+    showEditStep('password');
+    editModal.open();
+    setTimeout(() => ef.password.focus(), 50);
+  }
+
+  const request = (action, extra = {}) =>
+    manageGuestbook(action, { number: editing.target.info.number, id: editing.target.info.id, password: editing.password, ...extra });
+
+  async function busy(btn, label, task) {
+    const text = btn.textContent;
+    btn.disabled = true;
+    editSubmit.disabled = true;
+    deleteBtn.disabled = true;
+    btn.textContent = label;
+    try {
+      await task();
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      btn.disabled = false;
+      editSubmit.disabled = false;
+      deleteBtn.disabled = false;
+      if (btn.textContent === label) btn.textContent = text;
+    }
+  }
+
+  editForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    setEditError('');
+    if (!editing.verified) {
+      editing.password = ef.password.value;
+      if (!editing.password) return setEditError('비밀번호를 입력해 주세요.');
+      return busy(editSubmit, '확인 중...', async () => {
+        await request('verify');
+        editing.verified = true;
+        const { info } = editing.target;
+        ef.name.value = info.name;
+        ef.shortMsg.value = info.shortMsg ?? '';
+        ef.longMsg.value = info.longMsg ?? '';
+        showEditStep('form');
+      });
+    }
+    const name = ef.name.value.trim();
+    const shortMsg = ef.shortMsg.value.trim();
+    const longMsg = ef.longMsg.value.trim();
+    if (!name || !shortMsg || !longMsg) return setEditError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    return busy(editSubmit, '저장 중...', async () => {
+      const { guest } = await request('update', { name, shortMsg, longMsg });
+      editing.target.onUpdated?.(guest);
+      editModal.close();
+      showToast('방명록을 수정했어요');
+    });
+  });
+
+  deleteBtn.addEventListener('click', () => {
+    if (!confirm('이 캐릭터와 방명록을 삭제할까요? 되돌릴 수 없어요.')) return;
+    setEditError('');
+    busy(deleteBtn, '삭제 중...', async () => {
+      await request('delete');
+      editing.target.onDeleted?.();
+      editModal.close();
+      showToast('방명록을 삭제했어요');
+    });
+  });
 
   // ---------- 방명록 작성 (1단계: 방명록 → 2단계: 캐릭터) ----------
   const writeModal = setupModal(document.getElementById('write-modal'));
@@ -111,12 +210,14 @@ const UI = (() => {
       name: fields.name.value.trim(),
       shortMsg: fields.shortMsg.value.trim(),
       longMsg: fields.longMsg.value.trim(),
+      password: fields.password.value,
     };
   }
 
   function goNext() {
-    const { name, shortMsg, longMsg } = readTexts();
+    const { name, shortMsg, longMsg, password } = readTexts();
     if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    if ([...password].length < 4) return showError('비밀번호를 4자 이상 입력해 주세요.');
     showStep(2);
   }
 
@@ -249,8 +350,8 @@ const UI = (() => {
     if (step === 1) return goNext(); // 1단계에서 엔터
     if (generating) return;
     showError('');
-    const { name, shortMsg, longMsg } = readTexts();
-    if (!name || !shortMsg || !longMsg) {
+    const { name, shortMsg, longMsg, password } = readTexts();
+    if (!name || !shortMsg || !longMsg || [...password].length < 4) {
       showStep(1);
       return goNext();
     }
@@ -260,7 +361,7 @@ const UI = (() => {
     submitBtn.textContent = '등록 중...';
     try {
       const images = await (preparing ?? Promise.resolve(null));
-      const guest = await submitGuestbook({ name, shortMsg, longMsg, images });
+      const guest = await submitGuestbook({ name, shortMsg, longMsg, password, images });
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
         ...guest,

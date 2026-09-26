@@ -71,7 +71,12 @@ async function generateCharacter(type, image) {
 }
 
 /** 방명록 등록. 성공 시 서버가 만든 guest 객체(id = UUID) 반환. */
-async function submitGuestbook({ name, shortMsg, longMsg, images }) {
-  const { guest } = await postJson('/api/guestbook', { name, shortMsg, longMsg, images });
+async function submitGuestbook({ name, shortMsg, longMsg, password, images }) {
+  const { guest } = await postJson('/api/guestbook', { name, shortMsg, longMsg, password, images });
   return guest;
+}
+
+/** 방명록 수정/삭제. action: 'verify' | 'update' | 'delete' */
+function manageGuestbook(action, payload) {
+  return postJson('/api/guestbook', { action, ...payload });
 }

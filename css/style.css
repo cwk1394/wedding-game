@@ -605,6 +605,16 @@ html, body {
 
 /* 방명록 팝업: 조종하기 버튼은 오른쪽 아래 */
 .modal-footer-end { justify-content: flex-end; }
+.modal-footer-split { justify-content: space-between; }
+.modal-footer-split .edit-submit { margin-left: auto; }
+.btn-danger {
+  color: #d23f2c;
+  background: #fff;
+  border: 1.5px solid #f3b3aa;
+  box-shadow: 0 2px 0 #f3b3aa;
+  text-shadow: none;
+}
+.edit-step { display: flex; flex-direction: column; gap: 14px; }
 
 /* ---------- 배경음악 버튼 (오른쪽 위) ---------- */
 .bgm-btn {

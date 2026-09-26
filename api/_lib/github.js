@@ -99,4 +99,33 @@ export class GitHub {
     );
     return data.createDiscussion.discussion;
   }
+
+  /** 번호로 Discussion 조회 → { id, number, title, body, category } (없으면 null) */
+  async getDiscussion(number) {
+    const data = await this.graphql(
+      `query($owner: String!, $repo: String!, $number: Int!) {
+        repository(owner: $owner, name: $repo) {
+          discussion(number: $number) { id number title body category { name } }
+        }
+      }`,
+      { owner: this.env.GITHUB_OWNER, repo: this.env.GITHUB_REPO, number }
+    );
+    return data.repository.discussion;
+  }
+
+  async updateDiscussion(discussionId, title, body) {
+    await this.graphql(
+      `mutation($id: ID!, $title: String!, $body: String!) {
+        updateDiscussion(input: { discussionId: $id, title: $title, body: $body }) { discussion { number } }
+      }`,
+      { id: discussionId, title, body }
+    );
+  }
+
+  async deleteDiscussion(discussionId) {
+    await this.graphql(
+      `mutation($id: ID!) { deleteDiscussion(input: { id: $id }) { discussion { number } } }`,
+      { id: discussionId }
+    );
+  }
 }

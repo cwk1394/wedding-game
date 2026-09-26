@@ -82,6 +82,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 구현 메모
 - 캐릭터 컨테이너 원점(0,0) = 발 위치. 스프라이트 origin (0.5, 1).
+- 이름표는 텍스트 + 뒤에 그린 반투명 검정 둥근 사각형(반지름 3, `drawTagBg`).
 - 누르는 영역은 스프라이트가 아니라 컨테이너에 발 기준 고정 사각형(`updateHitArea`, 정면 폭×1.3 + 네임태그). 스프라이트에 걸면 걷기·사다리 프레임 크기마다 영역이 달라져 잘 안 눌림.
 - 임시 캐릭터는 오른쪽을 바라보게 그림 → 왼쪽 이동 시 `setFlipX(true)`.
 - `look`이 없는 데이터는 `lookFromId(id)`로 id 해시 기반 고정 랜덤 색상.
@@ -95,7 +96,14 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 신랑신부 스프라이트 원본(`img/npc/*/walk.png` 등): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 
+## 방명록 수정/삭제 (비밀번호)
+- 등록 폼 1단계에 비밀번호(4~30자). 서버는 Discussion 본문에 `pw: "salt:HMAC-SHA256(비밀키, salt:비밀번호)"`만 저장(본문은 공개라 평문 금지). 비밀키 = Vercel `GUEST_PASSWORD_SECRET`(없으면 `DEV_PASSWORD`) — 바꾸면 기존 비밀번호 전부 무효.
+- guests.json에는 `number`(Discussion 번호)가 들어가고 pw는 빠짐. `POST /api/guestbook {action: verify|update|delete, number, id, password, ...}` → 번호로 글을 읽고 카테고리·id 확인 후 비밀번호 검사.
+- `DEV_PASSWORD`는 관리자 비밀번호로 모든 방명록(비밀번호 없는 옛 글 포함)을 수정/삭제 가능.
+- 팝업: 하객이면 조종하기 왼쪽에 "수정" → 비밀번호 확인 → 이름·멘트·방명록 수정 폼 + "캐릭터 삭제". 수정하면 맵의 이름표/멘트 즉시 갱신, 삭제하면 맵에서 제거(`scene.removeGuest`). 이미지 폴더는 매일 정리 작업이 지움.
+
 ## 캐릭터 조종 (일반 방문자)
+- 신랑·신부는 개발자 모드에서만 조종 가능(일반 방문자 팝업엔 조종 버튼 없음), NPC는 불가.
 - 캐릭터를 누르면 방명록 팝업 오른쪽 아래에 "조종하기" 버튼(조종 중인 캐릭터면 "조종 끝내기"). 누르면 `scene.control.take(캐릭터, {zoom})` → 1.4배(`CONFIG.view.controlZoom`) 이상 확대 + 카메라 따라감.
 - 방명록 등록 직후: 새 캐릭터를 시작점(`CONFIG.spawn` = `MAP_DATA.spawn {floor, x}`, 없으면 랜덤 층)에 만들고 바로 조종 + 확대.
 - PC는 방향키/Space, 터치 기기는 화면 스틱 + 점프 버튼(조종 중에만 표시). 조작 규칙은 아래 개발자 모드 조종과 같음(`GuestCharacter.tickControlled`).
@@ -118,7 +126,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - Vercel 환경변수 `DEV_PASSWORD` 필요. 저장 후 로컬에서 push 전 `git pull --rebase`.
 
 ## NPC (`js/npcs.js`, `NpcCharacter`)
-- 푸딩(흰 토끼, 늘 꽃가루), 얼룩말(하트 선글라스, 서 있으면 비눗방울, 걸으면 파티 블로어 + 음표), 고양이 4마리(미미·옹이·복실이·별이(흰 페르시안): 어슬렁/그루밍/자기), 에쏘(크림색 보더콜리, 신랑·신부 주변 ±170px 뛰어다님, 앉아서 뒷다리로 머리 긁기), 몽실이(흰 페키니즈: 천천히 걷기, 올려다보기, 핑크 삑삑이 덤벨 물고 앉기), 택시(고정).
+- 푸딩(흰 토끼, 늘 꽃가루), 얼룩말(하트 선글라스, 서 있으면 비눗방울, 걸으면 파티 블로어 + 음표), 고양이 4마리(미미·옹이·복실이·별이(흰 페르시안): 어슬렁/그루밍/자기), 에쏘(크림색 보더콜리, 신랑·신부 주변 ±170px 뛰어다님, 앉아서 뒷다리로 머리 긁기), 몽실이(흰 페키니즈: 천천히 걷기, 올려다보기, 핑크 삑삑이 덤벨 물고 앉기), 택시(고정, 광장 발판 기울기에 맞춰 살짝 기울임 `alignToFloor`, 파스텔 웨딩 택시·위에서 살짝 내려다본 각도).
 - 푸딩·에쏘·별이·몽실이는 실제 사진 `img/npc/<id>/origin.jpg` 기반으로 생성(사진은 개인 사진이라 `.gitignore`로 저장소에 안 올림 — 다시 생성하려면 로컬에 있어야 함).
 - NPC 이미지는 OpenAI `background: transparent`로 생성. `removeBackground`는 네 귀퉁이가 투명한 이미지면 흰색을 지우지 않음(흰 털이 뚫리던 문제).
 - `NpcCharacter extends GuestCharacter`: 점프·사다리·로프 안 씀(canJump/canClimb=false), 조종 불가(팝업에 조종 버튼 없음). 동작은 idle/walk + NPC별 특수 동작(sleep, scratch…, `states`에 비율·`<동작>Time`), NPC별 height·motionFrames·motionHeight.
@@ -167,7 +175,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 사이트: https://kobe-kang.github.io/guestbook/
 - API: https://guestbook-nine-drab.vercel.app/api/guestbook (Vercel, GET = 상태 확인)
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
-- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장·관리자 비밀번호), `GUEST_PASSWORD_SECRET`(방명록 비밀번호 해시용 비밀키) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
 - API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.
