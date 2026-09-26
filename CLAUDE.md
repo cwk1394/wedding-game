@@ -6,7 +6,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 ## 진행 상황
 - [x] 1단계: Phaser 껍데기 (맵, 더미 캐릭터, 이동/네임태그/말풍선, 클릭 팝업)
 - [x] 2단계: GitHub Discussions 읽기 (Actions → `guests.json` 방식)
-- [~] 3단계: Cloudflare Worker로 방명록 쓰기 — 코드 완료(`worker/`), **Cloudflare 배포 + `CONFIG.apiUrl` 설정 필요**
+- [~] 3단계: Vercel Serverless Functions로 방명록 쓰기 — 로직은 `worker/`(Cloudflare용)에 완성, **`api/guestbook.js`로 이전 + Vercel 배포 + `CONFIG.apiUrl` 설정 필요** (Cloudflare는 사용 안 함)
 - [ ] 4단계: AI 스프라이트 생성 파이프라인 — 이미지 저장(저장소 커밋)은 완료, AI 생성만 남음 (지금은 폼에서 이미지 파일 직접 업로드)
 - [ ] 5단계: 모바일 최적화, 로딩 UI
 
@@ -21,15 +21,15 @@ js/config.js            CONFIG: 월드 크기(1280x720), 층(floors) 좌표, 속
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
-js/api.js               prepareSpriteImages()(업로드용 이미지 처리), submitGuestbook()(Worker 호출)
+js/api.js               prepareSpriteImages()(업로드용 이미지 처리), submitGuestbook()(API 호출)
 js/ui.js                방명록 팝업, 작성 폼, 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
 .github/workflows/deploy.yml  Pages 배포 워크플로
 img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, character1 = 예시 하객). *_move.png = 걷기 4프레임
-img/guests/<uuid>/       하객 스프라이트 (Worker가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
-worker/                 Cloudflare Worker (POST /api/guestbook). wrangler.toml에 공개 설정, GITHUB_TOKEN은 secret
+img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png, walk.png(투명 배경, 4프레임 스트립, 높이 128)
+worker/                 (폐기 예정) Cloudflare Worker 버전 쓰기 API. Vercel `api/`로 옮긴 뒤 삭제
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
 ```
 
@@ -48,8 +48,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 
 ## 데이터 흐름 (쓰기)
 1. 브라우저: 폼 입력 + 이미지 파일 → 배경 제거·크롭·높이 128로 축소 → PNG data URL (한 장 수십 KB)
-2. Worker `POST /api/guestbook`: 입력 검증(이름·멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
-3. Worker가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)
+2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름·멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
+3. API가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)
 4. Discussion 작성 → push/discussion 이벤트로 Actions가 재배포 (1~2분)
 5. 브라우저는 배포를 기다리지 않고 방금 처리한 data URL 이미지로 즉시 맵에 추가. 이후 재조회 때 같은 UUID라 중복 생성 안 됨.
 
@@ -65,16 +65,17 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - `index.html`을 파일로 열면 fetch 실패 → 더미 데이터로 동작.
 - 실제 데이터 흐름 확인은 로컬 서버 필요 (`python -m http.server`), 이때 `data/guests.json`을 임의로 만들어 테스트.
 - 이미지 에셋을 로드하게 되면 file://로는 안 되므로 로컬 서버 사용.
-- Worker 로컬 실행: `cd worker && npx wrangler dev --port 8787` → 페이지를 `?api=http://127.0.0.1:8787`로 열면 해당 API 사용. 로컬 서버는 8765 포트여야 CORS 허용됨.
+- API 로컬 테스트: 페이지를 `?api=<API 주소>`로 열면 해당 API 사용 (예: `vercel dev` 주소). 허용 출처에 로컬 페이지 주소가 들어 있어야 CORS 통과.
 
 ## 배포 / GitHub 설정
 - 저장소: https://github.com/kobe-KANG/guestbook (브랜치 `main`)
 - 사이트: https://kobe-kang.github.io/guestbook/
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
-- Worker 배포: `cd worker && npx wrangler login && npx wrangler secret put GITHUB_TOKEN && npx wrangler deploy` → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`(4단계에 `OPENAI_API_KEY`) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+  - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
-- Worker가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.
+- API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.
 
 ## 규칙
 - 사용자와는 항상 한국어로 대화한다.
-- 비밀값(GitHub PAT, OpenAI 키 등)은 절대 프론트엔드 코드/저장소에 넣지 않는다 → Worker 환경변수로.
+- 비밀값(GitHub PAT, OpenAI 키 등)은 절대 프론트엔드 코드/저장소에 넣지 않는다 → Vercel 환경변수로.
