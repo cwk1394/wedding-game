@@ -92,6 +92,15 @@ const CONFIG = {
     duration: 5000, // 말풍선 표시 시간 (ms)
     minGap: 3000, // 다음 말풍선까지 최소 대기 (ms)
     maxGap: 15000, // 다음 말풍선까지 최대 대기 (ms)
+    // 메이플스토리풍 말풍선 색
+    style: {
+      fill: 0xf2f9ff, // 아주 옅은 하늘색 바탕
+      line: 0xa3bdd3, // 얇고 연한 테두리
+      lineWidth: 1.2,
+      shade: 0xd3e6f5, // 아래쪽 안쪽 음영
+      shadow: 0x5d7f9c, // 아래 그림자
+      text: '#3b4a5a',
+    },
   },
 
   fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',

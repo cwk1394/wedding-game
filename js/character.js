@@ -89,7 +89,7 @@ class Character extends Phaser.GameObjects.Container {
       .text(0, 0, message, {
         fontFamily: CONFIG.fontFamily,
         fontSize: '16px',
-        color: '#222222',
+        color: CONFIG.bubble.style.text,
         resolution: TEXT_RESOLUTION,
       })
       .setOrigin(0.5);
@@ -100,18 +100,38 @@ class Character extends Phaser.GameObjects.Container {
     const bottom = cy + h / 2;
     text.setY(cy);
 
+    // 메이플스토리풍 말풍선: 아주 옅은 하늘색 바탕 + 얇고 연한 테두리 + 위쪽 광택·아래쪽 음영·옅은 그림자로 입체감
+    const B = CONFIG.bubble.style;
+    const top = cy - h / 2;
+    const left = -w / 2;
+    const r = 7;
     const g = this.scene.add.graphics();
-    g.fillStyle(0xffffff, 1);
-    g.lineStyle(2, 0x444444, 1);
-    g.fillRoundedRect(-w / 2, cy - h / 2, w, h, 8);
-    g.strokeRoundedRect(-w / 2, cy - h / 2, w, h, 8);
-    // 꼬리
-    g.fillTriangle(-6, bottom - 1, 6, bottom - 1, 0, bottom + 8);
+    const tail = (dy = 0) => g.fillTriangle(-6, bottom - 1 + dy, 6, bottom - 1 + dy, 0, bottom + 8 + dy);
+    // 그림자 (아래로 살짝)
+    g.fillStyle(B.shadow, 0.22);
+    g.fillRoundedRect(left, top + 2, w, h, r);
+    tail(2);
+    // 바탕
+    g.fillStyle(B.fill, 1);
+    g.fillRoundedRect(left, top, w, h, r);
+    tail();
+    // 얇고 연한 테두리
+    g.lineStyle(B.lineWidth, B.line, 1);
+    g.strokeRoundedRect(left, top, w, h, r);
     g.beginPath();
     g.moveTo(-6, bottom);
     g.lineTo(0, bottom + 8);
     g.lineTo(6, bottom);
     g.strokePath();
+    // 꼬리와 몸통 이음새의 테두리 가리기
+    g.fillStyle(B.fill, 1);
+    g.fillRect(-5, bottom - 2.5, 10, 3);
+    // 아래쪽 안쪽 음영 (테두리 쪽이 살짝 도톰해 보이게)
+    g.fillStyle(B.shade, 0.55);
+    g.fillRoundedRect(left + 1.5, top + h - 5, w - 3, 3.5, { tl: 0, tr: 0, bl: r - 2, br: r - 2 });
+    // 위쪽 광택
+    g.fillStyle(0xffffff, 0.85);
+    g.fillRoundedRect(left + 2, top + 1.5, w - 4, Math.max(4, h * 0.42), { tl: r - 2, tr: r - 2, bl: 3, br: 3 });
 
     const bubble = this.scene.add.container(0, 0, [g, text]).setAlpha(0);
     this.add(bubble);
