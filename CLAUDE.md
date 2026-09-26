@@ -31,7 +31,7 @@ scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실�
 scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
-img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 front/walk.webp(q0.9, 44~146KB) 사용
+img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope.png(투명 배경, 4프레임, 높이 128, 모두 선택)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
