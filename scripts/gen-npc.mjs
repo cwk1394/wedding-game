@@ -1,6 +1,6 @@
 // NPC 스프라이트 생성 (OpenAI 이미지 API). 로컬에서 한 번씩 돌리는 도구 — 키는 환경변수로만 받는다.
 //   OPENAI_API_KEY=... node scripts/gen-npc.mjs                 전부 생성
-//   OPENAI_API_KEY=... node scripts/gen-npc.mjs pudding cat-mimi:sleep   일부만 다시 생성
+//   OPENAI_API_KEY=... node scripts/gen-npc.mjs rabbit-pudding cat-mimi:sleep   일부만 다시 생성
 // 1) NPC마다 기준 이미지(front)를 글로 생성 — img/npc/<id>/origin.jpg(실제 사진)가 있으면 그 사진을 바탕으로 생성
 // 2) 그 기준 이미지를 참고로 동작 스트립(idle/walk/sleep/scratch) 생성
 // 결과: img/npc/<id>/<motion>.webp (sharp로 가로 768px로 줄여 저장, 원본은 .cache/npc-raw/)
@@ -44,7 +44,7 @@ ${STYLE}`;
 const catBase = (look) => `A cute small cat NPC in MapleStory style, ${look}, walking on four legs, side view facing LEFT, full body, chibi and round, big shiny eyes, friendly expression.`;
 
 const NPCS = {
-  pudding: {
+  'rabbit-pudding': {
     origin: true,
     front: `Turn the real rabbit in this photo into a cute MapleStory-style NPC named Pudding. Keep its real look: pure snow-white fluffy fur,
 bright red eyes, long upright ears with pink insides, round body. Give it a big happy smile and let it stand upright on two legs,
@@ -71,7 +71,7 @@ Full body, three-quarter view facing LEFT, chibi proportions.`,
     origin: true,
     look: 'the real cat in the reference photo: a pure white, very fluffy long-haired Persian-style cat with a flat round face, blue-grey eyes and a small pink nose',
   },
-  esso: {
+  'dog-esso': {
     origin: true,
     front: `Turn the real dog in this photo into a cute MapleStory-style NPC named Esso. Keep its real look: a fluffy light cream / pale golden-brown
 border collie with a white chest and muzzle, soft floppy ears, bright happy open-mouth smile with tongue out. Standing on four legs, side view facing LEFT,
@@ -82,7 +82,7 @@ full body, chibi and round. Ignore the photo background and people.`,
       scratch: strip(4, 'Sitting on the ground and scratching behind its ear/head with one hind leg, like a real dog: the hind leg moves up and down in a quick scratching loop, head tilted, eyes squinted happily.'),
     },
   },
-  mongsil: {
+  'dog-mongsil': {
     origin: true,
     front: `Turn the real dog in this photo into a cute MapleStory-style NPC named Mongsil. Keep its real look: a small white Pekingese with long soft white fur,
 a short flat face with a dark muzzle and black nose, big round dark shiny eyes, fluffy ears. Standing on four legs, three-quarter side view facing LEFT,

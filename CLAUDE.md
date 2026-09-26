@@ -123,7 +123,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - NPC 이미지는 OpenAI `background: transparent`로 생성. `removeBackground`는 네 귀퉁이가 투명한 이미지면 흰색을 지우지 않음(흰 털이 뚫리던 문제).
 - `NpcCharacter extends GuestCharacter`: 점프·사다리·로프 안 씀(canJump/canClimb=false), 조종 불가(팝업에 조종 버튼 없음). 동작은 idle/walk + NPC별 특수 동작(sleep, scratch…, `states`에 비율·`<동작>Time`), NPC별 height·motionFrames·motionHeight.
 - 효과는 `NpcEffect`(Phaser 파티클: 꽃잎 재사용, 비눗방울·음표 텍스처는 코드로 생성).
-- 팝업 글은 미정 → `NPC_POPUP_TBD`. 정해지면 npcs.js의 popup 수정. 처음 발판은 map-data 발판 이름이라 지도를 크게 바꾸면 확인.
+- NPC 디렉토리는 `<종류>-<이름>` (dog-esso, dog-mongsil, rabbit-pudding, cat-*). 한줄 멘트(shortMsg)가 있으면 하객처럼 가끔 말풍선이 뜸. 소개 글(longMsg)은 미정 → `NPC_POPUP_TBD`. 정해지면 npcs.js의 popup 수정. 처음 발판은 map-data 발판 이름이라 지도를 크게 바꾸면 확인.
 - 이미지 다시 만들기: `OPENAI_API_KEY=... node scripts/gen-npc.mjs <id>` 또는 `<id>:<motion>` (sharp 필요: `npm i --no-save sharp`).
 
 ## 효과
