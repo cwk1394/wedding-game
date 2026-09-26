@@ -11,7 +11,7 @@ const MAP_DATA = {
     "middleRoute": { "path": [[12,692],[560,692],[615,638],[828,632]] },
     "gazebo": { "path": [[845,842],[1108,842]] },
     "lowerRoute": { "path": [[72,862],[165,864],[180,877],[255,881],[322,893],[636,897]] },
-    "lowerRoute_1": { "path": [[790,931],[1008,940]] },
+    "lowerRoute_1": { "path": [[806,932],[1008,940]] },
     "heartBridge": { "path": [[612,1090],[850,1085],[1110,1066]] },
     "stage": { "path": [[742,318],[808,318]] },
     "f1": { "path": [[40,1071],[117,1162]] },
@@ -41,6 +41,7 @@ const MAP_DATA = {
     "f25": { "path": [[46,1028],[172,1032]] },
     "f26": { "path": [[345,933],[399,949]] },
     "f27": { "path": [[401,968],[468,987]] },
+    "f28": { "path": [[782,931],[806,932]] },
   },
   climbs: [
     {"type":"ladder","x":767,"floors":["upperRoute_1","middleRoute"]},
@@ -56,7 +57,6 @@ const MAP_DATA = {
     {"type":"ladder","x":725,"floors":["f8"],"end":746},
     {"type":"rope","x":964,"floors":["rightStairs"],"end":756},
     {"type":"rope","x":902,"floors":["f16"],"end":741},
-    {"type":"rope","x":790,"floors":["lowerRoute_1"],"end":997},
     {"type":"rope","x":590,"floors":["lowerRoute"],"end":1054},
     {"type":"rope","x":361,"floors":["middleRoute"],"end":782},
     {"type":"rope","x":284,"floors":["middleRoute"],"end":811},
@@ -69,5 +69,6 @@ const MAP_DATA = {
     {"type":"rope","x":305,"floors":["cherry"],"end":631},
     {"type":"rope","x":672,"floors":["upperRoute_1"],"end":558},
     {"type":"rope","x":125,"floors":["f25"],"end":1118},
+    {"type":"rope","x":789,"floors":["f28"],"end":1020},
   ],
 };
