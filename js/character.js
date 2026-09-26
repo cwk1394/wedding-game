@@ -39,12 +39,13 @@ class Character extends Phaser.GameObjects.Container {
     this.setDepth(y);
     this.scheduleBubble(Phaser.Math.Between(500, CONFIG.bubble.maxGap));
 
-    // 이미지 스프라이트가 있으면 로드되는 동안은 임시 캐릭터를 보여주고, 로드되면 교체
-    if (info.spriteUrl) {
-      loadSpriteTextures(scene, info)
-        .then((sprite) => this.active && this.applySprite(sprite))
-        .catch((err) => console.warn(`${info.name} 스프라이트 로드 실패:`, err));
-    }
+    // 이미지 스프라이트가 있으면 로드되는 동안은 임시 캐릭터를 보여주고, 로드되면 교체.
+    // ready: 이미지 적용이 끝나면(실패해도) resolve → 첫 로딩 화면이 이걸 기다린다.
+    this.ready = info.spriteUrl
+      ? loadSpriteTextures(scene, info)
+          .then((sprite) => this.active && this.applySprite(sprite))
+          .catch((err) => console.warn(`${info.name} 스프라이트 로드 실패:`, err))
+      : Promise.resolve();
   }
 
   applySprite({ key, facesLeft }) {

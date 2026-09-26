@@ -319,3 +319,45 @@ html, body {
 /* ---------- 지도 확대/축소 ---------- */
 #game { touch-action: none; }
 #game canvas { display: block; }
+
+/* ---------- 첫 로딩 화면 ---------- */
+.loading {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 50% 40%, #fff, #ffe6df 75%);
+  color: var(--ink);
+  transition: opacity .45s ease;
+}
+.loading.done { opacity: 0; pointer-events: none; }
+.loading-heart {
+  font-size: 44px;
+  line-height: 1;
+  color: var(--coral);
+  animation: beat 1s ease-in-out infinite;
+}
+.loading-title { margin-top: 10px; font-size: 26px; font-weight: bold; letter-spacing: .04em; }
+.loading-sub { font-size: 14px; color: var(--ink-soft); }
+.loading-bar {
+  width: min(220px, 60vw);
+  height: 8px;
+  margin-top: 22px;
+  border-radius: 999px;
+  background: #ffd9d1;
+  overflow: hidden;
+}
+.loading-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--coral-light), var(--coral-deep));
+  transition: width .3s ease;
+}
+.loading-text { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+@keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }

@@ -4,10 +4,13 @@ class MapScene extends Phaser.Scene {
   }
 
   preload() {
+    // 진행률 단위: 배경 1칸 + 캐릭터 1명당 1칸. 배경 몫은 로드 진행에 맞춰 0~1로 채운다
+    const { onProgress } = this.sys.settings.data ?? {};
+    this.load.on('progress', (value) => onProgress?.(value));
     if (CONFIG.mapImage) this.load.image('map', CONFIG.mapImage);
   }
 
-  create({ guests = [], live = false } = {}) {
+  create({ guests = [], live = false, onProgress, onReady } = {}) {
     if (this.textures.exists('map')) {
       this.add.image(0, 0, 'map').setOrigin(0).setDisplaySize(CONFIG.width, CONFIG.height);
     } else {
@@ -36,6 +39,20 @@ class MapScene extends Phaser.Scene {
     this.guests = [];
     this.guestIds = new Set();
     guests.forEach((info) => this.addGuest(info));
+
+    // 처음 스폰한 캐릭터들의 이미지가 모두 적용되면 로딩 화면을 걷는다
+    const initial = [...this.couple, ...this.guests];
+    let done = 0;
+    const report = () => onProgress?.(1 + done);
+    report();
+    Promise.all(
+      initial.map((c) =>
+        c.ready.then(() => {
+          done++;
+          report();
+        })
+      )
+    ).then(() => onReady?.());
 
     // 새 방명록이 올라오면 주기적으로 반영 (식장 스크린에 켜둘 때용)
     if (live) {

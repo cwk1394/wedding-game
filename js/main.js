@@ -15,7 +15,30 @@
     scale: { mode: Phaser.Scale.NONE, width: w, height: h, zoom: 1 / DPR },
     input: { activePointers: 3 }, // 마우스 포인터 포함 개수라 3이어야 터치 두 손가락(핀치)이 잡힘
   });
-  game.scene.add('MapScene', MapScene, true, { guests, live: fetched !== null });
+  // 첫 로딩 화면: 배경 1칸 + 캐릭터 1명당 1칸 기준 진행률
+  const loading = document.getElementById('loading');
+  const bar = loading.querySelector('.loading-bar span');
+  const total = 1 + COUPLE.length + new Set(guests.map((g) => g.id)).size;
+  let shown = false;
+  const showMain = () => {
+    if (shown) return;
+    shown = true;
+    bar.style.width = '100%';
+    loading.classList.add('done');
+    setTimeout(() => loading.remove(), 500);
+    // 터치 기기에서 처음 한 번 조작 방법 안내
+    if (matchMedia('(pointer: coarse)').matches) {
+      setTimeout(() => UI.showToast('두 손가락으로 확대, 드래그로 이동할 수 있어요', 3500), 700);
+    }
+  };
+  setTimeout(showMain, 20000); // 이미지 서버가 느려도 무한정 기다리지 않게
+
+  game.scene.add('MapScene', MapScene, true, {
+    guests,
+    live: fetched !== null,
+    onProgress: (units) => (bar.style.width = `${Math.min(100, (units / total) * 100)}%`),
+    onReady: showMain,
+  });
   const scene = () => game.scene.getScene('MapScene');
 
   window.addEventListener('resize', () => {
@@ -26,11 +49,6 @@
 
   // 브라우저 자체 확대(핀치)가 게임 조작과 겹치지 않게 막기 (iOS Safari)
   document.addEventListener('gesturestart', (e) => e.preventDefault());
-
-  // 터치 기기에서 처음 한 번 조작 방법 안내
-  if (matchMedia('(pointer: coarse)').matches) {
-    setTimeout(() => UI.showToast('두 손가락으로 확대, 드래그로 이동할 수 있어요', 3500), 1200);
-  }
 
   // 팝업이 떠 있는 동안은 맵 입력을 끈다.
   // Phaser는 손을 뗄 때(mouseup/touchend)를 window에서도 받아서, 팝업 안을 눌러도 뒤의 캐릭터가 클릭되기 때문.
