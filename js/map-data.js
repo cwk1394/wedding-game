@@ -73,6 +73,7 @@ const MAP_DATA = {
     {"type":"rope","x":672,"floors":["upperRoute_1"],"end":558},
     {"type":"rope","x":125,"floors":["f25"],"end":1118},
     {"type":"rope","x":789,"floors":["f28"],"end":1020},
+    {"type":"rope","x":674,"floors":["f31"],"end":978},
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
 };
