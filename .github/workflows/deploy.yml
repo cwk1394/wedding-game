@@ -39,6 +39,9 @@ jobs:
           mkdir -p _site
           cp -r index.html css js img _site/
 
+      - name: Build gallery list
+        run: node scripts/build-gallery.mjs _site/data/gallery.json
+
       - name: Fetch guestbook from Discussions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

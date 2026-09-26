@@ -43,13 +43,98 @@ html, body {
 }
 .btn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 0 var(--coral-shadow); }
 
-.write-btn {
+/* ---------- 오른쪽 아래 메뉴 ---------- */
+.menu {
   position: fixed;
   right: 16px;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 10;
-  font-size: 16px;
-  padding: 11px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.menu-btn {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: linear-gradient(var(--coral-light), var(--coral-deep));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 3px 0 var(--coral-shadow), 0 8px 18px rgba(216, 88, 74, .35);
+}
+.menu-btn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 0 var(--coral-shadow); }
+/* 햄버거 → X */
+.menu-btn span {
+  position: absolute;
+  left: 18px;
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+  transition: transform .2s ease, opacity .2s ease, top .2s ease;
+}
+.menu-btn span:nth-child(1) { top: 20px; }
+.menu-btn span:nth-child(2) { top: 27.5px; }
+.menu-btn span:nth-child(3) { top: 35px; }
+.menu.open .menu-btn span:nth-child(1) { top: 27.5px; transform: rotate(45deg); }
+.menu.open .menu-btn span:nth-child(2) { opacity: 0; }
+.menu.open .menu-btn span:nth-child(3) { top: 27.5px; transform: rotate(-45deg); }
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.menu-items li {
+  opacity: 0;
+  transform: translateY(12px) scale(.9);
+  visibility: hidden;
+  transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
+}
+.menu.open .menu-items li {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition: opacity .18s ease, transform .18s ease;
+}
+/* 아래(버튼 가까운 쪽)부터 차례로 펼쳐지게 */
+.menu.open .menu-items li:nth-child(3) { transition-delay: 0s; }
+.menu.open .menu-items li:nth-child(2) { transition-delay: .04s; }
+.menu.open .menu-items li:nth-child(1) { transition-delay: .08s; }
+.menu-items button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(120, 45, 35, .2);
+}
+.menu-items button:active { transform: translateY(1px); }
+.menu-items svg {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--soft);
+  fill: none;
+  stroke: var(--coral-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---------- 모달 (반투명 유리창 느낌) ---------- */
@@ -361,3 +446,66 @@ html, body {
 }
 .loading-text { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
 @keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+
+/* ---------- 방명록 목록 ---------- */
+.guest-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.guest-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.guest-list button:hover { background: var(--soft); }
+.guest-avatar {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  object-fit: contain;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff, #ffe0d8);
+  border: 1px solid var(--line);
+}
+.guest-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.guest-text b { color: var(--ink); font-size: 15px; }
+.guest-text small {
+  color: var(--ink-soft);
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.empty-note { margin: 12px 0; text-align: center; color: var(--ink-soft); line-height: 1.6; }
+
+/* ---------- 웨딩 갤러리 ---------- */
+.gallery-card { width: min(560px, 100%); max-height: 88vh; }
+.gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.gallery-grid button { padding: 0; border: none; border-radius: 10px; overflow: hidden; aspect-ratio: 1; cursor: pointer; background: var(--soft); }
+.gallery-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-viewer { touch-action: pan-y; }
+.gallery-stage { position: relative; }
+.gallery-photo { display: block; width: 100%; max-height: 62vh; object-fit: contain; border-radius: 12px; background: var(--soft); user-select: none; -webkit-user-drag: none; }
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  margin-top: -20px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .85);
+  color: var(--coral-deep);
+  font: bold 26px/1 sans-serif;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(120, 45, 35, .2);
+}
+.gallery-nav.prev { left: 8px; }
+.gallery-nav.next { right: 8px; }
+.gallery-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.gallery-count { color: var(--ink-soft); font-size: 14px; }

@@ -57,6 +57,9 @@
     if (s?.input) s.input.enabled = !open;
   };
 
+  // 방명록 목록용: 맵 위 하객 (방금 등록한 하객 포함)
+  UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl() }));
+
   // 방금 등록한 하객은 배포를 기다리지 않고 바로 맵에 등장시킨다
   UI.onGuestCreated = (info) => {
     const guest = scene().addGuest(info);

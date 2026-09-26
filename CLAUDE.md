@@ -15,20 +15,22 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 - `index.html`에서 스크립트 로드 순서가 의존성 순서: `config → data → textures → character → api → ui → view → scene → main`.
 
 ```
-index.html              모달/버튼 DOM + 스크립트 로드
+index.html              오른쪽 아래 메뉴(캐릭터 생성·방명록 목록·웨딩 갤러리), 모달 DOM + 스크립트 로드
 css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
 js/config.js            CONFIG: 월드 크기(=배경 이미지 1122x1402, 세로형), 배경 이미지, 층(floors) 꺾은선 좌표 + floorSpan()/floorY(), 속도, 말풍선, API 주소, AI/스프라이트 설정
 js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
-js/ui.js                방명록 팝업, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/lib/discussions.mjs  방명록 카테고리 Discussion 조회·본문 파싱 공통 코드
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
-scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/guests/<uuid>/ 폴더 git rm
+scripts/build-gallery.mjs  img/gallery/ 사진 목록 → gallery.json (Actions에서 실행)
+scripts/cleanup-guest-images.mjs  방명록에서 참조하지 않는 img/gallery/            웨딩 갤러리 사진. 파일 이름 순으로 보임(01.jpg, 02.jpg…). 폰에서 보므로 긴 변 1600px 안팎 권장
+img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
@@ -81,6 +83,12 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 진행률 = 배경 1칸 + 캐릭터 1명당 1칸. 20초가 지나면 로딩이 덜 끝나도 메인 화면을 보여준다. 이후 재조회로 추가되는 하객은 기다리지 않음.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
 - 신랑신부 스프라이트 원본(`img/npc/*/walk.png` 등): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
+
+## 메뉴 / 팝업
+- 오른쪽 아래 메뉴 버튼 → 위로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 누르면 방명록 팝업), 웨딩 갤러리(썸네일 → 크게 보기, 좌우 버튼/스와이프/방향키).
+- 방명록 목록은 `UI.getGuests()`(main.js에서 scene.guests 연결)로 맵 위 하객을 그대로 사용 → 방금 등록한 하객도 바로 보임.
+- 갤러리 목록 `data/gallery.json`은 guests.json처럼 배포 때 생성(`build-gallery.mjs`). 사진이 없으면 "준비하고 있어요" 문구.
+- 메뉴·팝업이 떠 있는 동안 맵 입력 off(`UI.onModalChange`). 팝업이 겹치면 ESC는 맨 위 하나만 닫음.
 
 ## 하객 움직임 (`GuestCharacter`, `CONFIG.motion`, `CONFIG.climbs`)
 - 상태: idle / walk / climb. 걷는 중 1초당 `jumpChance` 확률로 점프 (포물선 높이 `jumpHeight`, 이동은 계속). 점프 스트립은 포즈만 있고 높이는 코드가 준다.

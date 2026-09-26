@@ -18,7 +18,71 @@
     <div class="loading-text">하객분들을 모시는 중...</div>
   </div>
 
-  <button id="write-btn" class="btn btn-primary write-btn">방명록 작성</button>
+  <!-- 오른쪽 아래 메뉴: 버튼을 누르면 위로 항목이 펼쳐짐 -->
+  <nav id="menu" class="menu" aria-label="메뉴">
+    <ul id="menu-items" class="menu-items">
+      <li>
+        <button type="button" data-menu="write">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/><path d="M19 3v6M16 6h6"/></svg>
+          캐릭터 생성
+        </button>
+      </li>
+      <li>
+        <button type="button" data-menu="list">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+          방명록 목록
+        </button>
+      </li>
+      <li>
+        <button type="button" data-menu="gallery">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M21 16l-5-5-8 9"/></svg>
+          웨딩 갤러리
+        </button>
+      </li>
+    </ul>
+    <button type="button" id="menu-btn" class="menu-btn" aria-expanded="false" aria-controls="menu-items" aria-label="메뉴 열기">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- 방명록 목록 -->
+  <div id="list-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="list-title">
+      <div class="modal-header">
+        <span id="list-title" class="modal-title">방명록 목록</span>
+        <button class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <ul class="guest-list"></ul>
+        <p class="empty-note" hidden>아직 등록된 방명록이 없어요.<br />첫 번째 하객이 되어 주세요!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 웨딩 갤러리 -->
+  <div id="gallery-modal" class="modal" hidden>
+    <div class="modal-card gallery-card" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+      <div class="modal-header">
+        <span id="gallery-title" class="modal-title">웨딩 갤러리</span>
+        <button class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="gallery-grid"></div>
+        <div class="gallery-viewer" hidden>
+          <div class="gallery-stage">
+            <img class="gallery-photo" alt="" />
+            <button type="button" class="gallery-nav prev" aria-label="이전 사진">‹</button>
+            <button type="button" class="gallery-nav next" aria-label="다음 사진">›</button>
+          </div>
+          <div class="gallery-bar">
+            <button type="button" class="btn btn-ghost gallery-back">목록</button>
+            <span class="gallery-count"></span>
+          </div>
+        </div>
+        <p class="empty-note" hidden>웨딩 사진을 준비하고 있어요.<br />조금만 기다려 주세요!</p>
+      </div>
+    </div>
+  </div>
 
   <!-- 방명록 팝업 -->
   <div id="modal" class="modal" hidden>
@@ -47,7 +111,7 @@
   <div id="write-modal" class="modal" hidden>
     <form id="write-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="write-title" novalidate>
       <div class="modal-header">
-        <span id="write-title" class="modal-title">방명록 작성</span>
+        <span id="write-title" class="modal-title">캐릭터 생성</span>
         <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
       </div>
       <ol class="steps" aria-label="작성 단계">

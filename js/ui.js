@@ -4,10 +4,21 @@ const UI = (() => {
   const toast = document.getElementById('toast');
   let toastTimer = null;
 
-  /** 팝업이 하나라도 떠 있는지 → UI.onModalChange로 알림 (그동안 맵 입력을 막는 데 사용) */
+  const menu = document.getElementById('menu');
+
+  /** 팝업이나 메뉴가 하나라도 떠 있는지 → UI.onModalChange로 알림 (그동안 맵 입력을 막는 데 사용) */
   function notifyModalChange() {
-    UI.onModalChange?.(Boolean(document.querySelector('.modal:not([hidden])')));
+    const open = Boolean(document.querySelector('.modal:not([hidden])')) || menu.classList.contains('open');
+    UI.onModalChange?.(open);
   }
+
+  // ESC는 맨 위(DOM에서 마지막)에 떠 있는 팝업 하나만 닫는다
+  const closers = new Map(); // 팝업 요소 → 닫기 함수
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const top = [...document.querySelectorAll('.modal:not([hidden])')].pop();
+    closers.get(top)?.();
+  });
 
   /** 모달 공통 동작: 배경/닫기 버튼/ESC로 닫기 */
   function setupModal(el) {
@@ -22,9 +33,7 @@ const UI = (() => {
       if (Date.now() - openedAt < 400) return;
       if (e.target === el || e.target.closest('[data-close]')) setOpen(false);
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !el.hidden) setOpen(false);
-    });
+    closers.set(el, () => setOpen(false));
     return { open: () => setOpen(true), close: () => setOpen(false) };
   }
 
@@ -253,9 +262,144 @@ const UI = (() => {
     }
   });
 
-  document.getElementById('write-btn').addEventListener('click', () => {
+  function openWrite() {
     if (!CONFIG.apiUrl) return showToast('방명록 작성은 곧 오픈됩니다!');
     writeModal.open();
+  }
+
+  // ---------- 방명록 목록 ----------
+  const listModal = setupModal(document.getElementById('list-modal'));
+  const listEl = document.querySelector('#list-modal .guest-list');
+
+  /** UI.getGuests()가 돌려주는 맵 위 하객 [{ info, avatarUrl() }]로 목록을 그린다 (최신순) */
+  function openList() {
+    const guests = (UI.getGuests?.() ?? []).slice().sort((a, b) =>
+      String(b.info.createdAt ?? '9').localeCompare(String(a.info.createdAt ?? '9'))
+    );
+    document.getElementById('list-title').textContent = `방명록 목록 (${guests.length})`;
+    document.querySelector('#list-modal .empty-note').hidden = guests.length > 0;
+    listEl.replaceChildren(
+      ...guests.map((g) => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const avatar = document.createElement('img');
+        avatar.className = 'guest-avatar';
+        avatar.alt = '';
+        avatar.loading = 'lazy';
+        avatar.src = g.avatarUrl();
+        const text = document.createElement('span');
+        text.className = 'guest-text';
+        const name = document.createElement('b');
+        name.textContent = g.info.name;
+        const msg = document.createElement('small');
+        msg.textContent = g.info.shortMsg || g.info.longMsg || '';
+        text.append(name, msg);
+        btn.append(avatar, text);
+        btn.addEventListener('click', () => openGuestbook({ ...g.info, avatarUrl: avatar.src }));
+        li.append(btn);
+        return li;
+      })
+    );
+    listModal.open();
+  }
+
+  // ---------- 웨딩 갤러리 ----------
+  // 사진 목록은 배포 때 img/gallery/ 폴더를 읽어 만든 data/gallery.json (scripts/build-gallery.mjs)
+  const galleryEl = document.getElementById('gallery-modal');
+  const galleryModal = setupModal(galleryEl);
+  const grid = galleryEl.querySelector('.gallery-grid');
+  const viewer = galleryEl.querySelector('.gallery-viewer');
+  const photo = galleryEl.querySelector('.gallery-photo');
+  let photos = null;
+  let photoIndex = 0;
+
+  async function loadPhotos() {
+    if (photos) return photos;
+    try {
+      const res = await fetch(`data/gallery.json?t=${Date.now()}`);
+      photos = res.ok ? (await res.json()).photos ?? [] : [];
+    } catch {
+      photos = [];
+    }
+    return photos;
+  }
+
+  function showPhoto(i) {
+    photoIndex = (i + photos.length) % photos.length;
+    photo.src = photos[photoIndex];
+    galleryEl.querySelector('.gallery-count').textContent = `${photoIndex + 1} / ${photos.length}`;
+    grid.hidden = true;
+    viewer.hidden = false;
+  }
+
+  function showGrid() {
+    viewer.hidden = true;
+    grid.hidden = photos.length === 0;
+  }
+
+  async function openGallery() {
+    galleryModal.open();
+    await loadPhotos();
+    galleryEl.querySelector('.empty-note').hidden = photos.length > 0;
+    if (!grid.childElementCount) {
+      grid.append(
+        ...photos.map((src, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = `웨딩 사진 ${i + 1}`;
+          img.loading = 'lazy';
+          btn.append(img);
+          btn.addEventListener('click', () => showPhoto(i));
+          return btn;
+        })
+      );
+    }
+    showGrid();
+  }
+
+  galleryEl.querySelector('.prev').addEventListener('click', () => showPhoto(photoIndex - 1));
+  galleryEl.querySelector('.next').addEventListener('click', () => showPhoto(photoIndex + 1));
+  galleryEl.querySelector('.gallery-back').addEventListener('click', showGrid);
+  // 사진을 좌우로 밀어서 넘기기
+  let swipeX = null;
+  viewer.addEventListener('pointerdown', (e) => (swipeX = e.clientX));
+  viewer.addEventListener('pointerup', (e) => {
+    if (swipeX === null) return;
+    const dx = e.clientX - swipeX;
+    swipeX = null;
+    if (Math.abs(dx) > 40) showPhoto(photoIndex + (dx < 0 ? 1 : -1));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (galleryEl.hidden || viewer.hidden) return;
+    if (e.key === 'ArrowLeft') showPhoto(photoIndex - 1);
+    if (e.key === 'ArrowRight') showPhoto(photoIndex + 1);
+  });
+
+  // ---------- 메뉴 (오른쪽 아래) ----------
+  const menuBtn = document.getElementById('menu-btn');
+  function setMenu(open) {
+    menu.classList.toggle('open', open);
+    menuBtn.setAttribute('aria-expanded', String(open));
+    menuBtn.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+    notifyModalChange();
+  }
+  menuBtn.addEventListener('click', () => setMenu(!menu.classList.contains('open')));
+  const actions = { write: openWrite, list: openList, gallery: openGallery };
+  menu.querySelectorAll('[data-menu]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      setMenu(false);
+      actions[btn.dataset.menu]();
+    })
+  );
+  // 메뉴 밖을 누르면 닫기 (맵을 눌러도 캐릭터가 선택되지 않고 메뉴만 닫힘)
+  document.addEventListener('click', (e) => {
+    if (menu.classList.contains('open') && !menu.contains(e.target)) setMenu(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu.classList.contains('open')) setMenu(false);
   });
 
   // ---------- 토스트 ----------
@@ -266,5 +410,5 @@ const UI = (() => {
     toastTimer = setTimeout(() => (toast.hidden = true), duration);
   }
 
-  return { openGuestbook, showToast, onGuestCreated: null, onModalChange: null };
+  return { openGuestbook, showToast, onGuestCreated: null, onModalChange: null, getGuests: null };
 })();
