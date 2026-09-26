@@ -76,7 +76,12 @@ function parseBody(body) {
 }
 
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const httpsUrl = (v) => (typeof v === 'string' && v.startsWith('https://') ? v : null);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// 이미지 주소: https URL 또는 저장소 내부 경로(img/... .png)만 허용
+const imageUrl = (v) =>
+  typeof v === 'string' && (v.startsWith('https://') || (/^img\/[\w\-/.]+\.png$/.test(v) && !v.includes('..')))
+    ? v
+    : null;
 
 function toGuest(discussion) {
   const data = parseBody(discussion.body);
@@ -86,12 +91,13 @@ function toGuest(discussion) {
     return null;
   }
   return {
-    id: `d${discussion.number}`,
+    // Worker로 등록된 글은 UUID, 수동으로 쓴 옛 글은 Discussion 번호로 구분
+    id: UUID_RE.test(data.id) ? data.id.toLowerCase() : `d${discussion.number}`,
     name,
     shortMsg: str(data.shortMsg, 10),
     longMsg: str(data.longMsg, 1000),
-    spriteUrl: httpsUrl(data.spriteUrl),
-    walkUrl: httpsUrl(data.walkUrl),
+    spriteUrl: imageUrl(data.spriteUrl),
+    walkUrl: imageUrl(data.walkUrl),
     createdAt: discussion.createdAt,
   };
 }

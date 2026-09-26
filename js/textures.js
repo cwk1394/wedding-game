@@ -206,44 +206,67 @@ function cropScale(src, rect, scale) {
 }
 
 /**
+ * 원본 이미지(정면, 걷기 스트립)를 배경 제거·크롭·축소해 캔버스로 만든다.
+ * 반환: { front: canvas, walkFrames: canvas[] } (walkImg가 없으면 walkFrames는 빈 배열)
+ */
+function buildSpriteCanvases(frontImg, walkImg, height) {
+  const front = removeBackground(frontImg);
+  const fb = contentBounds(front, 0, 0, front.width, front.height);
+  const result = { front: cropScale(front, fb, height / fb.h), walkFrames: [] };
+
+  if (walkImg) {
+    // 모든 프레임을 같은 영역으로 잘라야 발 위치가 흔들리지 않는다 → 프레임별 경계 박스의 합집합 사용
+    const walk = removeBackground(walkImg);
+    const n = CONFIG.sprite.walkFrames;
+    const cw = Math.floor(walk.width / n);
+    const boxes = [...Array(n)].map((_, i) => contentBounds(walk, i * cw, 0, cw, walk.height));
+    const x0 = Math.min(...boxes.map((b) => b.x));
+    const y0 = Math.min(...boxes.map((b) => b.y));
+    const x1 = Math.max(...boxes.map((b) => b.x + b.w));
+    const y1 = Math.max(...boxes.map((b) => b.y + b.h));
+    const scale = height / (y1 - y0);
+    for (let i = 0; i < n; i++) {
+      const rect = { x: i * cw + x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      result.walkFrames.push(cropScale(walk, rect, scale));
+    }
+  }
+  return result;
+}
+
+/** 같은 크기의 프레임들을 가로 한 줄 스트립으로 합친다 (업로드용) */
+function joinFrames(frames) {
+  const canvas = document.createElement('canvas');
+  canvas.width = frames[0].width * frames.length;
+  canvas.height = frames[0].height;
+  const ctx = canvas.getContext('2d');
+  frames.forEach((f, i) => ctx.drawImage(f, i * f.width, 0));
+  return canvas;
+}
+
+/**
  * spriteUrl/walkUrl 이미지로 텍스처(`${key}_0`, `${key}_w0..`)와 걷기 애니메이션을 만든다.
  * 반환: { key, facesLeft } — 걷기 이미지는 왼쪽을 바라본다고 가정.
  */
 async function loadSpriteTextures(scene, info) {
   const key = `sprite_${info.id}`;
-  const height = CONFIG.sprite.height;
-  const walkFrameKeys = [];
 
   if (!scene.textures.exists(`${key}_0`)) {
-    const [front, walk] = await Promise.all([
-      loadImage(info.spriteUrl).then(removeBackground),
-      info.walkUrl ? loadImage(info.walkUrl).then(removeBackground) : null,
+    const [frontImg, walkImg] = await Promise.all([
+      loadImage(info.spriteUrl),
+      info.walkUrl ? loadImage(info.walkUrl) : null,
     ]);
+    const { front, walkFrames } = buildSpriteCanvases(frontImg, walkImg, CONFIG.sprite.height);
 
-    const fb = contentBounds(front, 0, 0, front.width, front.height);
-    scene.textures.addCanvas(`${key}_0`, cropScale(front, fb, height / fb.h));
-
-    if (walk) {
-      // 모든 프레임을 같은 영역으로 잘라야 발 위치가 흔들리지 않는다 → 프레임별 경계 박스의 합집합 사용
-      const n = CONFIG.sprite.walkFrames;
-      const cw = Math.floor(walk.width / n);
-      const boxes = [...Array(n)].map((_, i) => contentBounds(walk, i * cw, 0, cw, walk.height));
-      const x0 = Math.min(...boxes.map((b) => b.x));
-      const y0 = Math.min(...boxes.map((b) => b.y));
-      const x1 = Math.max(...boxes.map((b) => b.x + b.w));
-      const y1 = Math.max(...boxes.map((b) => b.y + b.h));
-      const scale = height / (y1 - y0);
-      for (let i = 0; i < n; i++) {
-        const rect = { x: i * cw + x0, y: y0, w: x1 - x0, h: y1 - y0 };
-        scene.textures.addCanvas(`${key}_w${i}`, cropScale(walk, rect, scale));
-        walkFrameKeys.push(`${key}_w${i}`);
-      }
-    }
+    scene.textures.addCanvas(`${key}_0`, front);
+    const frameKeys = walkFrames.map((canvas, i) => {
+      scene.textures.addCanvas(`${key}_w${i}`, canvas);
+      return `${key}_w${i}`;
+    });
 
     if (!scene.anims.exists(`${key}_walk`)) {
       scene.anims.create({
         key: `${key}_walk`,
-        frames: (walkFrameKeys.length ? walkFrameKeys : [`${key}_0`]).map((k) => ({ key: k })),
+        frames: (frameKeys.length ? frameKeys : [`${key}_0`]).map((k) => ({ key: k })),
         frameRate: 8,
         repeat: -1,
       });

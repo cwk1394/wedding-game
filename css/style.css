@@ -144,3 +144,36 @@ html, body {
 
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { transform: scale(.85); opacity: 0; } }
+
+/* ---------- 작성 폼 ---------- */
+.form-body { display: flex; flex-direction: column; gap: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: bold; color: #3b2410; }
+.field small { font-weight: normal; color: #8b5a2b; }
+.field input:not([type="file"]), .field textarea {
+  font: inherit;
+  font-weight: normal;
+  font-size: 16px; /* iOS 입력 시 자동 확대 방지 */
+  padding: 8px 10px;
+  border: 1px solid #d9c38f;
+  border-radius: 6px;
+  background: #fff;
+  resize: vertical;
+}
+.field input[type="file"] { font-size: 13px; font-weight: normal; }
+
+.preview {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #cfe8ff;
+}
+.preview img { height: 64px; }
+.preview img:not([src]) { display: none; }
+
+.form-error { margin: 0; color: #c0392b; font-size: 14px; }
+
+.btn:disabled { opacity: .6; cursor: wait; }

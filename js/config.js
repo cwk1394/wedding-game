@@ -19,9 +19,14 @@ const CONFIG = {
   // 하객이 스폰될 수 있는 층
   guestFloors: ['ground', 'midLeft', 'midRight', 'top'],
 
+  // 방명록 API (Cloudflare Worker) 주소. 예: 'https://guestbook-api.<계정>.workers.dev'
+  // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
+  apiUrl: new URLSearchParams(location.search).get('api') || '',
+
   // 이미지 스프라이트 처리
   sprite: {
     height: 64, // 화면에 표시할 캐릭터 높이 (px)
+    uploadHeight: 128, // 업로드 시 저장할 높이 (고해상도 화면 대비 2배)
     walkFrames: 4, // walkUrl 이미지의 가로 프레임 수
     bgThreshold: 235, // RGB가 모두 이 값 이상이면 흰 배경으로 간주
   },

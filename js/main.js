@@ -15,4 +15,10 @@
     },
   });
   game.scene.add('MapScene', MapScene, true, { guests, live: fetched !== null });
+
+  // 방금 등록한 하객은 배포를 기다리지 않고 바로 맵에 등장시킨다
+  UI.onGuestCreated = (info) => {
+    const guest = game.scene.getScene('MapScene').addGuest(info);
+    guest?.say(info.shortMsg);
+  };
 })();
