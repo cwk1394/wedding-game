@@ -7,7 +7,7 @@ class MapScene extends Phaser.Scene {
     if (CONFIG.mapImage) this.load.image('map', CONFIG.mapImage);
   }
 
-  create() {
+  create({ guests = [], live = false } = {}) {
     if (CONFIG.mapImage) {
       this.add.image(0, 0, 'map').setOrigin(0).setDisplaySize(CONFIG.width, CONFIG.height);
     } else {
@@ -16,21 +16,42 @@ class MapScene extends Phaser.Scene {
     }
     this.drawWeddingArch();
 
-    const onSelect = (character) =>
+    this.onSelect = (character) =>
       UI.openGuestbook({ ...character.info, avatarUrl: character.getAvatarUrl() });
 
     // 신랑/신부: 무대 가운데 고정
     const stage = CONFIG.floors.stage;
     const centerX = (stage.x1 + stage.x2) / 2;
     this.couple = COUPLE.map(
-      (info, i) => new CoupleCharacter(this, centerX + (i === 0 ? -24 : 24), stage.y, info, { onSelect })
+      (info, i) =>
+        new CoupleCharacter(this, centerX + (i === 0 ? -24 : 24), stage.y, info, { onSelect: this.onSelect })
     );
 
-    // 하객: 층을 랜덤으로 골라 스폰
-    this.guests = GUESTS.map((info) => {
-      const floorName = Phaser.Utils.Array.GetRandom(CONFIG.guestFloors);
-      return new GuestCharacter(this, CONFIG.floors[floorName], info, { onSelect });
-    });
+    this.guests = [];
+    this.guestIds = new Set();
+    guests.forEach((info) => this.addGuest(info));
+
+    // 새 방명록이 올라오면 주기적으로 반영 (식장 스크린에 켜둘 때용)
+    if (live) {
+      this.time.addEvent({
+        delay: CONFIG.refreshInterval,
+        loop: true,
+        callback: async () => {
+          const latest = await fetchGuests();
+          latest?.forEach((info) => this.addGuest(info));
+        },
+      });
+    }
+  }
+
+  /** 하객 한 명을 랜덤 층에 스폰. 이미 있는 id면 무시. */
+  addGuest(info) {
+    if (this.guestIds.has(info.id)) return null;
+    this.guestIds.add(info.id);
+    const floorName = Phaser.Utils.Array.GetRandom(CONFIG.guestFloors);
+    const guest = new GuestCharacter(this, CONFIG.floors[floorName], info, { onSelect: this.onSelect });
+    this.guests.push(guest);
+    return guest;
   }
 
   update(_time, delta) {

@@ -1,0 +1,51 @@
+name: Deploy guestbook
+
+# 코드 push 또는 방명록(Discussion) 변경 시마다 guests.json을 새로 만들어 Pages에 배포
+on:
+  push:
+    branches: [main]
+  discussion:
+    types: [created, edited, deleted, category_changed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  discussions: read
+  pages: write
+  id-token: write
+
+# 동시에 여러 건이 들어오면 마지막 것만 배포 (어차피 전체를 다시 긁어옴)
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cp -r index.html css js img _site/
+
+      - name: Fetch guestbook from Discussions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GUESTBOOK_CATEGORY: 방명록
+        run: node scripts/fetch-guests.mjs _site/data/guests.json
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

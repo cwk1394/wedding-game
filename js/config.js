@@ -19,6 +19,8 @@ const CONFIG = {
   // 하객이 스폰될 수 있는 층
   guestFloors: ['ground', 'midLeft', 'midRight', 'top'],
 
+  refreshInterval: 60000, // guests.json 재조회 주기 (ms)
+
   walkSpeed: { min: 35, max: 70 }, // px/s
   bubble: {
     duration: 5000, // 말풍선 표시 시간 (ms)

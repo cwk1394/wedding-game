@@ -82,12 +82,24 @@ function drawBride(g, look, frame) {
   g.fillRect(12, 5, 16, 3);
 }
 
+const HAIR_COLORS = [0x222222, 0x4a2c17, 0x7a3b12, 0xd9a441, 0x8e5a3c, 0x3b3b5c];
+const TOP_COLORS = [0x3d7dd8, 0xe85d8a, 0x4caf50, 0xf2a93b, 0x9b59b6, 0xe74c3c, 0x1abc9c, 0xf5f5f5];
+const BOTTOM_COLORS = [0x2b3a55, 0x4a4a4a, 0x6d4c41, 0x1a1a1a, 0x5d6d7e];
+
+/** id 문자열로부터 항상 같은 랜덤 외형을 만든다 (새로고침해도 색이 안 바뀌게) */
+function lookFromId(id) {
+  let h = 2166136261;
+  for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const pick = (arr, shift) => arr[(h >>> shift) % arr.length];
+  return { hair: pick(HAIR_COLORS, 0), top: pick(TOP_COLORS, 8), bottom: pick(BOTTOM_COLORS, 16) };
+}
+
 /** 캐릭터 한 명의 텍스처(프레임 2장)와 걷기 애니메이션을 생성하고 텍스처 키를 반환한다. */
 function createCharacterTexture(scene, info) {
   const key = `char_${info.id}`;
   if (scene.textures.exists(`${key}_0`)) return key;
 
-  const look = info.look || { hair: 0x333333, top: 0x888888, bottom: 0x444444 };
+  const look = info.look || lookFromId(info.id);
   const draw = look.type === 'groom' ? drawGroom : look.type === 'bride' ? drawBride : drawGuest;
 
   for (const frame of [0, 1]) {

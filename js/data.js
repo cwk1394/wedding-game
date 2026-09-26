@@ -1,5 +1,5 @@
-// 1단계용 더미 데이터. 2단계에서 GitHub Discussions API 응답으로 교체한다.
-// spriteUrl이 null이면 look 값으로 임시 캐릭터를 코드로 그린다.
+// 신랑/신부는 고정 데이터, 하객은 data/guests.json(GitHub Actions가 Discussions에서 생성)에서 읽는다.
+// spriteUrl이 null이면 look 값(없으면 id 기반 랜덤)으로 임시 캐릭터를 코드로 그린다.
 
 const COUPLE = [
   {
@@ -20,7 +20,8 @@ const COUPLE = [
   },
 ];
 
-const GUESTS = [
+// guests.json을 못 읽을 때(로컬에서 파일로 열었을 때 등) 쓰는 더미 데이터
+const DUMMY_GUESTS = [
   {
     id: 'guest-1',
     name: '고정만',
@@ -46,3 +47,18 @@ const GUESTS = [
     look: { hair: 0x7a3b12, top: 0x4caf50, bottom: 0x6d4c41 },
   },
 ];
+
+const GUESTS_URL = 'data/guests.json';
+
+/** 방명록 목록을 불러온다. 실패하면 null. */
+async function fetchGuests() {
+  try {
+    const res = await fetch(`${GUESTS_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return Array.isArray(json.guests) ? json.guests : [];
+  } catch (err) {
+    console.warn('guests.json 로드 실패:', err);
+    return null;
+  }
+}
