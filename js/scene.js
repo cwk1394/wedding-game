@@ -295,12 +295,9 @@ class MapScene extends Phaser.Scene {
   }
 }
 
-/** 하객 층(무대 제외)을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
+/** 하객 층을 길이에 비례한 확률로 고른다 (긴 층에 더 많이, 짧은 층은 덜 붐비게) */
 function pickGuestFloor() {
-  const floors = Object.entries(CONFIG.floors)
-    .filter(([name]) => !isStage(name))
-    .map(([, f]) => f);
-  if (!floors.length) return CONFIG.floors[mainStageName()]; // 발판을 다 지운 경우 (개발자 모드)
+  const floors = Object.values(CONFIG.floors);
   const length = (f) => floorSpan(f).x2 - floorSpan(f).x1;
   let r = Math.random() * floors.reduce((sum, f) => sum + length(f), 0);
   for (const f of floors) {

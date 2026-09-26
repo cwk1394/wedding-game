@@ -73,7 +73,7 @@ function validateMap(map) {
     spawn = { floor: map.spawn.floor, x: Math.round(map.spawn.x) };
   }
 
-  // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } — 없는 쪽은 무대 가운데
+  // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } — 없는 쪽은 무대 가운데. fixed = 자리 고정 (아니면 무대 안에서 돌아다님)
   let couple = null;
   if (map.couple != null) {
     couple = {};
@@ -83,6 +83,7 @@ function validateMap(map) {
       if (!floors[p.floor] || !isCoord(p.x)) throw bad(`${id === 'groom' ? '신랑' : '신부'} 자리`);
       couple[id] = { floor: p.floor, x: Math.round(p.x) };
     }
+    if (map.couple.fixed === true) couple.fixed = true;
     if (!Object.keys(couple).length) couple = null;
   }
 
@@ -122,7 +123,7 @@ function renderMapFile({ floors, climbs, spawn, couple }) {
     ...climbs.map((c) => `    ${JSON.stringify(c)},`),
     '  ],',
     `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
-    `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (null이면 무대 가운데)`,
+    `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)`,
     '};',
     '',
   ].join('\n');

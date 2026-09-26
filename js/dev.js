@@ -78,6 +78,7 @@ class DevMode {
         <button type="button" class="dev-btn" data-act="undo">되돌리기</button>
         <button type="button" class="dev-btn dev-save" data-act="save">저장</button>
         <label class="dev-check"><input type="checkbox" data-act="hide" /> 하객 숨기기</label>
+        <label class="dev-check" title="켜면 신랑·신부가 자리에 서 있고, 끄면 무대 안에서만 돌아다녀요"><input type="checkbox" data-act="fixed" /> 신랑신부 고정</label>
       </div>
       <div class="dev-hint"></div>`;
     document.body.append(bar);
@@ -96,6 +97,12 @@ class DevMode {
     bar.querySelector('[data-act="hide"]').addEventListener('change', (e) => {
       for (const g of this.scene.guests) g.setVisible(!e.target.checked);
     });
+    bar.querySelector('[data-act="fixed"]').addEventListener('change', (e) => {
+      this.checkpoint();
+      CONFIG.couple = { ...coupleData(), fixed: e.target.checked };
+      this.changed();
+      if (!e.target.checked) UI.showToast('신랑·신부가 무대 안에서만 돌아다녀요');
+    });
     this.updateToolbar();
   }
 
@@ -106,18 +113,19 @@ class DevMode {
     this.bar.querySelector('[data-group="type"]').classList.toggle('dim', !this.editing);
     this.bar.querySelector('[data-act="undo"]').disabled = !this.history.length;
     this.bar.querySelector('.dev-save').classList.toggle('dirty', this.dirty);
+    this.bar.querySelector('[data-act="fixed"]').checked = coupleFixed();
     const label = DEV_TYPES[this.type];
     const hints = {
       move: '드래그로 지도 이동 · 캐릭터를 끌면 그 자리로 (신랑·신부 자리는 저장) · 두 손가락/휠로 확대 · 보라 곡선 = 자동 점프',
       add:
         this.type === 'stage'
-          ? '시작점에서 누르고 끝점에서 떼면 직선 무대 추가 (신랑·신부만 다니는 곳, 조각끼리 끝을 붙이면 이어짐)'
+          ? '시작점에서 누르고 끝점에서 떼면 직선 무대 추가 (신랑신부 고정이 꺼져 있으면 신랑·신부가 여기서만 다님, 조각끼리 끝을 붙이면 이어짐)'
           : this.type === 'walk'
           ? '시작점에서 누르고 끝점에서 떼면 직선 발판 추가 (계단은 비스듬히)'
           : `위 발판에서 세로로 드래그해서 ${label} 추가 (아래 끝이 발판이면 연결, 허공이면 매달린 ${label})`,
       erase: `문질러서 ${label} 지우기 (${label}만 지워져요)`,
       spawn: '지도를 눌러 방명록 등록 직후 새 캐릭터가 나타날 시작점을 지정 (발판 위, 노란 깃발)',
-      couple: '지도를 눌러 신랑·신부 자리를 지정 (가까운 발판 위에 나란히) · 한 명씩 옮기려면 캐릭터를 끌기',
+      couple: '지도를 눌러 신랑·신부 자리를 지정 (가까운 발판 위에 나란히, 고정이 꺼져 있으면 무대만) · 한 명씩 옮기려면 캐릭터를 끌기',
     };
     // 조종 중(캐릭터 팝업의 "조종하기")이면 조작법을 대신 보여준다
     this.bar.querySelector('.dev-hint').textContent = this.controlled
@@ -248,16 +256,16 @@ class DevMode {
     this.drawPreview();
   }
 
-  /** 신랑신부 도구: 누른 곳 가까운 발판(무대 포함) 위에 신랑(왼쪽)·신부(오른쪽)를 나란히 */
+  /** 신랑신부 도구: 누른 곳 가까운 발판 위에 신랑(왼쪽)·신부(오른쪽)를 나란히 (고정이 아니면 무대만) */
   setCouple(pointer) {
     if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
     const p = this.worldPoint(pointer);
-    const floor = floorNear(p.x, p.y, true);
-    if (!floor) return UI.showToast('발판(빨간 선) 가까이를 눌러 주세요');
+    const floor = floorNear(p.x, p.y, coupleFloorOk);
+    if (!floor) return UI.showToast(coupleFixed() ? '발판(빨간·노란 선) 가까이를 눌러 주세요' : '무대(노란 선) 가까이를 눌러 주세요 (신랑신부 고정이 꺼져 있어요)');
     const { x1, x2 } = floorSpan(CONFIG.floors[floor]);
     const at = (dx) => ({ floor, x: Math.round(Phaser.Math.Clamp(p.x + dx, x1, x2)) });
     this.checkpoint();
-    CONFIG.couple = { groom: at(-30), bride: at(30) };
+    CONFIG.couple = { groom: at(-30), bride: at(30), fixed: coupleFixed() };
     this.changed();
   }
 
@@ -266,7 +274,7 @@ class DevMode {
     if (this.scene.view.dragMoved || pointer.event?.target !== this.scene.game.canvas) return;
     const p = this.worldPoint(pointer);
     const floor = floorNear(p.x, p.y);
-    if (!floor) return UI.showToast('발판(빨간 선) 가까이를 눌러 주세요');
+    if (!floor) return UI.showToast('발판(빨간·노란 선) 가까이를 눌러 주세요');
     this.checkpoint();
     CONFIG.spawn = { floor, x: Math.round(p.x) };
     this.changed();
@@ -293,8 +301,8 @@ class DevMode {
     if (!d?.moved) return;
     const c = d.character;
     const isCouple = c instanceof CoupleCharacter;
-    const name = floorForDrop(c.x, c.y, isCouple);
-    if (!name) UI.showToast('발판(빨간 선) 위에 놓아 주세요');
+    const name = floorForDrop(c.x, c.y, isCouple ? coupleFloorOk : undefined);
+    if (!name) UI.showToast(isCouple && !coupleFixed() ? '무대(노란 선) 위에 놓아 주세요 (신랑신부 고정이 꺼져 있어요)' : '발판(빨간·노란 선) 위에 놓아 주세요');
     if (isCouple && name) {
       this.checkpoint();
       CONFIG.couple = { ...coupleData(), [c.info.id]: { floor: name, x: Math.round(c.x) } };
@@ -340,7 +348,8 @@ class DevMode {
     CONFIG.spawn = relocatePoint(CONFIG.spawn);
     if (CONFIG.couple) {
       for (const id of Object.keys(CONFIG.couple)) {
-        const p = relocatePoint(CONFIG.couple[id], true);
+        if (id === 'fixed') continue;
+        const p = relocatePoint(CONFIG.couple[id], coupleFloorOk);
         if (p) CONFIG.couple[id] = p;
         else delete CONFIG.couple[id]; // 기본 자리(무대 가운데)로
       }
@@ -385,7 +394,7 @@ class DevMode {
     const top = floorNear(x, topY);
     const bottom = floorNear(x, bottomY);
     const label = DEV_TYPES[this.type];
-    if (!top) return UI.showToast(`${label} 위쪽 끝을 발판(빨간 선) 위에 맞춰 주세요`);
+    if (!top) return UI.showToast(`${label} 위쪽 끝을 발판(빨간·노란 선) 위에 맞춰 주세요`);
     let climb;
     if (bottom && bottom !== top) {
       climb = { type: this.type, x: Math.round(x), floors: [top, bottom] };
@@ -492,32 +501,37 @@ function mapData() {
   return { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn, couple: CONFIG.couple };
 }
 
-/** 지금 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x } } (지정 안 된 쪽은 기본 자리) */
+/** 지금 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (지정 안 된 쪽은 기본 자리) */
 function coupleData() {
-  return Object.fromEntries(
-    ['groom', 'bride'].map((id) => {
-      const p = couplePoint(id);
-      return [id, { floor: p.floor, x: Math.round(p.x) }];
-    })
-  );
+  const data = { fixed: coupleFixed() };
+  for (const id of ['groom', 'bride']) {
+    const p = couplePoint(id);
+    data[id] = { floor: p.floor, x: Math.round(p.x) };
+  }
+  return data;
 }
 
-/** 발판이 지워져 없어진 지점 { floor, x } → 그 x를 덮는 다른 발판으로 옮김 (없으면 null). 무대는 allowStage일 때만 */
-function relocatePoint(pt, allowStage = false) {
+/** 신랑·신부를 세울 수 있는 발판: 고정이면 어디든, 아니면 무대만 */
+function coupleFloorOk(name) {
+  return coupleFixed() || isStage(name);
+}
+
+/** 발판이 지워져 없어진 지점 { floor, x } → 그 x를 덮는 다른 발판(ok인 것)으로 옮김 (없으면 null) */
+function relocatePoint(pt, ok = () => true) {
   if (!pt || CONFIG.floors[pt.floor]) return pt;
-  const f = Object.entries(CONFIG.floors).find(([n, fl]) => (allowStage || !isStage(n)) && pt.x >= floorSpan(fl).x1 && pt.x <= floorSpan(fl).x2);
+  const f = Object.entries(CONFIG.floors).find(([n, fl]) => ok(n) && pt.x >= floorSpan(fl).x1 && pt.x <= floorSpan(fl).x2);
   return f ? { ...pt, floor: f[0] } : null;
 }
 
 /**
  * 캐릭터를 놓을 발판: x를 덮는 발판 중 발 아래(위로 30px 여유)에서 가장 가까운 것, 없으면 위아래 가장 가까운 것.
- * 무대(stage*)는 allowStage일 때만
+ * ok(name)인 발판만
  */
-function floorForDrop(x, y, allowStage) {
+function floorForDrop(x, y, ok = () => true) {
   let below = null;
   let near = null;
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (isStage(name) && !allowStage) continue;
+    if (!ok(name)) continue;
     const { x1, x2 } = floorSpan(f);
     if (x < x1 || x > x2) continue;
     const fy = floorY(f, x);
@@ -533,12 +547,12 @@ function uniqueFloorName(prefix, taken = CONFIG.floors) {
   return `${prefix}${i}`;
 }
 
-/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (무대는 allowStage일 때만) */
-function floorNear(x, y, allowStage = false) {
+/** (x, y) 가까이(세로 24px 이내)에 있는 발판 이름 (ok(name)인 것만) */
+function floorNear(x, y, ok = () => true) {
   let best = null;
   let bestDist = 24;
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (isStage(name) && !allowStage) continue;
+    if (!ok(name)) continue;
     const { x1, x2 } = floorSpan(f);
     if (x < x1 - 6 || x > x2 + 6) continue;
     const d = Math.abs(floorY(f, x) - y);

@@ -175,11 +175,12 @@ class Character extends Phaser.GameObjects.Container {
 /**
  * 발판 끝(dir 방향)에 바로 이어지는 다른 발판 이름 (끝점끼리 가로 6px·세로 10px 이내).
  * 개발자 모드에서 직선 여러 개로 그린 길은 이렇게 이어진 발판들 → 끊김 없이 걸어서 넘어간다.
+ * ok(name): 갈 수 있는 발판인지 (신랑·신부는 무대만)
  */
-function floorContinuation(fromName, dir) {
+function floorContinuation(fromName, dir, ok = () => true) {
   const end = dir > 0 ? CONFIG.floors[fromName].path.at(-1) : CONFIG.floors[fromName].path[0];
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === fromName || isStage(name) !== isStage(fromName)) continue; // 무대와 일반 발판은 서로 안 이어짐
+    if (name === fromName || !ok(name)) continue;
     const start = dir > 0 ? f.path[0] : f.path.at(-1);
     if (Math.abs(start[0] - end[0]) <= 6 && Math.abs(start[1] - end[1]) <= 10) return name;
   }
@@ -188,19 +189,19 @@ function floorContinuation(fromName, dir) {
 
 /**
  * 발판 끝(x, dir 방향)에서 점프로 건너갈 수 있는 다른 발판의 착지점들 [{ name, x, y }].
- * 가로 틈이 maxGap 이하이고, 착지 높이 차가 위로 maxUp / 아래로 maxDown 이내인 발판 (무대 ↔ 일반 발판끼리는 제외).
+ * 가로 틈이 maxGap 이하이고, 착지 높이 차가 위로 maxUp / 아래로 maxDown 이내인 발판 (ok(name)인 것만).
  * 틈이 없이 겹쳐 있는 발판(바로 아래층 등)으로 뛰어내리는 것도 포함.
  */
-function gapJumpTargets(fromName, x, dir) {
+function gapJumpTargets(fromName, x, dir, ok = () => true) {
   const g = CONFIG.motion.gapJump;
   const from = CONFIG.floors[fromName];
   const y = floorY(from, x);
   const span = floorSpan(from);
   const edge = dir > 0 ? span.x2 : span.x1;
   const out = [];
-  const next = floorContinuation(fromName, dir); // 이어진 발판은 점프 대신 걸어서 넘어감
+  const next = floorContinuation(fromName, dir, ok); // 이어진 발판은 점프 대신 걸어서 넘어감
   for (const [name, f] of Object.entries(CONFIG.floors)) {
-    if (name === fromName || isStage(name) !== isStage(fromName) || name === next) continue;
+    if (name === fromName || !ok(name) || name === next) continue;
     const { x1, x2 } = floorSpan(f);
     const m = Math.min(CHAR_W / 2, (x2 - x1) / 4);
     const gap = dir > 0 ? x1 - edge : edge - x2;
@@ -247,9 +248,10 @@ class GuestCharacter extends Character {
     const { x1, x2 } = floorSpan(this.floor);
     const margin = Math.min(CHAR_W / 2, (x2 - x1) / 4);
     // 이어진 발판이 있는 쪽 끝은 여유 없이 끝까지 (그대로 걸어서 넘어감)
-    this.nextFloor = { [-1]: floorContinuation(name, -1), [1]: floorContinuation(name, 1) };
+    const ok = (n) => this.canStandOn(n);
+    this.nextFloor = { [-1]: floorContinuation(name, -1, ok), [1]: floorContinuation(name, 1, ok) };
     // 사다리/로프가 층 끝 가까이 있어도 닿을 수 있게 범위를 넓힌다
-    const climbXs = this.info?.npc ? [] : climbsOn(name).map((c) => c.x); // NPC는 사다리/로프를 안 탄다
+    const climbXs = this.info?.npc || this.canClimb === false ? [] : climbsOn(name).map((c) => c.x); // NPC·신랑신부(AI)는 사다리/로프를 안 탄다
     this.minX = Math.min(this.nextFloor[-1] ? x1 : x1 + margin, ...climbXs);
     this.maxX = Math.max(this.nextFloor[1] ? x2 : x2 - margin, ...climbXs);
   }
@@ -261,9 +263,9 @@ class GuestCharacter extends Character {
     this.x = Phaser.Math.Clamp(this.x, x1, x2);
   }
 
-  /** 설 수 있는 발판: 하객·NPC는 무대(stage*) 제외. 신랑·신부는 어디든 */
-  canStandOn(name) {
-    return !isStage(name);
+  /** 설 수 있는 발판: 하객·NPC는 어디든 (무대 포함). 신랑·신부는 CoupleCharacter에서 따로 */
+  canStandOn() {
+    return true;
   }
 
   setDir(dir) {
@@ -747,7 +749,7 @@ class GuestCharacter extends Character {
         if (next) {
           this.continueTo(next);
         } else if (this.canJump !== false && !this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
-          const targets = gapJumpTargets(this.floorName, this.x, edgeDir);
+          const targets = gapJumpTargets(this.floorName, this.x, edgeDir, (n) => this.canStandOn(n));
           if (targets.length && Math.random() < m.gapJump.chance) {
             return this.startLeap(Phaser.Utils.Array.GetRandom(targets));
           }
@@ -776,8 +778,8 @@ class GuestCharacter extends Character {
 }
 
 /**
- * 신랑/신부: 제자리(couplePoint, 기본은 무대 가운데)에서 시작해 무대(stage*) 발판 안에서만 돌아다닌다. 살짝 통통 튀는 모션.
- * 무대 밖 발판에 세워 두면 그 자리에 고정.
+ * 신랑/신부: 제자리(couplePoint, 기본은 무대 가운데)에서 살짝 통통 튀는 모션.
+ * 고정(CONFIG.couple.fixed)이면 그 자리에 서 있고, 아니면 무대(stage*) 발판 안에서만 돌아다닌다.
  * 개발자 모드에서는 팝업의 "조종하기"로 하객처럼 직접 움직일 수 있고, 놓으면 제자리로 돌아간다.
  */
 class CoupleCharacter extends GuestCharacter {
@@ -821,6 +823,12 @@ class CoupleCharacter extends GuestCharacter {
       this.sprite.y = 0;
     }
     super.setControlled(on);
+    this.setFloor(this.floorName); // 조종 중엔 무대 밖 발판으로도 이어서 걸어감
+  }
+
+  /** 조종 중엔 어디든, 스스로 다닐 땐 무대만 */
+  canStandOn(name) {
+    return this.controlled || isStage(name);
   }
 
   /** 조종을 놓거나 지도가 바뀌면 제자리로 (하객처럼 다른 발판으로 가지 않음) */
@@ -834,8 +842,8 @@ class CoupleCharacter extends GuestCharacter {
   }
 
   tick(delta) {
-    // 조종 중이 아니면 무대 위에서만 돌아다닌다 (이어진 무대 조각끼리만 걷거나 점프로 건너감). 무대 밖에 세워 두면 제자리
-    if (this.controlled || isStage(this.floorName)) super.tick(delta);
+    // 고정이면 제자리. 아니면 무대 위에서만 돌아다닌다 (이어진 무대 조각끼리만 걷거나 점프로 건너감)
+    if (this.controlled || (!coupleFixed() && isStage(this.floorName))) super.tick(delta);
   }
 }
 
