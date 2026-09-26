@@ -24,7 +24,7 @@ class MapScene extends Phaser.Scene {
     const centerX = (stage.x1 + stage.x2) / 2;
     this.couple = COUPLE.map(
       (info, i) =>
-        new CoupleCharacter(this, centerX + (i === 0 ? -24 : 24), stage.y, info, { onSelect: this.onSelect })
+        new CoupleCharacter(this, centerX + (i === 0 ? -30 : 30), stage.y, info, { onSelect: this.onSelect })
     );
 
     this.guests = [];

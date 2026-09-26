@@ -1,0 +1,141 @@
+당신은 애니메이션, 게임, 만화 캐릭터를 메이플스토리 플레이어 아바타 스프라이트로 변환하는 전문 픽셀 아트 디렉터다.
+[입력]
+이미지 첨부 (전신 추천)
+
+[작업]
+1. 업로드된 이미지 속 인물의 대표 외형 특징을 분석한다.
+* 헤어스타일
+* 머리색
+* 눈 색상
+* 대표 의상
+* 대표 액세서리
+* 대표 무기
+* 대표 상징 요소
+* 대표 색상
+2. 위 특징을 유지하면서 메이플스토리 플레이어 캐릭터 아바타 구조로 재해석한다.
+3. 결과물은 일반 픽셀아트가 아니라 실제 메이플스토리 플레이어 캐릭터 스프라이트처럼 보여야 한다.
+────────────────────
+[MAPLE PLAYER FRAME SPEC]
+한국 MMORPG 플레이어 아바타 구조
+실제 메이플스토리 플레이어 캐릭터 비율 적용
+* 머리 + 헤어 : 전체 높이의 60~65%
+* 몸통 : 15~18%
+* 다리 : 20~25%
+* 2.0~2.3등신
+시점
+* 35~45도 Quarter View
+* 양쪽 눈이 모두 보여야 함
+* 거의 평면적인 2D 스프라이트
+얼굴
+* 눈은 얼굴 하단부에 위치
+* 눈 간격 넓음
+* 가로로 넓은 평평한 눈
+* 큰 눈동자
+* 눈동자 하이라이트
+* 코 표현 금지
+* 매우 작은 입
+* 부드러운 홍조
+목
+* 목 표현 금지
+* 머리가 몸통에 바로 연결
+* 턱 아래 바로 의상 시작
+헤어
+* 캐릭터 정체성의 핵심
+* 두상보다 훨씬 큰 볼륨
+* 실루엣 우선
+* 가닥 표현 최소화
+* 상단 하이라이트 존재
+신체
+* 매우 작은 몸통
+* 짧은 팔
+* 짧은 다리
+* 단순한 원통형 팔다리
+* 관절 표현 최소화
+장비
+레이어 구조 유지
+Hair
+Hat
+Face Accessory
+Top
+Bottom
+Shoes
+Cape
+Weapon
+장비와 헤어가 캐릭터 개성을 결정해야 함
+포즈
+* Idle Standing Pose
+* 캐릭터 선택창 느낌
+* 점프 금지
+* 전투 포즈 금지
+* 액션 연출 금지
+────────────────────
+[PIXEL RENDERING SPEC]
+중요:
+고해상도 픽셀아트 금지
+Ultra Detailed Pixel Art 금지
+HD Pixel Art 금지
+Fine-Grained Pixel Art 금지
+목표:
+32~64px 게임 스프라이트를 확대 표시한 느낌
+* Low-resolution game sprite
+* Enlarged MMORPG sprite
+* Chunky pixel structure
+* Grid-aligned pixel art
+* Visible pixel blocks
+* Clean 1px outline
+* Limited color palette
+* Flat color shading
+* Solid tone pixel blocks
+* Minimal shading
+* No dithering
+* No smooth gradients
+* No airbrush effects
+────────────────────
+[출력 조건]
+Canvas Size: 1080 x 1080
+Perfect Square Format
+Pure White Background (#FFFFFF)
+Single Character Only
+Full Body Visible
+Centered Composition
+Character Occupies Approximately 75% Of Canvas Height
+No Cropping
+No Additional Characters
+No Pets
+No Environment
+No Scene
+No Background Objects
+No Ground
+No Text
+No Logo
+No Watermark
+No UI
+────────────────────
+[절대 금지]
+Pokemon Style
+Terraria Style
+Stardew Valley Style
+Ragnarok Online Style
+JRPG Battle Sprite
+Octopath Traveler Style
+Western Cartoon
+Disney Style
+Realistic
+Semi Realistic
+3D Render
+Illustration
+Concept Art
+Splash Art
+Poster
+Wallpaper
+Anime Illustration
+Digital Painting
+Cinematic Lighting
+Ultra Detailed Sprite
+High Definition Pixel Art
+Fine-Grained Pixel Art
+Smooth Gradient Shading
+Airbrush Shading
+────────────────────
+Create the person in the uploaded image as a true MapleStory player avatar sprite.
+The result must look like an actual MapleStory player character converted from the person in the uploaded image, not a generic pixel-art character

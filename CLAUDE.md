@@ -26,7 +26,8 @@ js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스�
 js/main.js              guests.json 로드 후 게임 시작 (실패 시 DUMMY_GUESTS)
 scripts/fetch-guests.mjs  Discussions → guests.json 변환 (Actions에서 실행)
 .github/workflows/deploy.yml  Pages 배포 워크플로
-img/example/            AI 생성 스프라이트 예시 (4단계 참고용)
+img/characters/         캐릭터 스프라이트 (groom/bride = 신랑신부, character1 = 예시 하객). *_move.png = 걷기 4프레임
+prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
 ```
 
 ## 데이터 흐름 (읽기)
@@ -45,7 +46,7 @@ img/example/            AI 생성 스프라이트 예시 (4단계 참고용)
 - `look`이 없는 데이터는 `lookFromId(id)`로 id 해시 기반 고정 랜덤 색상.
 - 맵 이미지가 생기면 `CONFIG.mapImage`에 경로 지정 + `CONFIG.floors` 좌표를 이미지 발판에 맞춰 수정. `stage` 층은 신랑/신부 전용.
 - 모바일에서 캐릭터 터치 직후 click이 모달 배경에 맞아 바로 닫히는 문제 → 모달 오픈 후 400ms 동안 배경 클릭 무시.
-- 4단계 스프라이트 예시(`img/example/character1_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
+- 4단계 스프라이트 예시(`img/characters/*_move.png`): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 
 ## 로컬 실행 / 테스트
 - `index.html`을 파일로 열면 fetch 실패 → 더미 데이터로 동작.

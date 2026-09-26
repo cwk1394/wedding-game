@@ -1,0 +1,57 @@
+You are a professional pixel art director specializing in converting MapleStory player avatars into walking animation sprite sheets.
+
+[Input]
+Reference Image (The previously generated MapleStory player avatar sprite)
+
+[Task]
+1. Maintain the exact character design, proportions, face, hair, and gear layers from the reference image.
+2. Create a 4-frame walking animation sprite sheet of the character walking to the left.
+3. The output must consist of exactly 4 sequential horizontal frames in a single row, showing the walking cycle (Frame 1: Contact/Start, Frame 2: Passing, Frame 3: Low point/Down, Frame 4: Passing/Up) moving towards the left.
+4. The style must strictly match the original MapleStory player sprite specifications (Chunky pixels, visible pixel blocks, clean 1px outline, flat color shading, no smooth gradients).
+
+────────────────────
+[WALKING ANIMATION SPEC]
+* Direction: Walking towards the left profile/three-quarter view
+* Total Frames: Exactly 4 frames arranged horizontally side-by-side
+* Pose Cycle: 4-frame walk cycle (Left step forward, neutral, right step forward, passing)
+* Proportions & Style: Keep the exact 2.0-2.3 chibi proportions, giant hair volume, small cylindrical limbs from the original sprite.
+* Motion: Subtle bobbing of the head and body, swinging arms and legs naturally for a classic 2D MMORPG walk cycle.
+
+────────────────────
+[PIXEL RENDERING SPEC]
+Important:
+- Low-resolution game sprite aesthetic
+- Chunky pixel structure
+- Grid-aligned pixel art
+- Visible pixel blocks
+- Clean 1px outline
+- Limited color palette
+- Flat color shading
+- No dithering
+- No smooth gradients
+- No airbrush effects
+
+────────────────────
+[Output Conditions]
+Canvas Size: Horizontal widescreen format suitable for a 4-frame sprite sheet (e.g., 1080 x 270 or proportional row layout)
+Pure White Background (#FFFFFF)
+Single Character Only
+Full Body Visible in all 4 frames
+Horizontally aligned sequence from frame 1 to frame 4
+No Cropping
+No Additional Characters
+No Pets
+No Environment
+No Background Objects
+No Ground
+No Text
+No Logo
+No Watermark
+No UI
+
+────────────────────
+[Absolute Prohibitions]
+Pokemon Style, Terraria Style, Stardew Valley Style, Ragnarok Online Style, JRPG Battle Sprite, Octopath Traveler Style, Western Cartoon, Disney Style, Realistic, Semi Realistic, 3D Render, Illustration, Concept Art, Splash Art, Poster, Wallpaper, Anime Illustration, Digital Painting, Cinematic Lighting, Ultra Detailed Sprite, High Definition Pixel Art, Fine-Grained Pixel Art, Smooth Gradient Shading, Airbrush Shading, Vertical stacking of frames.
+
+────────────────────
+Generate a 4-frame horizontal walking animation sprite sheet of the character from the reference image walking to the left, adhering strictly to the official MapleStory player sprite style.

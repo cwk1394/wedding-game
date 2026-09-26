@@ -136,6 +136,11 @@ class CoupleCharacter extends Character {
       delay: Phaser.Math.Between(0, 400),
     });
   }
+
+  applySprite(sprite) {
+    super.applySprite(sprite);
+    this.sprite.setFlipX(false); // 정면 이미지는 뒤집지 않음
+  }
 }
 
 /** 하객: 자기 층 범위 안에서 랜덤하게 걷다 멈췄다 한다 */
