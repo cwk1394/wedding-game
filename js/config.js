@@ -19,9 +19,9 @@ const CONFIG = {
   // 하객이 스폰될 수 있는 층
   guestFloors: ['ground', 'midLeft', 'midRight', 'top'],
 
-  // 방명록 API (Cloudflare Worker) 주소. 예: 'https://guestbook-api.<계정>.workers.dev'
+  // 방명록 API (Vercel Serverless Functions) 주소
   // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
-  apiUrl: new URLSearchParams(location.search).get('api') || '',
+  apiUrl: new URLSearchParams(location.search).get('api') || 'https://guestbook-nine-drab.vercel.app',
 
   // 이미지 스프라이트 처리
   sprite: {

@@ -72,6 +72,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 ## 배포 / GitHub 설정
 - 저장소: https://github.com/kobe-KANG/guestbook (브랜치 `main`)
 - 사이트: https://kobe-kang.github.io/guestbook/
+- API: https://guestbook-nine-drab.vercel.app/api/guestbook (Vercel, GET = 상태 확인)
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
 - API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`(4단계에 `OPENAI_API_KEY`) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
