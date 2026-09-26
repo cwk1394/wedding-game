@@ -175,7 +175,6 @@ html, body {
   letter-spacing: .02em;
   text-shadow: 0 1px 1px rgba(160, 60, 48, .35);
 }
-.modal-title::before { content: "♥ "; opacity: .85; }
 
 .modal-close {
   width: 30px;
