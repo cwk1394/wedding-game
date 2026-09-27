@@ -43,7 +43,8 @@ const MAP_DATA = {
     "f30": { "path": [[11,1063],[39,1074]] },
     "f31": { "path": [[636,898],[688,899]] },
     "f7": { "path": [[660,1277],[1045,1347]] },
-    "stage": { "path": [[575,324],[1063,331]] },
+    "stage1": { "path": [[699,310],[890,312]] },
+    "f9": { "path": [[506,326],[1076,331]] },
   },
   climbs: [
     {"type":"ladder","x":767,"floors":["upperRoute_1","middleRoute"]},
@@ -69,12 +70,13 @@ const MAP_DATA = {
     {"type":"rope","x":125,"floors":["f25"],"end":1118},
     {"type":"rope","x":789,"floors":["f28"],"end":1020},
     {"type":"rope","x":674,"floors":["f31"],"end":978},
-    {"type":"rope","x":1035,"floors":["stage"],"end":429},
-    {"type":"ladder","x":765,"floors":["stage","upperRoute_1"]},
-    {"type":"rope","x":673,"floors":["stage"],"end":430},
+    {"type":"rope","x":1038,"floors":["f9"],"end":445},
+    {"type":"rope","x":670,"floors":["f9"],"end":427},
+    {"type":"ladder","x":766,"floors":["f9","upperRoute_1"]},
+    {"type":"rope","x":826,"floors":["f9"],"end":419},
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
-  couple: {"groom":{"floor":"stage","x":727},"bride":{"floor":"stage","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
+  couple: {"groom":{"floor":"stage1","x":727},"bride":{"floor":"stage1","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
   // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x, y } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김
   npcs: {
     "dog-mongsil": {"shortMsg":"멍멍! 삑삑~","longMsg":"신랑이 초등학생 때부터 함께 지낸 페키니즈 강아지다.\n페키니즈 특유의 귀여운 멍청미를 지니고 있다.\n지금은 강아지별에 살고 있지만, 결혼 소식을 듣고 잠시 놀러왔다.\n분홍색 삑삑이 장난감을 무척 아껴 언제나 품에 지니고 다닌다."},
