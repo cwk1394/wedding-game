@@ -59,13 +59,61 @@
   // 방명록 목록용: 맵 위 하객 (방금 등록한 하객 포함)
   UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl() }));
 
+  // ---------- 내 캐릭터 · 모드 ----------
+  // 내 캐릭터 = 처음 화면에서 만들거나 고른 캐릭터. 메뉴 "모드 전환"으로
+  //   플레이 모드(내 캐릭터를 직접 조종, 화면이 따라감) ↔ 관람 모드(캐릭터는 알아서 돌아다니고 맵을 자유롭게 구경)
+  let mine = null;
+  const touch = () => matchMedia('(pointer: coarse)').matches;
+
+  function play() {
+    scene().control.take(mine, { zoom: true });
+    UI.setMode(true);
+  }
+
+  function watch() {
+    const s = scene();
+    s.control.release();
+    s.view.touched = false;
+    s.view.reset();
+    UI.setMode(false);
+  }
+
+  UI.onToggleMode = () => {
+    if (!mine?.active) return UI.showToast('먼저 캐릭터를 만들거나 골라 주세요');
+    if (scene().control.controlled === mine) {
+      watch();
+      UI.showToast(touch() ? '관람 모드: 두 손가락으로 확대,\n드래그로 맵을 둘러보세요' : '관람 모드: 휠로 확대,\n드래그로 맵을 둘러보세요', 3000);
+    } else {
+      play();
+      UI.showToast(`플레이 모드: ${mine.info.name} 조종 중`, 2000);
+    }
+  };
+
+  // 캐릭터 수정: 등록할 때 정한 비밀번호 확인 → 수정 폼 (삭제하면 처음 화면으로)
+  UI.onEditMine = () => {
+    if (!mine?.active) return UI.showToast('먼저 캐릭터를 만들거나 골라 주세요');
+    if (!mine.info.number) return UI.showToast('이 캐릭터는 수정할 수 없어요');
+    UI.openEdit({
+      info: mine.info,
+      onUpdated: (guest) => mine.updateInfo(guest),
+      onDeleted: () => {
+        scene().removeGuest(mine);
+        mine = null;
+        UI.forgetMyGuest();
+        UI.setMode(false);
+        UI.openStart();
+      },
+    });
+  };
+
   // 방금 등록한 하객은 배포를 기다리지 않고 바로 맵에 등장시킨다
-  // 등록한 캐릭터는 시작점(개발자 모드에서 지정)에 나타나고 바로 조종 모드 + 확대
+  // 등록한 캐릭터는 시작점(개발자 모드에서 지정)에 나타나고 바로 플레이 모드 + 확대
   UI.onGuestCreated = (info) => {
     const s = scene();
     const guest = s.addGuest(info, { atSpawn: true });
     if (!guest) return;
-    s.control.take(guest, { zoom: true });
+    mine = guest;
+    play();
     guest.say(info.shortMsg);
   };
 
@@ -77,10 +125,11 @@
     const spawn = spawnPoint();
     s.control.release();
     if (spawn) guest.dropAt(spawn.floor, spawn.x);
-    s.control.take(guest, { zoom: true });
+    mine = guest;
+    play();
     guest.say(guest.info.shortMsg);
     UI.showToast(
-      matchMedia('(pointer: coarse)').matches ? `${guest.info.name}(으)로 시작해요!\n스틱과 점프 버튼으로 움직여 보세요` : `${guest.info.name}(으)로 시작해요!\n방향키와 Space(점프)로 움직여 보세요`,
+      touch() ? `${guest.info.name}(으)로 시작해요!\n스틱과 점프 버튼으로 움직여 보세요` : `${guest.info.name}(으)로 시작해요!\n방향키와 Space(점프)로 움직여 보세요`,
       3000
     );
   };

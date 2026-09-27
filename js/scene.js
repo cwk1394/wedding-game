@@ -35,10 +35,10 @@ class MapScene extends Phaser.Scene {
     this.onSelect = (character) => {
       if (this.dev && character instanceof NpcCharacter) return this.dev.openNpcSettings(character); // 개발자 모드: NPC 설정 창
       const isCouple = character instanceof CoupleCharacter;
-      // 조종: 하객은 누구나, 신랑·신부는 개발자 모드에서만, NPC는 불가
-      const canControl = !character.info.npc && (!isCouple || this.dev);
-      // 수정/삭제: 등록된 하객만 (방명록 번호가 있을 때). 개발자 모드에선 신랑·신부 멘트·소개 글 수정
-      const canManage = !character.info.npc && !isCouple && character.info.number;
+      // 일반 방문자는 내 캐릭터만 메뉴(모드 전환·캐릭터 수정)로 조종·수정 → 캐릭터창엔 버튼 없음.
+      // 개발자 모드에선 테스트용으로 하객·신랑신부 조종, 하객 수정, 신랑·신부 멘트 수정 버튼을 보여준다
+      const canControl = this.dev && !character.info.npc;
+      const canManage = this.dev && !character.info.npc && !isCouple && character.info.number;
       const coupleEdit = isCouple && this.dev ? { onEdit: () => this.dev.openCoupleSettings(character) } : null;
       UI.openGuestbook(
         { ...character.info, avatarUrl: character.getAvatarUrl() },

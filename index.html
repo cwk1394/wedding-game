@@ -22,6 +22,19 @@
   <nav id="menu" class="menu" aria-label="메뉴">
     <ul id="menu-items" class="menu-items">
       <li>
+        <!-- 플레이 모드(내 캐릭터 조종) ↔ 관람 모드(자유롭게 구경). 글자는 지금 모드에 따라 바뀜 (UI.setMode) -->
+        <button type="button" data-menu="mode">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="mode-label">관람 모드로 보기</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" data-menu="edit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+          캐릭터 수정
+        </button>
+      </li>
+      <li>
         <button type="button" data-menu="write">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/><path d="M19 3v6M16 6h6"/></svg>
           캐릭터 생성

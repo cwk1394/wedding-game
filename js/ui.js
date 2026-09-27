@@ -877,7 +877,18 @@ const UI = (() => {
     notifyModalChange();
   }
   menuBtn.addEventListener('click', () => setMenu(!menu.classList.contains('open')));
-  const actions = { write: openWrite, list: openList, gallery: openGallery };
+  const actions = {
+    mode: () => UI.onToggleMode?.(),
+    edit: () => UI.onEditMine?.(),
+    write: openWrite,
+    list: openList,
+    gallery: openGallery,
+  };
+
+  /** 메뉴의 모드 전환 글자: 지금 플레이 모드면 관람 모드로, 관람 모드면 플레이 모드로 */
+  function setMode(playing) {
+    menu.querySelector('.mode-label').textContent = playing ? '관람 모드로 보기' : '플레이 모드로 돌아가기';
+  }
   menu.querySelectorAll('[data-menu]').forEach((btn) =>
     btn.addEventListener('click', () => {
       setMenu(false);
@@ -950,5 +961,19 @@ const UI = (() => {
     openWrite();
   }
 
-  return { openGuestbook, openNpcSettings, openStart, showToast, onGuestCreated: null, onGuestPicked: null, onModalChange: null, getGuests: null };
+  return {
+    openGuestbook,
+    openEdit, // { info, onUpdated(guest), onDeleted() } → 비밀번호 확인 → 수정 폼
+    openNpcSettings,
+    openStart,
+    setMode,
+    showToast,
+    forgetMyGuest: () => myGuest.set(''),
+    onGuestCreated: null,
+    onGuestPicked: null,
+    onToggleMode: null, // 메뉴 "모드 전환"
+    onEditMine: null, // 메뉴 "캐릭터 수정"
+    onModalChange: null,
+    getGuests: null,
+  };
 })();
