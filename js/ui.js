@@ -637,9 +637,20 @@ const UI = (() => {
         text.className = 'guest-text';
         const name = document.createElement('b');
         name.textContent = g.info.name;
+        // 칭호 · 이름 / 관계 · 능력치 / 한줄 멘트
+        if (g.info.title) {
+          const title = document.createElement('span');
+          title.className = 'guest-title';
+          title.textContent = g.info.title;
+          text.append(title);
+        }
+        const meta = document.createElement('small');
+        meta.className = 'guest-meta';
+        const stats = g.info.stats && CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${g.info.stats[k]}`).join(' ');
+        meta.textContent = [CONFIG.relations[g.info.relation], stats].filter(Boolean).join(' · ');
         const msg = document.createElement('small');
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
-        text.append(name, msg);
+        text.append(name, ...(meta.textContent ? [meta] : []), msg);
         btn.append(avatar, text);
         btn.addEventListener('click', () => openGuestbook({ ...g.info, avatarUrl: avatar.src }));
         li.append(btn);
