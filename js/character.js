@@ -69,7 +69,10 @@ class Character extends Phaser.GameObjects.Container {
   setTitle(title) {
     this.titleTag?.destroy();
     this.titleTag = null;
+    this.titleTweens?.forEach((t) => t.remove());
+    this.titleTweens = [];
     if (!title) return;
+    if (this.info.titleStyle === 'gold') return this.setGoldTitle(title);
     const S = CONFIG.titleStyle;
     const text = this.scene.add
       .text(0, 0, title, { fontFamily: CONFIG.fontFamily, fontSize: '12px', fontStyle: 'bold', color: S.text, resolution: TEXT_RESOLUTION })
@@ -84,6 +87,67 @@ class Character extends Phaser.GameObjects.Container {
     g.fillTriangle(w / 2 + 5, -h / 2, w / 2, -h / 2 - 4, w / 2, -h / 2 + 4);
     this.titleTag = this.scene.add.container(0, -this.baseHeight - 3, [g, text]);
     this.titleTag.height = h;
+    this.add(this.titleTag);
+  }
+
+  /** 신랑·신부 전용 칭호 (info.titleStyle = 'gold'): 금빛 리본 메달 + 제비꼬리 + 하트 + 반짝이는 별 */
+  setGoldTitle(title) {
+    const G = CONFIG.goldTitleStyle;
+    const scene = this.scene;
+    const text = scene.add
+      .text(0, 0, title, {
+        fontFamily: CONFIG.fontFamily,
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: G.text,
+        stroke: G.textStroke,
+        strokeThickness: 3,
+        resolution: TEXT_RESOLUTION,
+      })
+      .setOrigin(0.5, 1);
+    const w = text.width + 22; // 양옆 하트 자리 (신랑·신부가 60px 간격으로 서도 안 겹치게 작게)
+    const h = text.height + 6;
+    text.setY(-3);
+    const g = scene.add.graphics();
+    // 제비꼬리 리본 (몸통 뒤, 양옆)
+    const tail = (s) =>
+      g.fillPoints(
+        [
+          { x: s * (w / 2 - 4), y: -h + 4 },
+          { x: s * (w / 2 + 7), y: -h + 4 },
+          { x: s * (w / 2 + 4), y: -h / 2 },
+          { x: s * (w / 2 + 7), y: -4 },
+          { x: s * (w / 2 - 4), y: -4 },
+        ],
+        true
+      );
+    g.fillStyle(G.tail, 1);
+    tail(-1);
+    tail(1);
+    // 몸통: 진한 금 테두리 → 금빛 바탕 → 위쪽 광택 → 안쪽 밝은 선
+    g.fillStyle(G.edge, 1).fillRoundedRect(-w / 2 - 1.5, -h - 1.5, w + 3, h + 3, 6);
+    g.fillStyle(G.fill, 1).fillRoundedRect(-w / 2, -h, w, h, 5);
+    g.fillStyle(G.shine, 0.95).fillRoundedRect(-w / 2 + 1, -h + 1, w - 2, h * 0.48, { tl: 4, tr: 4, bl: 0, br: 0 });
+    g.lineStyle(1, G.inner, 0.9).strokeRoundedRect(-w / 2 + 2, -h + 2, w - 4, h - 4, 4);
+    const heart = (x) =>
+      scene.add.text(x, -h / 2 - 0.5, '♥', { fontSize: '10px', color: G.heart, stroke: G.textStroke, strokeThickness: 2, resolution: TEXT_RESOLUTION }).setOrigin(0.5);
+    // 위 모서리에서 번갈아 반짝이는 별
+    const sparkle = (x, delay) => {
+      const star = scene.add.text(x, -h - 1, '✦', { fontSize: '11px', color: G.sparkle, stroke: G.edgeText, strokeThickness: 1, resolution: TEXT_RESOLUTION }).setOrigin(0.5);
+      this.titleTweens.push(
+        scene.tweens.add({ targets: star, alpha: { from: 1, to: 0.15 }, scale: { from: 1.15, to: 0.6 }, duration: 700, yoyo: true, repeat: -1, delay, ease: 'Sine.easeInOut' })
+      );
+      return star;
+    };
+    this.titleTag = scene.add.container(0, -this.baseHeight - 3, [
+      g,
+      heart(-w / 2 + 6),
+      heart(w / 2 - 6),
+      text,
+      sparkle(-w / 2 + 2, 0),
+      sparkle(w / 2 - 2, 700),
+    ]);
+    this.titleTag.height = h + 6; // 별이 위로 튀어나온 만큼
     this.add(this.titleTag);
   }
 

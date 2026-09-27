@@ -6,6 +6,7 @@ const COUPLE = [
     id: 'groom',
     name: '신랑',
     title: '신랑', // 머리 위 칭호
+    titleStyle: 'gold', // 금빛 특별 칭호 (Character.setGoldTitle)
     shortMsg: '와줘서 고마워!',
     longMsg: '바쁘신 와중에 저희 결혼식에 와주셔서 진심으로 감사드립니다.\n행복하게 잘 살겠습니다!',
     spriteUrl: 'img/npc/groom/front.webp',
@@ -16,6 +17,7 @@ const COUPLE = [
     id: 'bride',
     name: '신부',
     title: '신부', // 머리 위 칭호
+    titleStyle: 'gold',
     shortMsg: '행복하게 살게요',
     longMsg: '함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요 :)',
     spriteUrl: 'img/npc/bride/front.webp',

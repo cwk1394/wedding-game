@@ -97,7 +97,7 @@ const UI = (() => {
    * manage: { info, onUpdated(guest), onDeleted() } — 있으면 조종하기 왼쪽에 "수정" 버튼 (하객만)
    *         { onEdit() } — 개발자 모드 신랑·신부: "수정"을 누르면 onEdit (멘트·소개 글 창)
    */
-  function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, relation, personality, stats }, control = null, manage = null) {
+  function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, titleStyle, relation, personality, stats }, control = null, manage = null) {
     controlBtn.hidden = !control;
     editBtn.hidden = !manage;
     manageTarget = manage;
@@ -110,6 +110,7 @@ const UI = (() => {
     const titleEl = document.getElementById('modal-title');
     titleEl.hidden = !title;
     titleEl.textContent = title || '';
+    titleEl.classList.toggle('gold', titleStyle === 'gold');
     document.getElementById('modal-tags').textContent = profileTags({ relation, personality }).join(' · ');
     const statsEl = document.getElementById('modal-stats');
     statsEl.hidden = !stats;

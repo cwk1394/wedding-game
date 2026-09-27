@@ -790,3 +790,13 @@ html, body {
   .dev-bar { top: calc(70px + env(safe-area-inset-top, 0px)); }
 }
 .menu.open { z-index: 30; } /* 펼친 메뉴 항목은 개발자 모드 툴바 위로 */
+
+/* 신랑·신부 칭호 (캐릭터창): 금빛 */
+.guest-title.gold {
+  background: linear-gradient(180deg, #ffe27a 0%, #f5c343 48%, #e8ac2c 52%, #d99a1f 100%);
+  border-color: #8a5200;
+  color: #fffbe8;
+  text-shadow: 0 0 2px #7a4600, 0 1px 0 #7a4600;
+  box-shadow: inset 0 0 0 1px rgba(255, 246, 200, .8), 0 2px 6px rgba(200, 140, 20, .35);
+}
+.guest-title.gold::before, .guest-title.gold::after { content: '♥'; color: #ff5d8f; margin: 0 4px; text-shadow: 0 0 2px #7a4600; }

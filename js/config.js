@@ -133,6 +133,19 @@ const CONFIG = {
 
   // 칭호 (메이플 메달처럼 머리 위)
   titleStyle: { fill: 0x3b2a6e, line: 0xffd76a, text: '#fff3c4' },
+  // 신랑·신부 칭호 (js/data.js COUPLE의 titleStyle: 'gold'): 금빛 리본 메달
+  goldTitleStyle: {
+    fill: 0xe8ac2c, // 금빛 바탕
+    shine: 0xffe27a, // 위쪽 광택
+    edge: 0x8a5200, // 바깥 테두리
+    inner: 0xfff6c8, // 안쪽 밝은 선
+    tail: 0xc4860f, // 제비꼬리 리본
+    text: '#fffbe8',
+    textStroke: '#7a4600',
+    edgeText: '#8a5200',
+    heart: '#ff5d8f',
+    sparkle: '#fff6b0',
+  },
   bubble: {
     duration: 5000, // 말풍선 표시 시간 (ms)
     minGap: 3000, // 다음 말풍선까지 최소 대기 (ms)
