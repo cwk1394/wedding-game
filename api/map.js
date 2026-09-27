@@ -1,4 +1,9 @@
 // 개발자 모드 지도 저장 API (Vercel Serverless Function)
+// POST /api/map  { password, action: 'album-photos', album, photos: [{ name, data: jpeg data URL }] }
+//   개발자 모드 NPC 설정 "앨범 사진 추가": img/gallery/<album>/<name>.jpg 로 바로 커밋 (한 번에 최대 5장, 장당 1.5MB)
+// POST /api/map  { password, action: 'album-list', album } → { files: [이름] } (저장소에 있는 사진, 이름 순)
+// POST /api/map  { password, action: 'album-arrange', album, order: [이름], remove: [이름] }
+//   "사진 관리": order 순서대로 이름 앞에 001_, 002_ … 을 붙여 바꾸고(갤러리는 이름 순), remove는 지운다. 한 커밋
 // POST /api/map  { password, map: { floors, climbs, spawn, couple, npcs } }
 //   npcs[id].def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions } — 처음 저장할 때 npcImages { <id>: { front, idle, walk } }(webp data URL)를 img/npc/<id>/에 커밋
 //   npcImages[id].replace = true면 기존 NPC 이미지 교체 (설정 창 "이미지 새로 만들기") → 같은 경로에 덮어씀
@@ -35,6 +40,9 @@ export function POST(request) {
   return handlePost(request, async (body) => {
     checkDevPassword(body.password);
     if (!GITHUB_ENV.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN 환경변수가 설정되지 않았습니다.');
+    if (body.action === 'album-photos') return { status: 200, body: await uploadAlbumPhotos(new GitHub(GITHUB_ENV), body) };
+    if (body.action === 'album-list') return { status: 200, body: { files: (await albumFiles(new GitHub(GITHUB_ENV), body.album)).map((f) => f.name) } };
+    if (body.action === 'album-arrange') return { status: 200, body: await arrangeAlbum(new GitHub(GITHUB_ENV), body) };
 
     const map = validateMap(body.map);
     const github = new GitHub(GITHUB_ENV);
@@ -207,6 +215,54 @@ async function npcRenameFiles(github, map) {
   }
   for (const path of NPC_ID_FILES) files.push({ path, content: Buffer.from(texts[path]).toString('base64') });
   return { files, list };
+}
+
+const ALBUM_PHOTO = /\.(jpe?g|png|webp|gif)$/i;
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true });
+
+/** 저장소 img/gallery/<album>/ 의 사진 [{ name, path, sha }] (이름 순) */
+async function albumFiles(github, album) {
+  if (typeof album !== 'string' || !NPC_DIR.test(album)) throw new HttpError(400, '앨범 디렉토리 이름이 잘못됐어요.');
+  const entries = (await github.getContents(`img/gallery/${album}`)) ?? [];
+  return entries.filter((e) => e.type === 'file' && ALBUM_PHOTO.test(e.name)).sort(byName);
+}
+
+/** 사진 관리: order 순서대로 001_ … 순번 이름으로 바꾸고 remove는 지운다 (같은 blob으로 옮기므로 다시 올리지 않음) */
+async function arrangeAlbum(github, { album, order, remove = [] }) {
+  const files = await albumFiles(github, album);
+  const byFile = new Map(files.map((f) => [f.name, f]));
+  if (!Array.isArray(order) || !Array.isArray(remove)) throw new HttpError(400, '순서 정보가 잘못됐어요.');
+  const listed = [...order, ...remove];
+  if (listed.length !== files.length || new Set(listed).size !== listed.length || !listed.every((n) => byFile.has(n))) {
+    throw new HttpError(409, '앨범 사진 목록이 바뀌었어요. 창을 닫고 다시 열어 주세요.');
+  }
+  const changes = [];
+  order.forEach((name, i) => {
+    const next = `${String(i + 1).padStart(3, '0')}_${name.replace(/^\d{3}_/, '')}`;
+    if (next === name) return;
+    const f = byFile.get(name);
+    changes.push({ path: `img/gallery/${album}/${next}`, sha: f.sha }, { path: f.path, sha: null });
+  });
+  for (const name of remove) changes.push({ path: byFile.get(name).path, sha: null });
+  if (!changes.length) return { ok: true, commit: null };
+  const commit = await github.commitFiles(changes, `Arrange album ${album} (dev mode): ${order.length} photo(s), ${remove.length} removed`);
+  return { ok: true, commit };
+}
+
+/** 앨범 사진 올리기: 브라우저가 줄인 JPEG를 img/gallery/<album>/<이름>.jpg 로 한 커밋에 (같은 이름이면 덮어씀) */
+async function uploadAlbumPhotos(github, { album, photos }) {
+  if (typeof album !== 'string' || !NPC_DIR.test(album)) throw new HttpError(400, '앨범 디렉토리 이름이 잘못됐어요.');
+  if (!Array.isArray(photos) || !photos.length || photos.length > 5) throw new HttpError(400, '사진은 한 번에 1~5장이에요.');
+  const files = photos.map((p, i) => {
+    const match = typeof p?.data === 'string' && p.data.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) throw new HttpError(400, `${i + 1}번째 사진이 JPEG가 아니에요.`);
+    if (Buffer.byteLength(match[1], 'base64') > MAX_NPC_IMAGE_BYTES) throw new HttpError(413, `${i + 1}번째 사진이 너무 커요.`);
+    // 파일 이름: 글자·숫자·-·_만 (나머지는 _), 갤러리는 이름 순으로 보인다
+    const base = String(p.name ?? '').replace(/\.[^.]*$/, '').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 60) || `photo-${Date.now()}-${i}`;
+    return { path: `img/gallery/${album}/${base}.jpg`, content: match[1] };
+  });
+  const commit = await github.commitFiles(files, `Add ${files.length} photo(s) to album ${album} (dev mode)`);
+  return { ok: true, commit, paths: files.map((f) => f.path) };
 }
 
 /** 앨범 NPC의 img/gallery/<album>/ 이 저장소에 없으면 .gitkeep으로 만든다 (git은 빈 폴더를 못 올려서) */

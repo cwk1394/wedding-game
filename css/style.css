@@ -815,3 +815,22 @@ html, body {
 
 /* NPC 설정: 이미지 새로 만들기 (누르면 사진·설명·캐릭터 생성 칸이 펼쳐짐) */
 .npc-regen-toggle { width: 100%; margin-bottom: 12px; }
+
+/* NPC 설정: 분류·앨범 디렉토리·앨범 사진 추가 */
+.npc-kind { display: flex; flex-direction: column; gap: 14px; }
+.album-upload { display: flex; gap: 8px; align-items: center; }
+.album-upload input[type="file"] { flex: 1; min-width: 0; font-size: 13px; font-weight: normal; }
+.npc-album-photos .note { font-weight: normal; color: var(--ink-soft); font-size: 12px; }
+
+/* 앨범 사진 관리: 썸네일 격자 + ◀ ✕ ▶ */
+.album-manage-btn { margin-top: 2px; }
+.album-grid { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.album-item { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.album-item img, .album-noimg { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 7px; background: var(--soft); }
+.album-noimg { display: grid; place-items: center; padding: 4px; font-size: 10px; color: var(--ink-soft); word-break: break-all; text-align: center; }
+.album-num { position: absolute; top: 7px; left: 7px; padding: 0 6px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; }
+.album-tools { display: flex; justify-content: space-between; gap: 2px; }
+.album-tools button { flex: 1; padding: 3px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink); font-size: 12px; cursor: pointer; }
+.album-tools button:disabled { opacity: .35; cursor: default; }
+.album-item.removed img, .album-item.removed .album-noimg { opacity: .3; filter: grayscale(1); }
+.album-item.removed .album-num { background: #d23f2c; }

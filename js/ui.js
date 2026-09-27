@@ -194,7 +194,163 @@ const UI = (() => {
     npcCreate.querySelector('.photo-empty').hidden = Boolean(file);
   });
   // 분류가 앨범일 때만 앨범 디렉토리 칸
-  const showAlbum = () => (npcForm.querySelector('.npc-album').hidden = npcForm.elements.kind.value !== 'album');
+  let npcCreating = false; // NPC 추가 창이면 앨범 사진 칸은 숨김 (추가 후 설정에서)
+  const showAlbum = () => {
+    const album = npcForm.elements.kind.value === 'album';
+    npcForm.querySelector('.npc-album').hidden = !album;
+    npcForm.querySelector('.npc-album-photos').hidden = !album || npcCreating;
+  };
+
+  // ---------- 앨범 사진 올리기 (NPC 설정, 개발자 모드) ----------
+  const albumBtn = npcForm.querySelector('.album-upload-btn');
+  const albumStatus = npcForm.querySelector('.album-status');
+
+  /** 지금 앨범 사진 수 (배포된 gallery.json 기준) */
+  async function showAlbumCount() {
+    const album = npcForm.elements.album.value.trim();
+    const el = npcForm.querySelector('.album-count');
+    el.textContent = '';
+    if (!album) return;
+    const photos = await loadPhotos();
+    el.textContent = `(지금 ${photos.filter((p) => p.album === album).length}장)`;
+  }
+  npcForm.elements.album.addEventListener('change', showAlbumCount);
+
+  // ---------- 앨범 사진 관리 (순서 바꾸기·지우기) ----------
+  // 사진 목록은 저장소 기준(API album-list), 썸네일은 배포된 gallery.json에서 이름으로 찾음 (막 올린 사진은 이름만)
+  const albumEl = document.getElementById('album-modal');
+  const albumModal = setupModal(albumEl);
+  const albumGrid = albumEl.querySelector('.album-grid');
+  const albumSave = albumEl.querySelector('.album-save');
+  const albumError = albumEl.querySelector('.form-error');
+  let albumState = null; // { album, password, items: [{ name, thumb, removed }] }
+
+  const setAlbumError = (msg) => {
+    albumError.textContent = msg || '';
+    albumError.hidden = !msg;
+  };
+  const baseName = (name) => decodeURIComponent(name).replace(/\.[^.]*$/, '');
+
+  npcForm.querySelector('.album-manage-btn').addEventListener('click', async () => {
+    const album = npcForm.elements.album.value.trim();
+    if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(album)) return setNpcError('앨범 디렉토리 이름(영문 소문자·숫자·-)을 먼저 입력해 주세요.');
+    const password = devPassword();
+    if (!password) return setNpcError('개발자 비밀번호를 입력해야 사진을 관리할 수 있어요.');
+    albumState = { album, password, items: [] };
+    document.getElementById('album-title').textContent = `앨범 사진 관리 (${album})`;
+    setAlbumError('');
+    albumGrid.replaceChildren();
+    albumEl.querySelector('.empty-note').hidden = true;
+    const loading = albumEl.querySelector('.album-loading');
+    loading.hidden = false;
+    loading.querySelector('.gen-text').textContent = '사진 목록 불러오는 중...';
+    albumSave.disabled = true;
+    albumModal.open();
+    try {
+      const [{ files }, photos] = await Promise.all([postJson('/api/map', { password, action: 'album-list', album }), loadPhotos()]);
+      rememberDevPassword(password);
+      const thumbs = new Map(photos.filter((p) => p.album === album).map((p) => [baseName(p.thumb.split('/').pop()), p.thumb]));
+      albumState.items = files.map((name) => ({ name, thumb: thumbs.get(baseName(name)) ?? null, removed: false }));
+      renderAlbum();
+    } catch (err) {
+      rememberDevPassword(password, err);
+      setAlbumError(err.message);
+    } finally {
+      loading.hidden = true;
+      albumSave.disabled = false;
+    }
+  });
+
+  function renderAlbum() {
+    const { items } = albumState;
+    albumEl.querySelector('.empty-note').hidden = items.length > 0;
+    let n = 0;
+    albumGrid.replaceChildren(
+      ...items.map((item, i) => {
+        const li = document.createElement('li');
+        li.className = 'album-item' + (item.removed ? ' removed' : '');
+        const pic = item.thumb ? Object.assign(document.createElement('img'), { src: item.thumb, alt: item.name, loading: 'lazy' }) : Object.assign(document.createElement('span'), { className: 'album-noimg', textContent: item.name });
+        const num = Object.assign(document.createElement('b'), { className: 'album-num', textContent: item.removed ? '삭제' : ++n });
+        const btn = (label, title, onClick, disabled = false) => {
+          const b = Object.assign(document.createElement('button'), { type: 'button', textContent: label, title, disabled });
+          b.addEventListener('click', onClick);
+          return b;
+        };
+        const move = (d) => () => {
+          [items[i], items[i + d]] = [items[i + d], items[i]];
+          renderAlbum();
+        };
+        const tools = document.createElement('div');
+        tools.className = 'album-tools';
+        tools.append(
+          btn('◀', '앞으로', move(-1), i === 0 || item.removed),
+          btn(item.removed ? '↺' : '✕', item.removed ? '되살리기' : '지우기', () => {
+            item.removed = !item.removed;
+            renderAlbum();
+          }),
+          btn('▶', '뒤로', move(1), i === items.length - 1 || item.removed)
+        );
+        li.append(pic, num, tools);
+        return li;
+      })
+    );
+  }
+
+  albumSave.addEventListener('click', async () => {
+    if (!albumState?.items.length) return albumModal.close();
+    const { album, password, items } = albumState;
+    const order = items.filter((it) => !it.removed).map((it) => it.name);
+    const remove = items.filter((it) => it.removed).map((it) => it.name);
+    if (remove.length && !confirm(`사진 ${remove.length}장을 지울까요? (git 기록에는 남아요)`)) return;
+    setAlbumError('');
+    albumSave.disabled = true;
+    albumSave.textContent = '저장 중...';
+    try {
+      await postJson('/api/map', { password, action: 'album-arrange', album, order, remove });
+      albumModal.close();
+      showToast(`앨범을 정리했어요 (${order.length}장${remove.length ? `, ${remove.length}장 삭제` : ''}). 1~2분 뒤 반영돼요`, 3500);
+    } catch (err) {
+      setAlbumError(err.message);
+    } finally {
+      albumSave.disabled = false;
+      albumSave.textContent = '저장';
+    }
+  });
+
+  albumBtn.addEventListener('click', async () => {
+    const f = npcForm.elements;
+    const album = f.album.value.trim();
+    const files = [...f.albumPhotos.files];
+    if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(album)) return setNpcError('앨범 디렉토리 이름(영문 소문자·숫자·-)을 먼저 입력해 주세요.');
+    if (!files.length) return setNpcError('올릴 사진을 골라 주세요.');
+    const password = devPassword();
+    if (!password) return setNpcError('개발자 비밀번호를 입력해야 사진을 올릴 수 있어요.');
+    setNpcError('');
+    albumBtn.disabled = npcSubmit.disabled = true;
+    albumStatus.hidden = false;
+    const text = albumStatus.querySelector('.gen-text');
+    let done = 0;
+    try {
+      // 3장씩 나눠 보낸다 (Vercel 요청 크기 한도 4.5MB)
+      for (let i = 0; i < files.length; i += 3) {
+        const batch = files.slice(i, i + 3);
+        text.textContent = `사진 줄이는 중... ${done}/${files.length}`;
+        const photos = await Promise.all(batch.map(async (file) => ({ name: file.name, data: await resizePhoto(file, 2000) })));
+        text.textContent = `사진 올리는 중... ${done}/${files.length}`;
+        await postJson('/api/map', { password, action: 'album-photos', album, photos });
+        rememberDevPassword(password);
+        done += batch.length;
+      }
+      f.albumPhotos.value = '';
+      showToast(`앨범에 ${done}장 올렸어요. 1~2분 뒤 앨범에 보여요`, 3500);
+    } catch (err) {
+      rememberDevPassword(password, err);
+      setNpcError(`${done}장까지 올렸어요. ${err.message}`);
+    } finally {
+      albumStatus.hidden = true;
+      albumBtn.disabled = npcSubmit.disabled = false;
+    }
+  });
   npcForm.elements.kind.addEventListener('change', showAlbum);
   // 사물은 보통 가만히 서 있으니 배치도 고정으로
   npcForm.elements.moving.addEventListener('change', (e) => {
@@ -263,7 +419,10 @@ const UI = (() => {
     npcForm.querySelector('.npc-kind').hidden = textsOnly;
     npcForm.elements.kind.value = album ? 'album' : 'normal';
     npcForm.elements.album.value = album ?? '';
+    npcForm.elements.albumPhotos.value = '';
+    npcCreating = create;
     showAlbum();
+    if (album && !create) showAlbumCount();
     npcForm.querySelector('.npc-modes').hidden = textsOnly;
     npcDelete = onDelete;
     npcDeleteBtn.hidden = !onDelete;
