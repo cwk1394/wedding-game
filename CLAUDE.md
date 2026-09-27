@@ -20,7 +20,7 @@ css/style.css           메이플 UI 창 스타일 모달, 버튼, 토스트
 js/map-data.js          MAP_DATA: 이동 가능 영역(floors 꺾은선, climbs 사다리/로프), spawn 시작점, couple 신랑·신부 자리·고정 여부, npcs NPC 설정(멘트·배치). 개발자 모드 저장 시 API가 통째로 다시 씀
 js/config.js            CONFIG: 월드 크기(=배경 이미지 1122x1402, 세로형), 배경 이미지, 층(floors) 꺾은선 좌표 + floorSpan()/floorY(), 속도, 말풍선, API 주소, AI/스프라이트 설정
 js/npcs.js              NPCS: NPC 설정(이름, 처음 발판, 키, 속도, 동작, 효과, 팝업 글)
-js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백), fetchGuests()
+js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백 = 개발 때 테스트 캐릭터 7명, 이미지 img/dummy/<id>/), fetchGuests()
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
@@ -40,6 +40,7 @@ img/guests/<uuid>/ 폴더 git rm
 .github/workflows/deploy.yml  Pages 배포 워크플로
 .github/workflows/cleanup-images.yml  매일 03:00 KST 고아 이미지 정리 (수동 실행 시 기본 dry run)
 img/npc/<groom|bride>/   신랑신부 스프라이트. 하객과 같은 파일명(front, walk, jump, ladder, rope). 원본 png(각 1MB 안팎)는 보관용, 실제로는 webp(q0.9, 44~146KB) 사용
+img/dummy/<dummy-n>/     더미 하객 스프라이트 (DUMMY_GUESTS용, 테스트 캐릭터 이미지 복사본 — img/guests/는 방명록 글을 지우면 정리 작업이 지우므로 따로 보관)
 img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동작 스트립 walk/jump/ladder/rope/prone.png(투명 배경, 4프레임, 높이 128, 모두 선택)
 api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion 작성)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
