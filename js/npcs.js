@@ -1,7 +1,7 @@
 // NPC 설정. 이미지는 scripts/gen-npc.mjs로 만든 img/npc/<id>/{front,idle,walk,sleep}.webp
 // - floor: 처음 서 있을 발판 (없어졌으면 랜덤), x: 처음 위치(없으면 랜덤)
 // - NPC는 점프·사다리·로프를 쓰지 않고 자기 발판(이어진 발판 포함) 위만 돌아다닌다. 조종 불가
-// - popup: shortMsg = 말풍선·팝업 한줄 멘트(10자 안팎), longMsg = 팝업 소개 글(미정 — 정해지면 여기서 수정)
+// - popup: shortMsg = 말풍선·팝업 한줄 멘트(20자 이하), longMsg = 팝업 소개 글(미정 — 정해지면 여기서 수정)
 // - effect: petals(꽃가루 뿌리기) | bubbles(서 있으면 비눗방울, 걸으면 파티 블로어 음표)
 // - states: 걷기(walk)·특수 동작(sleep, scratch 등) 비율과 지속 시간(<동작>Time, ms). 나머지 확률은 서기(idle)
 

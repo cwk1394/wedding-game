@@ -309,6 +309,14 @@ class DevMode {
     const c = d.character;
     const isCouple = c instanceof CoupleCharacter;
     const npc = c instanceof NpcCharacter ? c.npc : null;
+    if (npc && isStaticNpc(npc)) {
+      // 가만히 있는 NPC(사물): 발판과 상관없이 놓은 자리(공중도)에 고정
+      this.checkpoint();
+      const { floor, ...rest } = CONFIG.npcs[npc.id] ?? {};
+      CONFIG.npcs = { ...CONFIG.npcs, [npc.id]: { ...rest, mode: 'fixed', x: Math.round(c.x), y: Math.round(c.y) } };
+      c.held = false;
+      return this.changed();
+    }
     const stageOnly = isCouple ? !coupleFixed() : npc && c.mode === 'stage';
     const name = floorForDrop(c.x, c.y, stageOnly ? isStage : undefined);
     if (!name) UI.showToast(stageOnly ? '무대(노란 선) 위에 놓아 주세요' : '발판(빨간·노란 선) 위에 놓아 주세요');
@@ -373,7 +381,7 @@ class DevMode {
     }
     // 고정 NPC 자리도 같은 방식으로 (못 옮기면 고정 해제 → 기본)
     for (const [id, n] of Object.entries(CONFIG.npcs)) {
-      if (n.mode !== 'fixed') continue;
+      if (n.mode !== 'fixed' || n.y != null) continue; // 발판 없이 놓인 자리(y)는 그대로
       const p = relocatePoint({ floor: n.floor, x: n.x });
       if (p) CONFIG.npcs[id] = { ...n, ...p };
       else {
@@ -418,8 +426,18 @@ class DevMode {
   openNpcSettings(c) {
     const { id } = c.npc;
     const cur = CONFIG.npcs[id] ?? {};
-    const pending = Boolean(this.pendingNpcImages[id]);
-    UI.openNpcSettings({ ...c.info, dir: cur.dir ?? id, album: cur.album, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ name, dir, shortMsg, longMsg, mode, album }) => {
+    const pending = this.pendingNpcImages[id] && !this.pendingNpcImages[id].replace; // 아직 저장 안 한 새 NPC
+    const regen = {
+      desc: cur.def?.desc ?? '',
+      moving: c.npc.motions.includes('walk') ? 'walk' : 'static',
+      height: cur.def?.height ?? c.npc.height ?? 40,
+      heightLocked: !cur.def, // js/npcs.js의 기본 NPC 키는 코드에 있음
+    };
+    UI.openNpcSettings({ ...c.info, dir: cur.dir ?? id, album: cur.album, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ name, dir, shortMsg, longMsg, mode, album, images, desc, height }) => {
+      if (images) {
+        if (!images.front) return '캐릭터를 먼저 생성해 주세요.';
+        if (dir !== (cur.dir ?? id)) return '이미지와 디렉토리 이름은 따로 바꿔 주세요. (이미지를 먼저 저장한 뒤 이름 변경)';
+      }
       if (pending) dir = id; // 아직 저장 안 한 추가 NPC는 폴더가 없어서 이름을 못 바꿈
       if (!name) return '이름을 입력해 주세요.';
       const albumError = checkAlbum(album);
@@ -428,16 +446,29 @@ class DevMode {
       const taken = this.scene.npcs.some((o) => o !== c && (o.npc.id === dir || CONFIG.npcs[o.npc.id]?.dir === dir));
       if (taken) return `"${dir}"는 다른 NPC가 쓰고 있어요.`;
       const next = { name: name === c.npc.name && !cur.def ? undefined : name, dir: dir === id ? undefined : dir, shortMsg, longMsg, album: album ?? undefined, def: cur.def };
-      if (mode === 'fixed') Object.assign(next, { mode, floor: c.floorName, x: Math.round(c.x) }); // 지금 서 있는 자리에 고정
+      if (mode === 'fixed') {
+        // 지금 서 있는 자리에 고정 (가만히 있는 NPC는 발판과 상관없이 x, y 그대로)
+        Object.assign(next, isStaticNpc(c.npc) ? { mode, x: Math.round(c.x), y: Math.round(c.y) } : { mode, floor: c.floorName, x: Math.round(c.x) });
+      }
       else if (mode !== 'default') next.mode = mode;
+      if (images && cur.def) {
+        // 추가한 NPC: 설명·키·동작도 새 이미지에 맞춘다
+        const motions = ['idle', 'walk'].filter((m) => images[m]);
+        next.def = { desc: desc || cur.def.desc, height: Phaser.Math.Clamp(Math.round(height) || cur.def.height, 10, 200), motions };
+      }
       const texts = npcTexts(c.npc);
-      if (name === texts.name && dir === (cur.dir ?? id) && shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode && (album ?? null) === (cur.album ?? null)) return; // 바뀐 것 없음
+      if (!images && name === texts.name && dir === (cur.dir ?? id) && shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode && (album ?? null) === (cur.album ?? null)) return; // 바뀐 것 없음
       this.checkpoint();
       CONFIG.npcs = { ...CONFIG.npcs, [id]: next };
+      if (images) {
+        this.replaceNpcImages(c, images, pending);
+        this.changed();
+        return UI.showToast('이미지를 바꿨어요. 저장 버튼을 누르면 사이트에 반영돼요 (이미지 변경은 되돌리기 없음)', 3500);
+      }
       c.updateInfo(npcTexts(c.npc));
       this.changed();
       UI.showToast('저장 버튼을 누르면 사이트에 반영돼요');
-    }, { dirLocked: pending, onDelete: () => this.deleteNpc(c) });
+    }, { dirLocked: pending, onDelete: () => this.deleteNpc(c), regen });
   }
 
   /** 신랑·신부 설정 창: 이름·한줄 멘트·소개 글 → CONFIG.npcs.groom/bride (js/data.js COUPLE 값을 덮어씀, 저장·되돌리기 대상) */
@@ -474,6 +505,22 @@ class DevMode {
     CONFIG.npcs = npcs;
     this.changed();
     UI.showToast(`${c.info.name}을(를) 삭제했어요. 저장 버튼을 누르면 사이트에 반영돼요`, 3000);
+  }
+
+  /**
+   * NPC 이미지 교체: 새 이미지로 맵의 NPC를 다시 만들고 저장 때 img/npc/<id>/에 덮어쓴다 (replace).
+   * 저장 전 새 NPC(pendingNew)면 그냥 새 이미지로. 이미지는 스냅샷에 없어서 되돌리기 기록은 비운다
+   */
+  replaceNpcImages(c, images, pendingNew) {
+    const { id } = c.npc;
+    this.pendingNpcImages[id] = { ...images, replace: !pendingNew };
+    const s = CONFIG.npcs[id];
+    const npc = s?.def ? { ...customNpc(id, s) } : { ...c.npc };
+    Object.assign(npc, { images, imagesRev: Date.now() }); // imagesRev: 텍스처를 새로 불러오게
+    const i = this.scene.npcs.indexOf(c);
+    c.destroy();
+    this.scene.npcs[i] = new NpcCharacter(this.scene, npc, { onSelect: this.scene.onSelect });
+    this.history = [];
   }
 
   /** NPC 추가 창: 사진·설명으로 캐릭터를 만들어 추가 (화면 가운데 발판) */
@@ -630,19 +677,19 @@ class DevMode {
     btn.disabled = true;
     btn.textContent = '저장 중...';
     try {
-      // 추가한 NPC 이미지 (아직 저장 안 했고, 되돌리기로 빠지지 않은 것만)
+      // 새 NPC 이미지·바꾼 이미지 (아직 저장 안 했고, 되돌리기·삭제로 빠지지 않은 것만)
       const npcImages = {};
-      for (const [id, imgs] of Object.entries(this.pendingNpcImages)) {
-        if (!CONFIG.npcs[id]?.def) continue;
-        npcImages[id] = {};
+      for (const [id, { replace, ...imgs }] of Object.entries(this.pendingNpcImages)) {
+        if (replace ? CONFIG.npcs[id]?.deleted || this.deletedNpcDirs.has(id) : !CONFIG.npcs[id]?.def) continue;
+        npcImages[id] = { replace };
         for (const [m, src] of Object.entries(imgs)) npcImages[id][m] = await shrinkWebp(src);
       }
       // 삭제한 추가 NPC 폴더 (되돌리기로 살아난 것·저장 전 추가였던 것은 빼고)
-      const npcDeletes = [...this.deletedNpcDirs].filter((id) => !CONFIG.npcs[id] && !this.pendingNpcImages[id]);
+      const npcDeletes = [...this.deletedNpcDirs].filter((id) => !CONFIG.npcs[id] && !(this.pendingNpcImages[id] && !this.pendingNpcImages[id].replace));
       await postJson('/api/map', { password, map: mapData(), npcImages, npcDeletes });
       rememberDevPassword(password);
       this.deletedNpcDirs.clear();
-      this.pendingNpcImages = Object.fromEntries(Object.entries(this.pendingNpcImages).filter(([id]) => !CONFIG.npcs[id]?.def)); // 올린 것만 비움
+      this.pendingNpcImages = Object.fromEntries(Object.entries(this.pendingNpcImages).filter(([id]) => !npcImages[id])); // 올린 것만 비움
       // NPC 폴더를 만들었거나·지웠거나·이름을 바꿨으면 되돌리기 기록을 비운다 (저장소 폴더와 안 맞는 스냅샷으로 되돌리면 꼬임)
       if (this.applyNpcRenames() || npcDeletes.length || Object.keys(npcImages).length) this.history = [];
       this.savedSnap = this.snapshot();

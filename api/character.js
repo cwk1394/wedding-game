@@ -55,7 +55,8 @@ export function POST(request) {
     if (!spec) throw new HttpError(400, `type은 ${Object.keys(TYPES).join(', ')} 중 하나여야 합니다.`);
     if (spec.npc) {
       checkDevPassword(body.password); // NPC 추가는 개발자 모드 전용
-      const desc = typeof body.desc === 'string' ? body.desc.replace(/\s+/g, ' ').trim().slice(0, 100) : '';
+      // 여러 줄로 써도 한 줄로 합쳐 프롬프트에 넣는다
+      const desc = typeof body.desc === 'string' ? body.desc.replace(/\s+/g, ' ').trim().slice(0, 300) : '';
       if (!desc) throw new HttpError(400, 'NPC 설명(무엇인지)을 입력해 주세요.');
       if (!body.image && !spec.noref) throw new HttpError(400, '정면 이미지가 필요합니다.');
       const file = body.image ? spec.prompt : spec.noref;

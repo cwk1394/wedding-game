@@ -166,13 +166,16 @@
             <span>이름 <small>(15자 이하)</small></span>
             <input name="name" maxlength="15" required autocomplete="name" />
           </label>
-          <label class="field">
+          <div class="field">
             <span>신랑·신부와의 관계</span>
-            <select name="relation" required></select>
-          </label>
+            <div class="relation-row">
+              <select name="side" required aria-label="신랑측·신부측"></select>
+              <select name="relation" required aria-label="관계"></select>
+            </div>
+          </div>
           <label class="field">
-            <span>한줄 멘트 <small>(10자 이하, 말풍선으로 보여요)</small></span>
-            <input name="shortMsg" maxlength="10" required />
+            <span>한줄 멘트 <small>(20자 이하, 말풍선으로 보여요)</small></span>
+            <input name="shortMsg" maxlength="20" required />
           </label>
           <label class="field">
             <span>방명록</span>
@@ -268,10 +271,13 @@
             <span>이름 <small>(15자 이하)</small></span>
             <input name="name" maxlength="15" required />
           </label>
-          <label class="field">
+          <div class="field">
             <span>신랑·신부와의 관계</span>
-            <select name="relation" required></select>
-          </label>
+            <div class="relation-row">
+              <select name="side" required aria-label="신랑측·신부측"></select>
+              <select name="relation" required aria-label="관계"></select>
+            </div>
+          </div>
           <label class="field">
             <span>캐릭터 성향</span>
             <select name="personality" required></select>
@@ -281,8 +287,8 @@
             <input name="title" maxlength="12" />
           </label>
           <label class="field">
-            <span>한줄 멘트 <small>(10자 이하)</small></span>
-            <input name="shortMsg" maxlength="10" required />
+            <span>한줄 멘트 <small>(20자 이하)</small></span>
+            <input name="shortMsg" maxlength="20" required />
           </label>
           <label class="field">
             <span>방명록</span>
@@ -310,6 +316,7 @@
           <div class="modal-avatar"><img id="npc-avatar" alt="" /></div>
           <div id="npc-name" class="modal-name"></div>
         </div>
+        <button type="button" class="have-char-btn npc-regen-toggle" hidden>이미지 새로 만들기 ▾</button>
         <div class="npc-create" hidden>
           <div class="char-maker">
             <label class="photo-pick">
@@ -325,7 +332,7 @@
           </div>
           <label class="field">
             <span>NPC 설명 <small>(무엇인지 — 예: 강아지, 토끼, 자동차, 탁자 위에 올려진 앨범, 게시판)</small></span>
-            <input name="desc" maxlength="100" />
+            <textarea name="desc" maxlength="300" rows="3" placeholder="예: 탁자 위에 펼쳐서 세워 둔 하얀 웨딩 앨범, 표지에 금색 하트"></textarea>
           </label>
           <div class="npc-create-row">
             <label class="field">
@@ -340,9 +347,11 @@
               <input name="height" type="number" min="10" max="200" value="40" />
             </label>
           </div>
+          <!-- 키 참고값: 하객·신랑신부 = CONFIG.sprite.height, 나머지는 js/npcs.js height -->
+          <small class="note height-note">키 참고: 하객·신랑신부 72 · 고양이 30 · 몽실이 32 · 에쏘 36 · 스튜디오 앨범 40 · 토끼 50 · 얼룩말 66 · 택시 87</small>
           <button type="button" class="btn btn-secondary npc-generate">캐릭터 생성</button>
           <p class="gen-status" hidden><span class="spinner" aria-hidden="true"></span><span class="gen-text"></span></p>
-          <small class="note">사진이 없으면 설명만으로 그려요. 정면 → 움직임 순서로 1~3분 걸려요.</small>
+          <small class="note">사진이 없으면 설명만으로 그려요.<br />정면 → 움직임 순서로 1~3분 걸려요.</small>
         </div>
         <label class="field">
           <span>이름 <small>(15자 이하, 이름표)</small></span>
@@ -366,8 +375,8 @@
           </label>
         </div>
         <label class="field">
-          <span>한줄 멘트 <small>(15자 이하, 말풍선으로 보여요)</small></span>
-          <input name="shortMsg" maxlength="15" />
+          <span>한줄 멘트 <small>(20자 이하, 말풍선으로 보여요)</small></span>
+          <input name="shortMsg" maxlength="20" />
         </label>
         <label class="field">
           <span>소개 글 <small>(누르면 팝업에 보여요)</small></span>

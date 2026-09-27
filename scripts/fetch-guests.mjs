@@ -50,9 +50,11 @@ function toGuest(discussion) {
     // API로 등록된 글은 UUID, 수동으로 쓴 옛 글은 Discussion 번호로 구분
     id: UUID_RE.test(data.id) ? data.id.toLowerCase() : `d${discussion.number}`,
     name,
-    shortMsg: str(data.shortMsg, 10),
+    shortMsg: str(data.shortMsg, 20),
     longMsg: str(data.longMsg, 1000),
-    relation: key(data.relation),
+    // 예전 글은 relation에 신랑측/신부측/두 사람 모두(groom|bride|both)가 들어 있음 → side로 옮김
+    side: key(data.side) ?? (['groom', 'bride', 'both'].includes(data.relation) ? data.relation : null),
+    relation: ['groom', 'bride', 'both'].includes(data.relation) ? null : key(data.relation),
     personality: key(data.personality),
     title: str(data.title, 12) || null,
     stats: stats(data.stats),

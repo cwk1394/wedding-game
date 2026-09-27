@@ -1,6 +1,7 @@
 // 개발자 모드 지도 저장 API (Vercel Serverless Function)
 // POST /api/map  { password, map: { floors, climbs, spawn, couple, npcs } }
 //   npcs[id].def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions } — 처음 저장할 때 npcImages { <id>: { front, idle, walk } }(webp data URL)를 img/npc/<id>/에 커밋
+//   npcImages[id].replace = true면 기존 NPC 이미지 교체 (설정 창 "이미지 새로 만들기") → 같은 경로에 덮어씀
 //   npcs[id].album = 앨범 NPC의 앨범 디렉토리 → img/gallery/<album>/ 이 없으면 .gitkeep을 커밋해 만든다 (사진은 직접 넣기)
 //   npcDeletes [id]: 삭제한 추가 NPC의 img/npc/<id>/ 폴더를 지움 (js/npcs.js에 있는 기본 NPC는 npcs[id].deleted = true로 숨기기만)
 //   npcs[id].dir가 있으면 NPC 디렉토리 이름 바꾸기: img/npc/<id>/ → img/npc/<dir>/ 이동 + js/npcs.js·scripts/gen-npc.mjs의 id도 바꿈 (같은 커밋)
@@ -13,7 +14,7 @@ import { GITHUB_ENV, GitHub } from './_lib/github.js';
 import { HttpError, checkDevPassword, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 
 const FILE = 'js/map-data.js';
-const LIMITS = { floors: 200, points: 300, climbs: 200, coord: 10000, npcs: 50, name: 15, shortMsg: 15, longMsg: 500 };
+const LIMITS = { floors: 200, points: 300, climbs: 200, coord: 10000, npcs: 50, name: 15, shortMsg: 20, longMsg: 500 };
 const NPC_DIR = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const NPC_ID_FILES = ['js/npcs.js', 'scripts/gen-npc.mjs'];
 const NPC_MOTIONS = ['idle', 'walk']; // 추가한 NPC가 가질 수 있는 동작
@@ -45,7 +46,7 @@ export function POST(request) {
       [...deleted.files, ...added.files, ...renames.files, ...albums, { path: FILE, content: Buffer.from(renderMapFile(map)).toString('base64') }],
       `Update walkable map areas (dev mode): ${Object.keys(map.floors).length} floors, ${map.climbs.length} climbs` +
         deleted.list.map((id) => `; delete NPC ${id}`).join('') +
-        added.list.map((id) => `; add NPC ${id}`).join('') +
+        added.list.map((what) => `; ${what}`).join('') +
         renames.list.map(([from, to]) => `; rename NPC ${from} -> ${to}`).join('')
     );
     return { status: 200, body: { ok: true, commit } };
@@ -116,7 +117,11 @@ function validateMap(map) {
       if (!NPC_MODES.includes(n.mode)) throw bad(`${id}: 배치 방식`);
       out.mode = n.mode;
     }
-    if (out.mode === 'fixed') {
+    if (out.mode === 'fixed' && n.y != null) {
+      // 가만히 있는 NPC: 발판과 상관없이 x, y (공중도 가능)
+      if (!isCoord(n.x) || !isCoord(n.y)) throw bad(`${id}: 고정 자리`);
+      Object.assign(out, { x: Math.round(n.x), y: Math.round(n.y) });
+    } else if (out.mode === 'fixed') {
       if (!floors[n.floor] || !isCoord(n.x)) throw bad(`${id}: 고정 자리`);
       Object.assign(out, { floor: n.floor, x: Math.round(n.x) });
     }
@@ -129,7 +134,7 @@ function validateMap(map) {
       // 개발자 모드에서 추가한 NPC (id = 이미지 폴더 이름)
       const d = n.def;
       if (!NPC_DIR.test(id)) throw bad(`${id}: 디렉토리 이름은 영문 소문자·숫자·-만 (40자 이하)`);
-      if (typeof d.desc !== 'string' || !d.desc.trim() || [...d.desc].length > 100) throw bad(`${id}: 설명은 1~100자`);
+      if (typeof d.desc !== 'string' || !d.desc.trim() || [...d.desc].length > 300) throw bad(`${id}: 설명은 1~300자`);
       if (!Number.isInteger(d.height) || d.height < 10 || d.height > 200) throw bad(`${id}: 키는 10~200`);
       const motions = Array.isArray(d.motions) ? d.motions : [];
       if (motions.some((m, i) => !NPC_MOTIONS.includes(m) || motions.indexOf(m) !== i)) throw bad(`${id}: 동작`);
@@ -235,23 +240,31 @@ async function npcDeleteFiles(github, map, npcDeletes) {
 }
 
 /**
- * 새로 추가한 NPC 이미지 npcImages { <id>: { front, idle?, walk? } } → img/npc/<id>/<동작>.webp 커밋 항목.
- * map.npcs[id].def가 있는 NPC만, 이미 있는 폴더 이름이면 거부. → { files, list: [id] }
+ * NPC 이미지 npcImages { <id>: { front, idle?, walk?, replace? } } → img/npc/<id>/<동작>.webp 커밋 항목.
+ *   새 NPC(replace 없음): map.npcs[id].def가 있어야 하고, 이미 있는 폴더 이름이면 거부. front + def.motions 필수
+ *   이미지 교체(replace: true): 이미 있는 NPC 폴더에 덮어쓴다. front 필수, idle/walk는 있으면
+ * → { files, list: ['add NPC id' | 'update NPC images id'] }
  */
 async function npcImageFiles(github, map, npcImages) {
   const files = [];
   const list = [];
   for (const [id, imgs] of Object.entries(npcImages ?? {})) {
+    if (!NPC_DIR.test(id) || !imgs || typeof imgs !== 'object') throw new HttpError(400, `NPC "${id}" 이미지: 잘못된 NPC예요.`);
     const def = map.npcs[id]?.def;
-    if (!def || !imgs || typeof imgs !== 'object') throw new HttpError(400, `NPC "${id}" 이미지: 추가한 NPC가 아니에요.`);
-    if (await github.getContents(`img/npc/${id}`)) throw new HttpError(400, `"${id}" 이름은 이미 있어요.`);
-    for (const m of ['front', ...def.motions]) {
+    const replace = imgs.replace === true;
+    if (!replace) {
+      if (!def) throw new HttpError(400, `NPC "${id}" 이미지: 추가한 NPC가 아니에요.`);
+      if (await github.getContents(`img/npc/${id}`)) throw new HttpError(400, `"${id}" 이름은 이미 있어요.`);
+    }
+    const required = ['front', ...(def?.motions ?? [])];
+    for (const m of ['front', ...NPC_MOTIONS]) {
+      if (imgs[m] == null && !required.includes(m)) continue;
       const match = typeof imgs[m] === 'string' && imgs[m].match(/^data:image\/webp;base64,([A-Za-z0-9+/=]+)$/);
       if (!match) throw new HttpError(400, `NPC "${id}" ${m} 이미지가 없거나 webp가 아니에요.`);
       if (Buffer.byteLength(match[1], 'base64') > MAX_NPC_IMAGE_BYTES) throw new HttpError(413, `NPC "${id}" ${m} 이미지가 너무 커요.`);
       files.push({ path: `img/npc/${id}/${m}.webp`, content: match[1] });
     }
-    list.push(id);
+    list.push(`${replace ? 'update NPC images' : 'add NPC'} ${id}`);
   }
   return { files, list };
 }
@@ -271,7 +284,7 @@ function renderMapFile({ floors, climbs, spawn, couple, npcs }) {
     '  ],',
     `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
     `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)`,
-    '  // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김',
+    '  // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x, y } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김',
     '  npcs: {',
     ...Object.entries(npcs).map(([id, n]) => `    ${JSON.stringify(id)}: ${JSON.stringify(n)},`),
     '  },',

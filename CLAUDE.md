@@ -57,13 +57,13 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - `guests.json`은 빌드 산출물이라 저장소에 커밋하지 않는다.
 - Discussion 본문 형식 (```json 코드블록으로 감싸도 됨):
   ```json
-  { "id": "<uuid>", "name": "이름", "shortMsg": "10자 이하", "longMsg": "방명록 내용",
-    "relation": "friend", "personality": "dancer", "title": "칭호(없으면 null)", "stats": { "str": 6, "dex": 8, "int": 5, "luk": 6 },
+  { "id": "<uuid>", "name": "이름", "shortMsg": "20자 이하", "longMsg": "방명록 내용",
+    "side": "groom", "relation": "friend", "personality": "dancer", "title": "칭호(없으면 null)", "stats": { "str": 6, "dex": 8, "int": 5, "luk": 6 },
     "spriteUrl": "img/guests/<uuid>/front.png", "walkUrl": "img/guests/<uuid>/walk.png",
     "jumpUrl": "…/jump.png", "ladderUrl": "…/ladder.png", "ropeUrl": "…/rope.png" }
   ```
 - 본문에 없는 동작 이미지도 `img/guests/<uuid>/<동작>.png` 파일이 저장소에 있으면 `fetch-guests`가 채움 → 나중에 추가한 동작(예: 기존 하객 엎드리기)은 이미지만 커밋하면 됨.
-- `guests.json` 항목: `{ id, name, shortMsg, longMsg, relation, personality, title, stats, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }` (옛 글은 relation 등이 null). name 없거나 JSON 파싱 실패 글은 건너뜀.
+- `guests.json` 항목: `{ id, name, shortMsg, longMsg, side, relation, personality, title, stats, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }` (옛 글은 relation 등이 null). name 없거나 JSON 파싱 실패 글은 건너뜀.
 - **id**: 본문의 UUID. UUID가 없는 옛 수동 글은 `d<discussion번호>`. 이름은 중복 가능하므로 식별·이미지 매핑은 항상 id로 한다.
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
@@ -79,7 +79,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
    - 프레임은 각자 영역만 잘라 **발(아래)을 맞춤**(AI가 점프 프레임을 위아래로 띄워 그려도 무시). 크기는 사람형 캐릭터면 **정면 이미지의 머리 폭**(`measureHead`: 위쪽 40% 안 가장 넓은 줄)에 동작 프레임 머리 폭 중간값을 맞춤 → 웅크린 점프도 서 있을 때와 같은 크기. 누운 자세(`lyingMotions`: prone, sleep)와 네발 동물 NPC는 가장 키 큰 프레임 = 키 × `motionHeight`.
    - 자른 프레임은 좌우에 `CONFIG.sprite.framePadding`(12%) 여유를 둔다. 프롬프트에도 프레임 사이 빈 간격(셀 폭 15% 이상)·좌우 여백을 요구하는 `[FRAME SPACING / SAFE MARGIN]` 섹션이 있음.
 1. 브라우저: 폼 입력 + 이미지 파일 → 배경 제거·크롭·높이 128로 축소 → PNG data URL (한 장 수십 KB)
-2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름 15자, 멘트 10자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
+2. API `POST /api/guestbook` (Vercel 함수): 입력 검증(이름 15자, 멘트 20자, 방명록 500자, PNG 서명, 512KB 상한), 허용 출처(CORS) 확인
 3. API가 `crypto.randomUUID()`로 id 발급 → Git Data API로 이미지 2장을 **한 커밋**으로 `img/guests/<uuid>/`에 올림 (브랜치가 앞서가면 최대 3회 재시도)
 4. Discussion 작성 → push/discussion 이벤트로 Actions가 재배포 (1~2분)
 5. 브라우저는 배포를 기다리지 않고 방금 처리한 data URL 이미지로 즉시 맵에 추가. 이후 재조회 때 같은 UUID라 중복 생성 안 됨.
@@ -107,8 +107,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 팝업: 하객이면 조종하기 왼쪽에 "수정" → 비밀번호 확인 → 이름·멘트·방명록 수정 폼 + "캐릭터 삭제". 수정하면 맵의 이름표/멘트 즉시 갱신, 삭제하면 맵에서 제거(`scene.removeGuest`). 이미지 폴더는 매일 정리 작업이 지움.
 
 ## 하객 프로필: 관계·성향·칭호·능력치
-- 작성 1단계에 신랑·신부와의 관계(필수), 2단계(캐릭터 만들기) 위쪽에 성향(필수)·칭호(선택, 12자)·능력치 주사위. 수정 폼에서 관계·성향·칭호는 바꿀 수 있고 능력치는 그대로.
-- 목록 키는 `CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
+- 작성 1단계에 신랑·신부와의 관계(필수, 두 칸: 어느 쪽 `side` 신랑측·신부측·두 사람 모두 + 어떤 관계 `relation` 친척·직장·친구·기타. 예전 글은 relation에 groom/bride/both → fetch-guests·화면이 side로 읽음), 2단계(캐릭터 만들기) 위쪽에 성향(필수)·칭호(선택, 12자)·능력치 주사위. 수정 폼에서 관계·성향·칭호는 바꿀 수 있고 능력치는 그대로.
+- 목록 키는 `CONFIG.sides`/`CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `SIDES`/`RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
 - 능력치 STR/DEX/INT/LUK: 각 4에서 시작해 남은 9점을 한 점씩 무작위로(`rollStats`) → 합 25, 4~13, 6 근처가 잘 나오고 끝값은 드묾. API가 범위·합 검사. 팝업에 표시만(움직임엔 영향 없음).
 - 칭호: 캐릭터 머리 위 메달(`setTitle`, `CONFIG.titleStyle`). 말풍선·조종 표시는 `headY()`(칭호 위)에.
 - 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(제자리에서 방향 바꾸며 통통).
@@ -137,12 +137,14 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 캐릭터 끌기(추가/지우기 도구가 아닐 때): 캐릭터를 누르고 끌면 따라오고, 놓으면 그 x를 덮는 발판 중 발 아래(위로 30px 여유) 가장 가까운 발판에 선다(`floorForDrop`, 없으면 원래 자리). 끄는 동안 `character.held`(tick 멈춤, 카메라 고정).
   - 하객·NPC는 그 자리로 옮기기만 하고 저장 안 됨(`dropAt`). 조종 중이면 조종 그대로.
   - 신랑·신부는 자리가 `CONFIG.couple` `{groom:{floor,x}, bride:{floor,x}}`에 들어가 되돌리기·저장 대상(`couplePoint(id)`, 없거나 발판이 사라지면 무대 가운데 ±30, `mainStageName()`). 고정 N이면 무대 위에만 놓을 수 있고 무대 조각들 안에서만 돌아다님(사다리 안 탐), 고정 Y면 어느 발판이든 그 자리에 서 있음. 에쏘의 활동 범위(range)는 신랑·신부 사이 가운데 기준.
-- NPC 설정 창: 개발자 모드에서 NPC를 누르면 방명록 팝업 대신 설정 창(`UI.openNpcSettings` → `dev.openNpcSettings`). 이름(15자)·디렉토리·한줄 멘트(15자)·소개 글(500자)·배치 방식을 바꾸면 `CONFIG.npcs[id]`(= `MAP_DATA.npcs`, js/npcs.js 값을 덮어씀)에 들어가 되돌리기·저장 대상.
+- NPC 설정 창: 개발자 모드에서 NPC를 누르면 방명록 팝업 대신 설정 창(`UI.openNpcSettings` → `dev.openNpcSettings`). 이름(15자)·디렉토리·한줄 멘트(20자)·소개 글(500자)·배치 방식을 바꾸면 `CONFIG.npcs[id]`(= `MAP_DATA.npcs`, js/npcs.js 값을 덮어씀)에 들어가 되돌리기·저장 대상.
   - 배치(`npcMode`/`npcHome`): 고정(`fixed`, 지금 선 자리 `{floor, x}` 저장 — 끌어서 옮기면 그 자리 저장, 발판이 지워지면 x를 덮는 발판으로 옮기고 없으면 기본으로) / 랜덤(`random`, 접속할 때마다 아무 발판) / 무대에서만(`stage`, 무대 발판 안에서만 — `canStandOn`) / 기본(mode 없음, npcs.js 처음 발판. 택시처럼 `npc.fixed`면 고정).
   - 디렉토리(= NPC id) 바꾸기: `CONFIG.npcs[id].dir`로 들고 있다가 저장 때 `api/map.js`(`npcRenameFiles`)가 같은 커밋에서 `img/npc/<id>/` 파일을 `img/npc/<dir>/`로 옮기고(같은 blob), `js/npcs.js`·`scripts/gen-npc.mjs`의 `'id'` 문자열을 바꾸고, npcs 키도 바꿈. 저장 후 클라이언트도 새 id로 바꾸고 되돌리기 기록은 비움(`applyNpcRenames`). `origin.jpg`는 저장소에 없으니 로컬에서 직접 옮겨야 함.
+  - 가만히 있는 NPC(움직임 이미지 없음: 택시, 가만히로 추가한 NPC, `isStaticNpc`)는 끌어 놓으면 발판과 상관없이 놓은 좌표에 고정(공중도 가능) → `{mode: 'fixed', x, y}`(floor 없음, `freeY`). 지도를 편집해도 그 자리 그대로.
   - NPC는 처음 자리가 랜덤일 때 사다리·로프와 겹치지 않는 x를 고름(`xClearOfClimbs`).
 - NPC 추가(툴바 "NPC 추가" → 같은 설정 창의 추가 모드): 사진(선택)·NPC 설명(무엇인지: 강아지, 택시, 탁자 위 앨범 …)·움직임(걸어다님/가만히)·키 → "캐릭터 생성"이 `POST /api/character {type:'npc-front', image?, desc}`(사진 없으면 `npc-front-noref.txt`) → 걸어다니면 정면을 기준으로 `npc-idle`·`npc-walk`를 동시에. 이름·디렉토리(= id, 영문 소문자·숫자·-) 넣고 "추가"하면 화면 가운데에 바로 등장(가만히 = 고정, 화면 가운데 발판).
   - 설정은 `CONFIG.npcs[id] = {name, …, def: {desc, height, motions}}`(되돌리기 가능, 되돌리면 맵에서도 사라짐 `syncNpcs`), 이미지는 `dev.pendingNpcImages`(스냅샷 제외). 저장 때 가로 768px webp로 줄여(`shrinkWebp`) `npcImages`로 보내면 API가 `img/npc/<id>/{front,idle,walk}.webp`로 커밋(이미 있는 폴더면 거부). 저장 전엔 디렉토리 이름 변경 불가.
+  - 이미지 교체: NPC 설정 창 "이미지 새로 만들기"(설명·움직임은 지금 값으로 채워짐, 기본 NPC는 키 고정) → 새 이미지로 맵의 NPC를 다시 만들고(`replaceNpcImages`, 텍스처 키에 `imagesRev`) 저장 때 `npcImages[id].replace`로 `img/npc/<id>/`에 덮어씀. 추가한 NPC는 def(desc·height·motions)도 갱신. 기본 NPC의 특수 동작(sleep 등)은 그대로. 되돌리기 기록은 비움.
   - 캐릭터 생성(`npc-*` 타입)은 개발자 비밀번호 필요(`checkDevPassword`, 저장과 같은 sessionStorage 비밀번호 — `devPassword()`).
   - 삭제(설정 창 "NPC 삭제", 되돌리기 가능): 추가 NPC는 `CONFIG.npcs`에서 빼고 저장 때 `npcDeletes`로 보내 API가 `img/npc/<id>/`를 지움. js/npcs.js의 기본 NPC는 코드라 `{deleted: true}`로 숨기기만(이미지 남음, 다시 보이려면 map-data에서 그 항목을 지움). 맵은 `syncNpcs`가 CONFIG.npcs에 맞춰 지우고 되살림.
   - 불러올 때 `js/npcs.js` 끝에서 `def`가 있는 항목을 `customNpc()`로 NPCS에 붙임. 추가 NPC는 npcs.js·gen-npc.mjs에 없으므로 디렉토리 변경 때 폴더만 옮김.

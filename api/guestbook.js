@@ -1,13 +1,13 @@
 // 방명록 쓰기 API (Vercel Serverless Function)
-// POST /api/guestbook  { name, shortMsg, longMsg, password, relation, personality, title?, stats, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
-//   relation(신랑·신부와의 관계)·personality(성향) = 아래 목록의 키 (한글 이름은 js/config.js), title = 칭호(12자, 선택)
+// POST /api/guestbook  { name, shortMsg, longMsg, password, side, relation, personality, title?, stats, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
+//   side(신랑측·신부측·두 사람 모두)·relation(친척·직장·친구·기타)·personality(성향) = 아래 목록의 키 (한글 이름은 js/config.js), title = 칭호(12자, 선택)
 //   stats = { str, dex, int, luk } 각 4~13, 합 25 (브라우저에서 주사위로 굴림)
 //   1) UUID 발급
 //   2) 이미지를 img/guests/<uuid>/front.png, walk.png, jump.png, ladder.png, rope.png 로 저장소에 한 커밋으로 올림
 //   3) GitHub Discussion(방명록 카테고리)에 JSON 본문으로 글 작성
 //   4) 생성된 guest 객체 반환
 // POST /api/guestbook  { action: 'verify' | 'update' | 'delete', number, id, password, (update) name, shortMsg, longMsg }
-//   방명록 수정/삭제. 비밀번호는 등록 때 정한 것, 또는 관리자 비밀번호(DEV_PASSWORD). 수정은 relation·personality·title도 (능력치는 그대로)
+//   방명록 수정/삭제. 비밀번호는 등록 때 정한 것, 또는 관리자 비밀번호(DEV_PASSWORD). 수정은 side·relation·personality·title도 (능력치는 그대로)
 //
 // 비밀번호 저장: Discussion 본문은 공개라 비밀번호 대신 HMAC-SHA256(서버 비밀키, salt + 비밀번호)만 "pw" 필드에 저장.
 //   서버 비밀키 = GUEST_PASSWORD_SECRET (없으면 DEV_PASSWORD). 비밀키를 바꾸면 기존 비밀번호는 모두 무효가 된다.
@@ -24,15 +24,16 @@ const ENV = GITHUB_ENV;
 
 const LIMITS = {
   name: 15,
-  shortMsg: 10,
+  shortMsg: 20,
   longMsg: 500,
   password: { min: 4, max: 30 },
   imageBytes: 512 * 1024, // 브라우저에서 축소해서 보내므로 넉넉한 상한
   title: 12,
 };
 
-// 선택 목록 (키). 한글 이름·성향별 움직임은 js/config.js의 CONFIG.relations / CONFIG.personalities
-const RELATIONS = ['groom', 'bride', 'both', 'family', 'work', 'friend', 'other'];
+// 선택 목록 (키). 한글 이름·성향별 움직임은 js/config.js의 CONFIG.sides / CONFIG.relations / CONFIG.personalities
+const SIDES = ['groom', 'bride', 'both'];
+const RELATIONS = ['family', 'work', 'friend', 'other'];
 const PERSONALITIES = ['chatty', 'explorer', 'foodie', 'sleepy', 'photo', 'dancer', 'calm'];
 const STATS = { keys: ['str', 'dex', 'int', 'luk'], min: 4, max: 13, total: 25 };
 
@@ -79,11 +80,12 @@ function stats(value) {
   return out;
 }
 
-/** 관계·성향·칭호 (등록·수정 공통). 칭호는 비우면 없음 */
+/** 관계(어느 쪽·어떤 관계)·성향·칭호 (등록·수정 공통). 칭호는 비우면 없음 */
 function profile(body) {
   const title = text(body.title, '칭호', LIMITS.title, { required: false });
   return {
-    relation: choice(body.relation, RELATIONS, '신랑·신부와의 관계'),
+    side: choice(body.side, SIDES, '신랑측·신부측'),
+    relation: choice(body.relation, RELATIONS, '관계(친척·직장·친구·기타)'),
     personality: choice(body.personality, PERSONALITIES, '캐릭터 성향'),
     title: title || null,
   };

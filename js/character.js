@@ -995,7 +995,7 @@ function npcInfo(npc) {
   const dir = `img/npc/${npc.id}`;
   const url = (m) => npc.images?.[m] ?? `${dir}/${m}.webp`; // 막 추가해서 아직 저장 안 한 NPC는 data URL
   const info = {
-    id: `npc-${npc.id}`,
+    id: `npc-${npc.id}${npc.imagesRev ? `-${npc.imagesRev}` : ''}`, // 이미지를 바꿨으면 텍스처를 새로 불러오게 다른 키
     npc: true,
     ...npcTexts(npc),
     spriteUrl: url('front'),
@@ -1025,6 +1025,11 @@ function coupleTexts(id) {
   return npcTexts({ id, name: base.name, popup: base });
 }
 
+/** 움직임 이미지가 없는 NPC(사물: 택시, 가만히로 추가한 NPC) → 발판과 상관없이 아무 데나(공중도) 놓을 수 있다 */
+function isStaticNpc(npc) {
+  return !npc.motions?.length;
+}
+
 /**
  * NPC 배치 방식 (개발자 모드 NPC 설정, CONFIG.npcs[id].mode)
  * fixed = 자리(floor, x)에 서 있음 · random = 접속할 때마다 아무 발판 · stage = 무대 안에서만 돌아다님
@@ -1038,6 +1043,8 @@ function npcMode(npc) {
 function npcHome(npc) {
   const s = CONFIG.npcs[npc.id] ?? {};
   const mode = npcMode(npc);
+  // 가만히 있는 NPC(움직임 없음)는 발판과 상관없이 x, y 그대로 (공중도 가능). floor는 내부 계산용
+  if (mode === 'fixed' && s.y != null && s.x != null) return { floor: CONFIG.floors[s.floor] ? s.floor : mainStageName(), x: s.x, y: s.y };
   if (mode === 'fixed' && CONFIG.floors[s.floor] && s.x != null) return { floor: s.floor, x: s.x };
   if (mode === 'stage') return { floor: mainStageName(), x: null };
   if (mode !== 'random' && CONFIG.floors[npc.floor]) return { floor: npc.floor, x: npc.x ?? null };
@@ -1090,13 +1097,19 @@ class NpcCharacter extends GuestCharacter {
   }
 
   /** 자리 { floor, x }에 선다 (x가 null이면 사다리/로프를 피한 랜덤 위치) */
-  placeAt({ floor, x }) {
+  placeAt({ floor, x, y }) {
     this.placedMode = this.mode;
     this.state = 'idle';
     this.pose = 'idle';
     this.setFloor(floor); // range 적용
-    this.x = Phaser.Math.Clamp(x ?? xClearOfClimbs(this.floor, this.minX, this.maxX) ?? this.x, this.minX, this.maxX);
-    this.y = floorY(this.floor, this.x);
+    this.freeY = y ?? null; // 발판 없이 놓인 자리 (가만히 있는 NPC)
+    if (y != null) {
+      this.x = x;
+      this.y = y;
+    } else {
+      this.x = Phaser.Math.Clamp(x ?? xClearOfClimbs(this.floor, this.minX, this.maxX) ?? this.x, this.minX, this.maxX);
+      this.y = floorY(this.floor, this.x);
+    }
     this.setDepth(this.y);
     this.updatePose();
     if (this.npc.tilt) this.alignToFloor();
@@ -1109,6 +1122,7 @@ class NpcCharacter extends GuestCharacter {
 
   /** npc.tilt면 발판 기울기에 맞춰 살짝 기울인다 (옆모습 이미지용. 3/4 입체 이미지는 똑바로 두는 게 자연스럽다) */
   alignToFloor() {
+    if (this.freeY != null) return this.sprite.setRotation(0); // 공중에 놓인 자리는 똑바로
     const slope = (floorY(this.floor, this.x + 8) - floorY(this.floor, this.x - 8)) / 16;
     this.sprite.setRotation(Math.atan(slope));
   }
@@ -1169,9 +1183,10 @@ class NpcCharacter extends GuestCharacter {
     this.updateInfo(npcTexts(this.npc)); // 되돌리기로 이름·멘트가 바뀌었을 수 있음
     // 배치 방식이 바뀌었거나, 고정인데 자리가 바뀌었거나, 서 있던 발판에 설 수 없으면 새 자리로
     const home = npcHome(this.npc);
-    const moved = this.mode === 'fixed' && (home.floor !== this.floorName || home.x !== this.x);
+    const moved = this.mode === 'fixed' && (home.floor !== this.floorName || home.x !== this.x || (home.y ?? null) !== this.freeY);
     if (this.placedMode !== this.mode || moved || !CONFIG.floors[this.floorName] || !this.canStandOn(this.floorName)) return this.placeAt(home);
     if (this.mode === 'fixed') {
+      if (this.freeY != null) return; // 발판 없이 놓인 자리는 지도를 바꿔도 그대로
       this.y = floorY(this.floor, this.x);
       if (this.npc.tilt) this.alignToFloor();
       return;

@@ -46,6 +46,7 @@ const UI = (() => {
     document.querySelectorAll(`select[name="${name}"]`).forEach((sel) => {
       sel.replaceChildren(new Option('선택해 주세요', ''), ...Object.entries(map).map(([k, v]) => new Option(typeof v === 'string' ? v : v.label, k)));
     });
+  fillSelect('side', CONFIG.sides);
   fillSelect('relation', CONFIG.relations);
   fillSelect('personality', CONFIG.personalities);
 
@@ -72,7 +73,12 @@ const UI = (() => {
   }
 
   /** 관계 · 성향 한글 이름 */
-  const profileTags = (info) => [CONFIG.relations[info.relation], CONFIG.personalities[info.personality]?.label].filter(Boolean);
+  const profileTags = (info) => [...relationTags(info), CONFIG.personalities[info.personality]?.label].filter(Boolean);
+
+  /** 어느 쪽 · 어떤 관계 한글 이름 (예전 데이터는 relation에 groom/bride/both가 들어 있을 수 있음) */
+  function relationTags({ side, relation }) {
+    return [CONFIG.sides[side ?? relation], CONFIG.relations[relation]].filter(Boolean);
+  }
 
   // ---------- 방명록 보기 ----------
   const viewModal = setupModal(document.getElementById('modal'));
@@ -97,7 +103,7 @@ const UI = (() => {
    * manage: { info, onUpdated(guest), onDeleted() } — 있으면 조종하기 왼쪽에 "수정" 버튼 (하객만)
    *         { onEdit() } — 개발자 모드 신랑·신부: "수정"을 누르면 onEdit (멘트·소개 글 창)
    */
-  function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, titleStyle, relation, personality, stats }, control = null, manage = null) {
+  function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, titleStyle, side, relation, personality, stats }, control = null, manage = null) {
     controlBtn.hidden = !control;
     editBtn.hidden = !manage;
     manageTarget = manage;
@@ -111,7 +117,7 @@ const UI = (() => {
     titleEl.hidden = !title;
     titleEl.textContent = title || '';
     titleEl.classList.toggle('gold', titleStyle === 'gold');
-    document.getElementById('modal-tags').textContent = profileTags({ relation, personality }).join(' · ');
+    document.getElementById('modal-tags').textContent = profileTags({ side, relation, personality }).join(' · ');
     const statsEl = document.getElementById('modal-stats');
     statsEl.hidden = !stats;
     if (stats) renderStats(statsEl, stats);
@@ -141,6 +147,11 @@ const UI = (() => {
   let npcImages = null; // NPC 추가: 생성한 이미지 { front, idle?, walk? } (webp data URL)
   let npcPhotoUrl = null;
   let npcDelete = null; // 설정 창의 삭제 콜백
+  const regenToggle = npcForm.querySelector('.npc-regen-toggle');
+  regenToggle.addEventListener('click', () => {
+    npcCreate.hidden = !npcCreate.hidden;
+    regenToggle.textContent = npcCreate.hidden ? '이미지 새로 만들기 ▾' : '이미지 새로 만들기 ▴';
+  });
   const npcDeleteBtn = npcForm.querySelector('.npc-delete');
   npcDeleteBtn.addEventListener('click', () => {
     if (!confirm(`"${npcForm.elements.name.value || 'NPC'}"를 삭제할까요? (저장 전엔 되돌리기로 살릴 수 있어요)`)) return;
@@ -162,7 +173,8 @@ const UI = (() => {
       // NPC 추가일 때만
       desc: f.desc.value.trim(),
       height: Number(f.height.value),
-      images: npcImages,
+      moving: f.moving.value,
+      images: npcImages, // 추가: 필수, 설정: 새로 만들었을 때만
     });
     if (error) return setNpcError(error);
     npcModal.close();
@@ -243,7 +255,10 @@ const UI = (() => {
    * opts.create = NPC 추가 (사진·설명·캐릭터 생성 칸), opts.dirLocked = 디렉토리 칸 잠금 (아직 저장 안 한 추가 NPC)
    * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼, opts.textsOnly = 이름·멘트·소개 글만 (신랑·신부)
    */
-  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, album, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false } = {}) {
+  /**
+   * regen: NPC 설정에서 "이미지 새로 만들기" 칸 { desc, moving, height, heightLocked } — 사진·설명으로 다시 만들면 onApply에 images가 온다
+   */
+  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, album, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false, regen = null } = {}) {
     npcForm.elements.dir.closest('label').hidden = textsOnly;
     npcForm.querySelector('.npc-kind').hidden = textsOnly;
     npcForm.elements.kind.value = album ? 'album' : 'normal';
@@ -256,20 +271,22 @@ const UI = (() => {
     setNpcError('');
     document.getElementById('npc-title').textContent = create ? 'NPC 추가' : textsOnly ? `${name} 설정` : 'NPC 설정';
     npcForm.querySelector('.npc-profile').hidden = create;
-    npcCreate.hidden = !create;
+    npcCreate.hidden = !create; // 설정일 땐 "이미지 새로 만들기"를 눌러야 펼쳐짐
+    regenToggle.hidden = !regen;
+    regenToggle.textContent = '이미지 새로 만들기 ▾';
     npcSubmit.textContent = create ? '추가' : '적용';
     f.dir.disabled = dirLocked;
-    if (create) {
-      npcImages = null;
-      f.photo.value = '';
-      f.photo.dispatchEvent(new Event('change'));
-      f.desc.value = '';
-      f.moving.value = 'walk';
-      f.height.value = 40;
-      setImgSrc(npcPreview, null);
-      npcCreate.querySelector('.preview-empty').hidden = false;
-      npcGenerate.textContent = '캐릭터 생성';
-    }
+    // 사진·설명·캐릭터 생성 칸 초기화 (추가: 빈 값, 설정: 지금 NPC 값)
+    npcImages = null;
+    f.photo.value = '';
+    f.photo.dispatchEvent(new Event('change'));
+    f.desc.value = regen?.desc ?? '';
+    f.moving.value = regen?.moving ?? 'walk';
+    f.height.value = regen?.height ?? 40;
+    f.height.disabled = Boolean(regen?.heightLocked);
+    setImgSrc(npcPreview, null);
+    npcCreate.querySelector('.preview-empty').hidden = false;
+    npcGenerate.textContent = '캐릭터 생성';
     document.getElementById('npc-name').textContent = name;
     f.name.value = name;
     f.dir.value = dir;
@@ -343,7 +360,8 @@ const UI = (() => {
         editing.verified = true;
         const { info } = editing.target;
         ef.name.value = info.name;
-        ef.relation.value = info.relation ?? '';
+        ef.side.value = info.side ?? (CONFIG.sides[info.relation] ? info.relation : ''); // 예전 데이터 호환
+        ef.relation.value = CONFIG.relations[info.relation] ? info.relation : '';
         ef.personality.value = info.personality ?? '';
         ef.title.value = info.title ?? '';
         ef.shortMsg.value = info.shortMsg ?? '';
@@ -354,13 +372,14 @@ const UI = (() => {
     const name = ef.name.value.trim();
     const shortMsg = ef.shortMsg.value.trim();
     const longMsg = ef.longMsg.value.trim();
+    const side = ef.side.value;
     const relation = ef.relation.value;
     const personality = ef.personality.value;
     const title = ef.title.value.trim();
     if (!name || !shortMsg || !longMsg) return setEditError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
-    if (!relation || !personality) return setEditError('관계와 캐릭터 성향을 골라 주세요.');
+    if (!side || !relation || !personality) return setEditError('관계(두 가지)와 캐릭터 성향을 골라 주세요.');
     return busy(editSubmit, '저장 중...', async () => {
-      const { guest } = await request('update', { name, shortMsg, longMsg, relation, personality, title });
+      const { guest } = await request('update', { name, shortMsg, longMsg, side, relation, personality, title });
       editing.target.onUpdated?.(guest);
       editModal.close();
       showToast('캐릭터를 수정했어요');
@@ -443,6 +462,7 @@ const UI = (() => {
       shortMsg: fields.shortMsg.value.trim(),
       longMsg: fields.longMsg.value.trim(),
       password: fields.password.value,
+      side: fields.side.value,
       relation: fields.relation.value,
       personality: fields.personality.value,
       title: fields.title.value.trim(),
@@ -450,9 +470,9 @@ const UI = (() => {
   }
 
   function goNext() {
-    const { name, shortMsg, longMsg, password, relation } = readTexts();
+    const { name, shortMsg, longMsg, password, side, relation } = readTexts();
     if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
-    if (!relation) return showError('신랑·신부와의 관계를 골라 주세요.');
+    if (!side || !relation) return showError('신랑·신부와의 관계를 두 가지 모두 골라 주세요. (신랑측·신부측, 친척·직장·친구·기타)');
     if ([...password].length < 4) return showError('비밀번호를 4자 이상 입력해 주세요.');
     showStep(2);
   }
@@ -589,8 +609,8 @@ const UI = (() => {
     if (step === 1) return goNext(); // 1단계에서 엔터
     if (generating) return;
     showError('');
-    const { name, shortMsg, longMsg, password, relation, personality, title } = readTexts();
-    if (!name || !shortMsg || !longMsg || [...password].length < 4 || !relation) {
+    const { name, shortMsg, longMsg, password, side, relation, personality, title } = readTexts();
+    if (!name || !shortMsg || !longMsg || [...password].length < 4 || !side || !relation) {
       showStep(1);
       return goNext();
     }
@@ -604,7 +624,7 @@ const UI = (() => {
     submitBtn.textContent = '등록 중...';
     try {
       const images = await (preparing ?? Promise.resolve(null));
-      const guest = await submitGuestbook({ name, shortMsg, longMsg, password, relation, personality, title, stats, images });
+      const guest = await submitGuestbook({ name, shortMsg, longMsg, password, side, relation, personality, title, stats, images });
       myGuest.set(guest.id);
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
@@ -695,7 +715,7 @@ const UI = (() => {
         const meta = document.createElement('small');
         meta.className = 'guest-meta';
         const stats = g.info.stats && CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${g.info.stats[k]}`).join(' ');
-        meta.textContent = [CONFIG.relations[g.info.relation], stats].filter(Boolean).join(' · ');
+        meta.textContent = [...relationTags(g.info), stats].filter(Boolean).join(' · ');
         const msg = document.createElement('small');
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
         text.append(name, ...(meta.textContent ? [meta] : []), msg);
