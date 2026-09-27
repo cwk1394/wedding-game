@@ -1072,21 +1072,31 @@ function npcHome(npc) {
   if (mode === 'stage') return { floor: mainStageName(), x: null };
   if (mode !== 'random' && CONFIG.floors[npc.floor]) return { floor: npc.floor, x: npc.x ?? null };
   // 랜덤 (또는 처음 발판이 없어짐) — 사다리/로프로 거의 덮인 짧은 발판은 피한다
-  let floor;
-  for (let i = 0; !floor && i < 10; i++) {
-    const f = pickGuestFloor();
-    const { x1, x2 } = floorSpan(f);
-    if (i === 9 || xClearOfClimbs(f, x1, x2) != null) floor = f;
-  }
-  return { floor: Object.keys(CONFIG.floors).find((n) => CONFIG.floors[n] === floor), x: null };
+  return { floor: randomNpcFloor(), x: null };
 }
 
-/** 발판 위 minX~maxX에서 사다리/로프와 겹치지 않는 랜덤 x (못 찾으면 null) */
+/** NPC 랜덤 발판: 길이에 비례해 고르되, 사다리/로프를 피해 설 자리가 있고 NPC_MIN_SPAN 이상 걸을 수 있는 발판 */
+function randomNpcFloor() {
+  let floor;
+  for (let i = 0; !floor && i < 20; i++) {
+    const f = pickGuestFloor();
+    const { x1, x2 } = floorSpan(f);
+    if (i === 19 || (x2 - x1 >= NPC_MIN_SPAN + CHAR_W && xClearOfClimbs(f, x1 + CHAR_W / 2, x2 - CHAR_W / 2) != null)) floor = f;
+  }
+  return Object.keys(CONFIG.floors).find((n) => CONFIG.floors[n] === floor);
+}
+
+// 사다리/로프를 못 타는 NPC가 시작할 때 사다리/로프에서 떨어질 가로 거리, 최소로 걸을 수 있어야 하는 폭 (px)
+const NPC_CLIMB_CLEARANCE = 60;
+const NPC_MIN_SPAN = 40;
+
+/** 발판 위 minX~maxX에서 사다리/로프와 NPC_CLIMB_CLEARANCE 이상 떨어진 랜덤 x (못 찾으면 null) */
 function xClearOfClimbs(floor, minX, maxX) {
+  if (!(maxX >= minX)) return null;
   const onClimb = (x) => {
     const y = floorY(floor, x);
     return CONFIG.climbs.some((c) => {
-      if (Math.abs(c.x - x) >= CHAR_W) return false;
+      if (!c.floors.every((n) => CONFIG.floors[n]) || Math.abs(c.x - x) >= NPC_CLIMB_CLEARANCE) return false;
       const { top, bottom } = climbEnds(c);
       return top.y < y + 2 && bottom.y > y - CHAR_H; // 캐릭터 높이 구간과 사다리 세로 구간이 겹침
     });
@@ -1124,13 +1134,22 @@ class NpcCharacter extends GuestCharacter {
     this.placedMode = this.mode;
     this.state = 'idle';
     this.pose = 'idle';
-    this.setFloor(floor); // range 적용
+    this.setFloor(floor);
     this.freeY = y ?? null; // 발판 없이 놓인 자리 (가만히 있는 NPC)
     if (y != null) {
       this.x = x;
       this.y = y;
     } else {
-      this.x = Phaser.Math.Clamp(x ?? xClearOfClimbs(this.floor, this.minX, this.maxX) ?? this.x, this.minX, this.maxX);
+      if (x == null) {
+        // 랜덤 자리: 사다리/로프에서 떨어진 곳이 없거나 걸을 폭이 좁으면 (무대 모드가 아니면) 다른 발판으로
+        let free = this.maxX - this.minX >= NPC_MIN_SPAN ? xClearOfClimbs(this.floor, this.minX, this.maxX) : null;
+        for (let i = 0; free == null && i < 10 && this.mode !== 'stage'; i++) {
+          this.setFloor(randomNpcFloor());
+          if (this.maxX - this.minX >= NPC_MIN_SPAN) free = xClearOfClimbs(this.floor, this.minX, this.maxX);
+        }
+        x = free ?? (this.minX + this.maxX) / 2;
+      }
+      this.x = Phaser.Math.Clamp(x, Math.min(this.minX, this.maxX), Math.max(this.minX, this.maxX));
       this.y = floorY(this.floor, this.x);
     }
     this.setDepth(this.y);
@@ -1148,17 +1167,6 @@ class NpcCharacter extends GuestCharacter {
     if (this.freeY != null) return this.sprite.setRotation(0); // 공중에 놓인 자리는 똑바로
     const slope = (floorY(this.floor, this.x + 8) - floorY(this.floor, this.x - 8)) / 16;
     this.sprite.setRotation(Math.atan(slope));
-  }
-
-  setFloor(name) {
-    super.setFloor(name);
-    const range = this.npc?.range;
-    if (range) {
-      // 신랑·신부 주변에서만 (둘 사이 가운데 기준)
-      const cx = (couplePoint('groom').x + couplePoint('bride').x) / 2;
-      this.minX = Math.max(this.minX, cx - range);
-      this.maxX = Math.min(this.maxX, cx + range);
-    }
   }
 
   pickState() {

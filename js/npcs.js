@@ -48,8 +48,7 @@ const NPCS = [
   {
     id: 'dog-esso',
     name: '에쏘',
-    floor: 'stage', // 웰컴 무대: 신랑·신부 주변을 뛰어다님
-    range: 170, // 신랑·신부(무대 가운데)에서 좌우 이만큼 안에서만
+    floor: null, // 처음 발판 없음 → 접속할 때마다 사다리·로프를 피한 랜덤 발판에서 시작
     height: 36,
     speed: [75, 100],
     motions: ['idle', 'walk', 'scratch'], // scratch = 앉아서 뒷다리로 머리 긁기
