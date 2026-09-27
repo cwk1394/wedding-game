@@ -114,6 +114,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(제자리에서 방향 바꾸며 통통).
 
 ## 캐릭터 조종 (일반 방문자)
+- 처음 접속(로딩이 끝나면, `?dev` 제외): 캐릭터 생성 창이 자동으로 뜸(`UI.openStart`). 1단계 위 "이미 생성한 캐릭터가 있어요" → 방명록 목록 창을 "내 캐릭터 선택" 모드로(`openList(true)`, 이름 검색, 이 기기에서 만들거나 고른 캐릭터 `localStorage.myGuestId`가 맨 위) → 고르면 `UI.onGuestPicked`가 시작점으로 옮기고(`dropAt`) 조종 + 확대. 창을 닫으면 그냥 둘러보기.
+- 캐릭터창의 "조종 끝내기" = 기본 모드: AI로 돌아다니고 화면은 처음 보기(`view.reset`).
 - 신랑·신부는 개발자 모드에서만 조종 가능(일반 방문자 팝업엔 조종 버튼 없음), NPC는 불가.
 - 캐릭터를 누르면 방명록 팝업 오른쪽 아래에 "조종하기" 버튼(조종 중인 캐릭터면 "조종 끝내기"). 누르면 `scene.control.take(캐릭터, {zoom})` → 1.2배(`CONFIG.view.controlZoom`) 이상 확대 + 카메라 따라감.
 - 방명록 등록 직후: 새 캐릭터를 시작점(`CONFIG.spawn` = `MAP_DATA.spawn {floor, x}`, 없으면 랜덤 층)에 만들고 바로 조종 + 확대.

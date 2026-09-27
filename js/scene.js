@@ -45,7 +45,13 @@ class MapScene extends Phaser.Scene {
           ? {
               controlling: this.control.controlled === character,
               onControl: () => this.control.take(character, { zoom: true }),
-              onRelease: () => this.control.release(),
+              // 조종 끝내기 = 기본 모드: 캐릭터는 스스로 돌아다니고 화면은 처음 보기로
+              onRelease: () => {
+                this.control.release();
+                this.view.touched = false;
+                this.view.reset();
+                if (matchMedia('(pointer: coarse)').matches) UI.showToast('두 손가락으로 확대,\n드래그로 이동할 수 있어요', 3000);
+              },
             }
           : null,
         canManage

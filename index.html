@@ -53,6 +53,7 @@
         <button class="modal-close" data-close aria-label="닫기">×</button>
       </div>
       <div class="modal-body">
+        <input type="search" class="list-search" placeholder="이름으로 찾기" aria-label="이름으로 찾기" />
         <ul class="guest-list"></ul>
         <p class="empty-note" hidden>아직 등록된 방명록이 없어요.<br />첫 번째 하객이 되어 주세요!</p>
       </div>
@@ -126,6 +127,7 @@
       <div class="modal-body form-body">
         <!-- 1단계: 방명록 -->
         <div class="step" data-step="1">
+          <button type="button" class="have-char-btn">이미 생성한 캐릭터가 있어요 →</button>
           <label class="field">
             <span>이름 <small>(15자 이하)</small></span>
             <input name="name" maxlength="15" required autocomplete="name" />

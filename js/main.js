@@ -26,10 +26,8 @@
     bar.style.width = '100%';
     loading.classList.add('done');
     setTimeout(() => loading.remove(), 500);
-    // 터치 기기에서 처음 한 번 조작 방법 안내
-    if (matchMedia('(pointer: coarse)').matches) {
-      setTimeout(() => UI.showToast('두 손가락으로 확대,\n드래그로 이동할 수 있어요', 3500), 700);
-    }
+    // 처음 접속: 캐릭터 생성부터 ("이미 생성한 캐릭터가 있어요"면 선택). 개발자 모드는 바로 편집
+    if (!new URLSearchParams(location.search).has('dev')) setTimeout(() => UI.openStart(), 500);
   };
   setTimeout(showMain, 20000); // 이미지 서버가 느려도 무한정 기다리지 않게
 
@@ -68,5 +66,21 @@
     if (!guest) return;
     s.control.take(guest, { zoom: true });
     guest.say(info.shortMsg);
+  };
+
+  // "이미 생성한 캐릭터가 있어요"에서 고른 캐릭터: 시작점으로 옮겨서 바로 조종 모드 + 확대
+  UI.onGuestPicked = (info) => {
+    const s = scene();
+    const guest = s.guests.find((g) => g.info.id === info.id);
+    if (!guest) return;
+    const spawn = spawnPoint();
+    s.control.release();
+    if (spawn) guest.dropAt(spawn.floor, spawn.x);
+    s.control.take(guest, { zoom: true });
+    guest.say(guest.info.shortMsg);
+    UI.showToast(
+      matchMedia('(pointer: coarse)').matches ? `${guest.info.name}(으)로 시작해요!\n스틱과 점프 버튼으로 움직여 보세요` : `${guest.info.name}(으)로 시작해요!\n방향키와 Space(점프)로 움직여 보세요`,
+      3000
+    );
   };
 })();

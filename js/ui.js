@@ -441,6 +441,10 @@ const UI = (() => {
   }
 
   nextBtn.addEventListener('click', goNext);
+  form.querySelector('.have-char-btn').addEventListener('click', () => {
+    writeModal.close();
+    openList(true);
+  });
   prevBtn.addEventListener('click', () => showStep(1));
 
   function setImg(img, src) {
@@ -584,6 +588,7 @@ const UI = (() => {
     try {
       const images = await (preparing ?? Promise.resolve(null));
       const guest = await submitGuestbook({ name, shortMsg, longMsg, password, relation, personality, title, stats, images });
+      myGuest.set(guest.id);
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
         ...guest,
@@ -616,13 +621,47 @@ const UI = (() => {
   const listModal = setupModal(document.getElementById('list-modal'));
   const listEl = document.querySelector('#list-modal .guest-list');
 
-  /** UI.getGuests()가 돌려주는 맵 위 하객 [{ info, avatarUrl() }]로 목록을 그린다 (최신순) */
-  function openList() {
-    const guests = (UI.getGuests?.() ?? []).slice().sort((a, b) =>
-      String(b.info.createdAt ?? '9').localeCompare(String(a.info.createdAt ?? '9'))
+  const listSearch = document.querySelector('#list-modal .list-search');
+  let listPick = false; // true = "내 캐릭터 선택" (누르면 그 캐릭터로 시작), false = 방명록 보기
+
+  /** 이 기기에서 만들거나 고른 내 캐릭터 id (다음 접속 때 선택 목록 맨 위에) */
+  const myGuest = {
+    get: () => {
+      try {
+        return localStorage.getItem('myGuestId');
+      } catch {
+        return null;
+      }
+    },
+    set: (id) => {
+      try {
+        localStorage.setItem('myGuestId', id);
+      } catch {}
+    },
+  };
+
+  /**
+   * UI.getGuests()가 돌려주는 맵 위 하객 [{ info, avatarUrl() }]로 목록을 그린다 (최신순, 이름 검색).
+   * pick이면 "내 캐릭터 선택": 내 캐릭터를 맨 위에, 누르면 UI.onGuestPicked(info)
+   */
+  function openList(pick = false) {
+    listPick = pick;
+    listSearch.value = '';
+    renderList();
+    listModal.open();
+  }
+
+  function renderList() {
+    const mine = listPick ? myGuest.get() : null;
+    const all = (UI.getGuests?.() ?? []).slice().sort((a, b) =>
+      (b.info.id === mine) - (a.info.id === mine) || String(b.info.createdAt ?? '9').localeCompare(String(a.info.createdAt ?? '9'))
     );
-    document.getElementById('list-title').textContent = `방명록 목록 (${guests.length})`;
-    document.querySelector('#list-modal .empty-note').hidden = guests.length > 0;
+    const query = listSearch.value.trim();
+    const guests = query ? all.filter((g) => g.info.name.includes(query)) : all;
+    document.getElementById('list-title').textContent = listPick ? '내 캐릭터 선택' : `방명록 목록 (${all.length})`;
+    const empty = document.querySelector('#list-modal .empty-note');
+    empty.hidden = guests.length > 0;
+    empty.innerHTML = query ? '찾는 이름이 없어요.' : '아직 등록된 방명록이 없어요.<br />첫 번째 하객이 되어 주세요!';
     listEl.replaceChildren(
       ...guests.map((g) => {
         const li = document.createElement('li');
@@ -636,7 +675,7 @@ const UI = (() => {
         const text = document.createElement('span');
         text.className = 'guest-text';
         const name = document.createElement('b');
-        name.textContent = g.info.name;
+        name.textContent = g.info.name + (g.info.id === mine ? ' (내 캐릭터)' : '');
         // 칭호 · 이름 / 관계 · 능력치 / 한줄 멘트
         if (g.info.title) {
           const title = document.createElement('span');
@@ -652,13 +691,18 @@ const UI = (() => {
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
         text.append(name, ...(meta.textContent ? [meta] : []), msg);
         btn.append(avatar, text);
-        btn.addEventListener('click', () => openGuestbook({ ...g.info, avatarUrl: avatar.src }));
+        btn.addEventListener('click', () => {
+          if (!listPick) return openGuestbook({ ...g.info, avatarUrl: avatar.src });
+          myGuest.set(g.info.id);
+          listModal.close();
+          UI.onGuestPicked?.(g.info);
+        });
         li.append(btn);
         return li;
       })
     );
-    listModal.open();
   }
+  listSearch.addEventListener('input', renderList);
 
   // ---------- 웨딩 갤러리 ----------
   // 사진 목록은 배포 때 img/gallery/ 폴더를 읽어 만든 data/gallery.json (scripts/build-gallery.mjs)
@@ -823,5 +867,8 @@ const UI = (() => {
     play();
   })();
 
-  return { openGuestbook, openNpcSettings, showToast, onGuestCreated: null, onModalChange: null, getGuests: null };
+  /** 처음 접속: 캐릭터 생성부터 (창을 닫으면 그냥 둘러보기) */
+  const openStart = openWrite;
+
+  return { openGuestbook, openNpcSettings, openStart, showToast, onGuestCreated: null, onGuestPicked: null, onModalChange: null, getGuests: null };
 })();
