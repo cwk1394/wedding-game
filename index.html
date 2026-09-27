@@ -73,6 +73,27 @@
     </div>
   </div>
 
+  <!-- 방명록 보기 (방명록 목록에서 누르면): 프로필 + 방명록 글만 (능력치·버튼 없음). 목록 위에 겹쳐 뜨도록 목록 뒤에 둔다 -->
+  <div id="letter-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="letter-name">
+      <div class="modal-header">
+        <span class="modal-title">방명록</span>
+        <button class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-profile">
+          <div class="modal-avatar"><img class="letter-avatar" alt="" /></div>
+          <div>
+            <div class="guest-title letter-title" hidden></div>
+            <div id="letter-name" class="modal-name"></div>
+            <div class="modal-tags letter-tags"></div>
+          </div>
+        </div>
+        <p class="modal-long letter-long"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- 웨딩 갤러리 -->
   <div id="gallery-modal" class="modal" hidden>
     <div class="modal-card gallery-card" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
@@ -232,7 +253,7 @@
   <div id="edit-modal" class="modal" hidden>
     <form id="edit-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-title" novalidate>
       <div class="modal-header">
-        <span id="edit-title" class="modal-title">방명록 수정</span>
+        <span id="edit-title" class="modal-title">캐릭터 수정</span>
         <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
       </div>
       <div class="modal-body form-body">

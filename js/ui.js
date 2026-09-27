@@ -289,7 +289,7 @@ const UI = (() => {
     editForm.querySelectorAll('[data-edit-step]').forEach((el) => (el.hidden = el.dataset.editStep !== step));
     deleteBtn.hidden = step !== 'form';
     editSubmit.textContent = step === 'form' ? '저장' : '확인';
-    document.getElementById('edit-title').textContent = step === 'form' ? '방명록 수정' : '비밀번호 확인';
+    document.getElementById('edit-title').textContent = step === 'form' ? '캐릭터 수정' : '비밀번호 확인';
   }
 
   function openEdit(target) {
@@ -354,7 +354,7 @@ const UI = (() => {
       const { guest } = await request('update', { name, shortMsg, longMsg, relation, personality, title });
       editing.target.onUpdated?.(guest);
       editModal.close();
-      showToast('방명록을 수정했어요');
+      showToast('캐릭터를 수정했어요');
     });
   });
 
@@ -365,7 +365,7 @@ const UI = (() => {
       await request('delete');
       editing.target.onDeleted?.();
       editModal.close();
-      showToast('방명록을 삭제했어요');
+      showToast('캐릭터를 삭제했어요');
     });
   });
 
@@ -691,13 +691,29 @@ const UI = (() => {
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
         text.append(name, ...(meta.textContent ? [meta] : []), msg);
         btn.append(avatar, text);
-        btn.addEventListener('click', () => openGuestbook({ ...g.info, avatarUrl: avatar.src }));
+        btn.addEventListener('click', () => openLetter(g.info, avatar.src));
         li.append(btn);
         return li;
       })
     );
   }
   listSearch.addEventListener('input', renderList);
+
+  // ---------- 방명록 보기 (목록에서 누르면) ----------
+  const letterEl = document.getElementById('letter-modal');
+  const letterModal = setupModal(letterEl);
+
+  /** 프로필(모습·칭호·이름·관계/성향) + 방명록 글 */
+  function openLetter(info, avatarUrl) {
+    letterEl.querySelector('.letter-avatar').src = avatarUrl;
+    const title = letterEl.querySelector('.letter-title');
+    title.hidden = !info.title;
+    title.textContent = info.title || '';
+    document.getElementById('letter-name').textContent = info.name;
+    letterEl.querySelector('.letter-tags').textContent = profileTags(info).join(' · ');
+    letterEl.querySelector('.letter-long').textContent = info.longMsg || info.shortMsg || '';
+    letterModal.open();
+  }
 
   /** 맵 위 하객 최신순 (mine이면 그 캐릭터를 맨 위로) */
   function sortedGuests(mine = null) {
