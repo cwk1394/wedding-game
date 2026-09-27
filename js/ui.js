@@ -17,6 +17,7 @@ const UI = (() => {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     const top = [...document.querySelectorAll('.modal:not([hidden])')].pop();
+    if (top?.matches('.fullscreen, .select-screen')) return; // 처음 접속 화면(생성·선택)은 닫지 않음
     closers.get(top)?.();
   });
 

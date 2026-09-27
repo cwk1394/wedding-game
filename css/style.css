@@ -732,6 +732,8 @@ html, body {
   box-shadow: 0 0 40px rgba(120, 45, 35, .12);
 }
 .modal.fullscreen .modal-body, .modal.select-screen .modal-body { flex: 1; }
+/* 처음 접속 화면은 캐릭터를 만들거나 고를 때까지 닫지 않음 (닫기 버튼 없음) */
+.modal.fullscreen .modal-close, .modal.select-screen .modal-close { display: none; }
 
 /* 캐릭터 선택 화면: 카드 격자 (메이플 캐릭터 선택창 느낌) */
 .modal.select-screen .modal-card { width: min(720px, 100%); }
