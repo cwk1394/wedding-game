@@ -37,6 +37,40 @@ const UI = (() => {
     return { open: () => setOpen(true), close: () => setOpen(false) };
   }
 
+  // ---------- 관계·성향 목록, 능력치 ----------
+  // 모든 관계/성향 선택 칸(작성·수정 폼)을 CONFIG 목록으로 채운다
+  const fillSelect = (name, map) =>
+    document.querySelectorAll(`select[name="${name}"]`).forEach((sel) => {
+      sel.replaceChildren(new Option('선택해 주세요', ''), ...Object.entries(map).map(([k, v]) => new Option(typeof v === 'string' ? v : v.label, k)));
+    });
+  fillSelect('relation', CONFIG.relations);
+  fillSelect('personality', CONFIG.personalities);
+
+  const STAT_LABELS = { str: 'STR', dex: 'DEX', int: 'INT', luk: 'LUK' };
+
+  /** 주사위: 각 능력치 min에서 시작, 남은 점수를 한 점씩 무작위 능력치에 → 합은 항상 total, 끝값일수록 드묾 */
+  function rollStats() {
+    const { keys, min, total } = CONFIG.stats;
+    const stats = Object.fromEntries(keys.map((k) => [k, min]));
+    for (let i = 0; i < total - min * keys.length; i++) stats[keys[Math.floor(Math.random() * keys.length)]]++;
+    return stats;
+  }
+
+  function renderStats(el, stats) {
+    el.replaceChildren(
+      ...CONFIG.stats.keys.map((k) => {
+        const cell = document.createElement('div');
+        cell.className = 'stat';
+        cell.innerHTML = `<b>${STAT_LABELS[k]}</b><span></span>`;
+        cell.querySelector('span').textContent = stats[k];
+        return cell;
+      })
+    );
+  }
+
+  /** 관계 · 성향 한글 이름 */
+  const profileTags = (info) => [CONFIG.relations[info.relation], CONFIG.personalities[info.personality]?.label].filter(Boolean);
+
   // ---------- 방명록 보기 ----------
   const viewModal = setupModal(document.getElementById('modal'));
 
@@ -58,7 +92,7 @@ const UI = (() => {
    * control: { controlling, onControl, onRelease } — 오른쪽 아래 버튼이 조종 중이면 "조종 끝내기", 아니면 "조종하기"
    * manage: { info, onUpdated(guest), onDeleted() } — 있으면 조종하기 왼쪽에 "수정" 버튼 (하객만)
    */
-  function openGuestbook({ name, shortMsg, longMsg, avatarUrl }, control = null, manage = null) {
+  function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, relation, personality, stats }, control = null, manage = null) {
     controlBtn.hidden = !control;
     editBtn.hidden = !manage;
     manageTarget = manage;
@@ -68,6 +102,13 @@ const UI = (() => {
       controlAction = control.controlling ? control.onRelease : control.onControl;
     }
     document.getElementById('modal-name').textContent = name;
+    const titleEl = document.getElementById('modal-title');
+    titleEl.hidden = !title;
+    titleEl.textContent = title || '';
+    document.getElementById('modal-tags').textContent = profileTags({ relation, personality }).join(' · ');
+    const statsEl = document.getElementById('modal-stats');
+    statsEl.hidden = !stats;
+    if (stats) renderStats(statsEl, stats);
     document.getElementById('modal-short').textContent = shortMsg ? `“${shortMsg}”` : '';
     document.getElementById('modal-long').textContent = longMsg || '';
     const avatar = document.getElementById('modal-avatar');
@@ -286,6 +327,9 @@ const UI = (() => {
         editing.verified = true;
         const { info } = editing.target;
         ef.name.value = info.name;
+        ef.relation.value = info.relation ?? '';
+        ef.personality.value = info.personality ?? '';
+        ef.title.value = info.title ?? '';
         ef.shortMsg.value = info.shortMsg ?? '';
         ef.longMsg.value = info.longMsg ?? '';
         showEditStep('form');
@@ -294,9 +338,13 @@ const UI = (() => {
     const name = ef.name.value.trim();
     const shortMsg = ef.shortMsg.value.trim();
     const longMsg = ef.longMsg.value.trim();
+    const relation = ef.relation.value;
+    const personality = ef.personality.value;
+    const title = ef.title.value.trim();
     if (!name || !shortMsg || !longMsg) return setEditError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    if (!relation || !personality) return setEditError('관계와 캐릭터 성향을 골라 주세요.');
     return busy(editSubmit, '저장 중...', async () => {
-      const { guest } = await request('update', { name, shortMsg, longMsg });
+      const { guest } = await request('update', { name, shortMsg, longMsg, relation, personality, title });
       editing.target.onUpdated?.(guest);
       editModal.close();
       showToast('방명록을 수정했어요');
@@ -334,6 +382,25 @@ const UI = (() => {
   let generating = false;
   let generationCount = 0;
   let photoUrl = null;
+  const statGrid = form.querySelector('.stat-grid');
+  const diceBtn = form.querySelector('.dice-btn');
+  let stats = rollStats();
+  renderStats(statGrid, stats);
+  // 주사위: 잠깐 숫자가 굴러가다가 멈춘다
+  diceBtn.addEventListener('click', () => {
+    if (diceBtn.disabled) return;
+    diceBtn.disabled = true;
+    diceBtn.classList.add('rolling');
+    let n = 0;
+    const timer = setInterval(() => {
+      stats = rollStats();
+      renderStats(statGrid, stats);
+      if (++n < 8) return;
+      clearInterval(timer);
+      diceBtn.disabled = false;
+      diceBtn.classList.remove('rolling');
+    }, 70);
+  });
 
   function showError(message) {
     errorBox.textContent = message || '';
@@ -359,12 +426,16 @@ const UI = (() => {
       shortMsg: fields.shortMsg.value.trim(),
       longMsg: fields.longMsg.value.trim(),
       password: fields.password.value,
+      relation: fields.relation.value,
+      personality: fields.personality.value,
+      title: fields.title.value.trim(),
     };
   }
 
   function goNext() {
-    const { name, shortMsg, longMsg, password } = readTexts();
+    const { name, shortMsg, longMsg, password, relation } = readTexts();
     if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
+    if (!relation) return showError('신랑·신부와의 관계를 골라 주세요.');
     if ([...password].length < 4) return showError('비밀번호를 4자 이상 입력해 주세요.');
     showStep(2);
   }
@@ -483,6 +554,8 @@ const UI = (() => {
 
   function resetForm() {
     form.reset();
+    stats = rollStats();
+    renderStats(statGrid, stats);
     setPhoto(null);
     preparing = null;
     setImg(frontPreview, null);
@@ -495,10 +568,14 @@ const UI = (() => {
     if (step === 1) return goNext(); // 1단계에서 엔터
     if (generating) return;
     showError('');
-    const { name, shortMsg, longMsg, password } = readTexts();
-    if (!name || !shortMsg || !longMsg || [...password].length < 4) {
+    const { name, shortMsg, longMsg, password, relation, personality, title } = readTexts();
+    if (!name || !shortMsg || !longMsg || [...password].length < 4 || !relation) {
       showStep(1);
       return goNext();
+    }
+    if (!personality) {
+      fields.personality.focus();
+      return showError('캐릭터 성향을 골라 주세요.');
     }
 
     submitBtn.disabled = true;
@@ -506,7 +583,7 @@ const UI = (() => {
     submitBtn.textContent = '등록 중...';
     try {
       const images = await (preparing ?? Promise.resolve(null));
-      const guest = await submitGuestbook({ name, shortMsg, longMsg, password, images });
+      const guest = await submitGuestbook({ name, shortMsg, longMsg, password, relation, personality, title, stats, images });
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
         ...guest,

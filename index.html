@@ -96,10 +96,13 @@
         <div class="modal-profile">
           <div class="modal-avatar"><img id="modal-avatar" alt="" /></div>
           <div>
+            <div id="modal-title" class="guest-title" hidden></div>
             <div id="modal-name" class="modal-name"></div>
+            <div id="modal-tags" class="modal-tags"></div>
             <div id="modal-short" class="modal-short"></div>
           </div>
         </div>
+        <div id="modal-stats" class="stat-grid stat-view" hidden></div>
         <p id="modal-long" class="modal-long"></p>
       </div>
       <div class="modal-footer modal-footer-end">
@@ -128,6 +131,10 @@
             <input name="name" maxlength="15" required autocomplete="name" />
           </label>
           <label class="field">
+            <span>신랑·신부와의 관계</span>
+            <select name="relation" required></select>
+          </label>
+          <label class="field">
             <span>한줄 멘트 <small>(10자 이하, 말풍선으로 보여요)</small></span>
             <input name="shortMsg" maxlength="10" required />
           </label>
@@ -143,6 +150,23 @@
 
         <!-- 2단계: 캐릭터 -->
         <div class="step" data-step="2" hidden>
+          <div class="char-settings">
+            <label class="field">
+              <span>캐릭터 성향 <small>(맵에서 움직이는 방식이 달라져요)</small></span>
+              <select name="personality" required></select>
+            </label>
+            <label class="field">
+              <span>칭호 <small>(선택, 12자 이하 — 캐릭터 머리 위에 보여요)</small></span>
+              <input name="title" maxlength="12" placeholder="예: 신랑의 15년지기" />
+            </label>
+            <div class="field">
+              <span>능력치 <small>(주사위를 굴려 정해요, 총합 25)</small></span>
+              <div class="stat-roll">
+                <div class="stat-grid"></div>
+                <button type="button" class="dice-btn" aria-label="주사위 굴리기">🎲</button>
+              </div>
+            </div>
+          </div>
           <p class="step-intro">사진을 올리면 메이플 캐릭터로 바꿔드려요.<br />사진 없이 만들면 랜덤 캐릭터를 그려드려요.</p>
           <div class="char-maker">
             <label class="photo-pick">
@@ -188,6 +212,18 @@
           <label class="field">
             <span>이름 <small>(15자 이하)</small></span>
             <input name="name" maxlength="15" required />
+          </label>
+          <label class="field">
+            <span>신랑·신부와의 관계</span>
+            <select name="relation" required></select>
+          </label>
+          <label class="field">
+            <span>캐릭터 성향</span>
+            <select name="personality" required></select>
+          </label>
+          <label class="field">
+            <span>칭호 <small>(선택, 12자 이하)</small></span>
+            <input name="title" maxlength="12" />
           </label>
           <label class="field">
             <span>한줄 멘트 <small>(10자 이하)</small></span>

@@ -58,11 +58,12 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - Discussion 본문 형식 (```json 코드블록으로 감싸도 됨):
   ```json
   { "id": "<uuid>", "name": "이름", "shortMsg": "10자 이하", "longMsg": "방명록 내용",
+    "relation": "friend", "personality": "dancer", "title": "칭호(없으면 null)", "stats": { "str": 6, "dex": 8, "int": 5, "luk": 6 },
     "spriteUrl": "img/guests/<uuid>/front.png", "walkUrl": "img/guests/<uuid>/walk.png",
     "jumpUrl": "…/jump.png", "ladderUrl": "…/ladder.png", "ropeUrl": "…/rope.png" }
   ```
 - 본문에 없는 동작 이미지도 `img/guests/<uuid>/<동작>.png` 파일이 저장소에 있으면 `fetch-guests`가 채움 → 나중에 추가한 동작(예: 기존 하객 엎드리기)은 이미지만 커밋하면 됨.
-- `guests.json` 항목: `{ id, name, shortMsg, longMsg, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }`. name 없거나 JSON 파싱 실패 글은 건너뜀.
+- `guests.json` 항목: `{ id, name, shortMsg, longMsg, relation, personality, title, stats, spriteUrl, walkUrl, jumpUrl, ladderUrl, ropeUrl, createdAt }` (옛 글은 relation 등이 null). name 없거나 JSON 파싱 실패 글은 건너뜀.
 - **id**: 본문의 UUID. UUID가 없는 옛 수동 글은 `d<discussion번호>`. 이름은 중복 가능하므로 식별·이미지 매핑은 항상 id로 한다.
 - 이미지 주소는 https URL 또는 저장소 내부 경로(`img/...png`, `..` 금지)만 허용.
 
@@ -104,6 +105,13 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - guests.json에는 `number`(Discussion 번호)가 들어가고 pw는 빠짐. `POST /api/guestbook {action: verify|update|delete, number, id, password, ...}` → 번호로 글을 읽고 카테고리·id 확인 후 비밀번호 검사.
 - `DEV_PASSWORD`는 관리자 비밀번호로 모든 방명록(비밀번호 없는 옛 글 포함)을 수정/삭제 가능.
 - 팝업: 하객이면 조종하기 왼쪽에 "수정" → 비밀번호 확인 → 이름·멘트·방명록 수정 폼 + "캐릭터 삭제". 수정하면 맵의 이름표/멘트 즉시 갱신, 삭제하면 맵에서 제거(`scene.removeGuest`). 이미지 폴더는 매일 정리 작업이 지움.
+
+## 하객 프로필: 관계·성향·칭호·능력치
+- 작성 1단계에 신랑·신부와의 관계(필수), 2단계(캐릭터 만들기) 위쪽에 성향(필수)·칭호(선택, 12자)·능력치 주사위. 수정 폼에서 관계·성향·칭호는 바꿀 수 있고 능력치는 그대로.
+- 목록 키는 `CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
+- 능력치 STR/DEX/INT/LUK: 각 4에서 시작해 남은 9점을 한 점씩 무작위로(`rollStats`) → 합 25, 4~13, 6 근처가 잘 나오고 끝값은 드묾. API가 범위·합 검사. 팝업에 표시만(움직임엔 영향 없음).
+- 칭호: 캐릭터 머리 위 메달(`setTitle`, `CONFIG.titleStyle`). 말풍선·조종 표시는 `headY()`(칭호 위)에.
+- 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(제자리에서 방향 바꾸며 통통).
 
 ## 캐릭터 조종 (일반 방문자)
 - 신랑·신부는 개발자 모드에서만 조종 가능(일반 방문자 팝업엔 조종 버튼 없음), NPC는 불가.

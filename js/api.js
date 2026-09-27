@@ -76,9 +76,9 @@ async function generateCharacter(type, image, extra = {}) {
   return result;
 }
 
-/** 방명록 등록. 성공 시 서버가 만든 guest 객체(id = UUID) 반환. */
-async function submitGuestbook({ name, shortMsg, longMsg, password, images }) {
-  const { guest } = await postJson('/api/guestbook', { name, shortMsg, longMsg, password, images });
+/** 방명록 등록 { name, shortMsg, longMsg, password, relation, personality, title, stats, images }. 성공 시 서버가 만든 guest 객체(id = UUID) 반환. */
+async function submitGuestbook(data) {
+  const { guest } = await postJson('/api/guestbook', data);
   return guest;
 }
 

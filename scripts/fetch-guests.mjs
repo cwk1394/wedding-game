@@ -18,6 +18,14 @@ const imageUrl = (v) =>
 
 const MOTIONS = ['walk', 'jump', 'ladder', 'rope', 'prone'];
 
+// 관계·성향 키 (한글 이름은 js/config.js). 모르는 값이면 null
+const key = (v) => (typeof v === 'string' && /^[a-z]{1,20}$/.test(v) ? v : null);
+// 능력치 { str, dex, int, luk } 각 4~13 (API가 합 25까지 검사함). 없거나 이상하면 null
+const stats = (v) =>
+  v && ['str', 'dex', 'int', 'luk'].every((k) => Number.isInteger(v[k]) && v[k] >= 4 && v[k] <= 13)
+    ? { str: v.str, dex: v.dex, int: v.int, luk: v.luk }
+    : null;
+
 /**
  * 본문에 없는 동작 이미지라도 저장소의 img/guests/<uuid>/<동작>.png 가 있으면 채운다.
  * (나중에 추가한 동작 이미지 — 예: 기존 하객의 엎드리기 — 를 Discussion 본문 수정 없이 반영)
@@ -44,6 +52,10 @@ function toGuest(discussion) {
     name,
     shortMsg: str(data.shortMsg, 10),
     longMsg: str(data.longMsg, 1000),
+    relation: key(data.relation),
+    personality: key(data.personality),
+    title: str(data.title, 12) || null,
+    stats: stats(data.stats),
     spriteUrl: imageUrl(data.spriteUrl),
     walkUrl: imageUrl(data.walkUrl),
     jumpUrl: imageUrl(data.jumpUrl),

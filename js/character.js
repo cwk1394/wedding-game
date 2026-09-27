@@ -26,6 +26,9 @@ class Character extends Phaser.GameObjects.Container {
     this.tagBg = scene.add.graphics(); // 이름표 배경 (모서리 살짝 둥글게)
     this.drawTagBg();
     this.add([this.sprite, this.tagBg, this.tag]);
+    this.baseHeight = CHAR_H; // 정면 이미지 높이 (칭호 위치 기준)
+    this.titleTag = null;
+    this.setTitle(info.title);
 
     // 누르는 영역: 발(원점) 기준 고정 사각형 + 네임태그.
     // 스프라이트 자체에 걸면 걷기·사다리 프레임마다 크기가 달라 가장자리를 눌러도 안 잡히는 경우가 생긴다.
@@ -58,6 +61,36 @@ class Character extends Phaser.GameObjects.Container {
     this.facesLeft = facesLeft;
     this.sprite.setTexture(`${key}_0`).setScale(1 / CONFIG.sprite.textureScale);
     this.updateHitArea(this.sprite.displayWidth, this.sprite.displayHeight);
+    this.baseHeight = this.sprite.displayHeight;
+    this.titleTag?.setY(-this.baseHeight - 3);
+  }
+
+  /** 칭호: 메이플 메달처럼 머리 위에 [칭호] (없으면 지움) */
+  setTitle(title) {
+    this.titleTag?.destroy();
+    this.titleTag = null;
+    if (!title) return;
+    const S = CONFIG.titleStyle;
+    const text = this.scene.add
+      .text(0, 0, title, { fontFamily: CONFIG.fontFamily, fontSize: '12px', fontStyle: 'bold', color: S.text, resolution: TEXT_RESOLUTION })
+      .setOrigin(0.5, 1);
+    const w = text.width + 14;
+    const h = text.height + 4;
+    text.setY(-2);
+    const g = this.scene.add.graphics();
+    g.fillStyle(S.fill, 0.92).fillRoundedRect(-w / 2, -h, w, h, 4);
+    g.lineStyle(1.5, S.line, 1).strokeRoundedRect(-w / 2, -h, w, h, 4);
+    g.fillStyle(S.line, 1).fillTriangle(-w / 2 - 5, -h / 2, -w / 2, -h / 2 - 4, -w / 2, -h / 2 + 4); // 양옆 리본 끝
+    g.fillTriangle(w / 2 + 5, -h / 2, w / 2, -h / 2 - 4, w / 2, -h / 2 + 4);
+    this.titleTag = this.scene.add.container(0, -this.baseHeight - 3, [g, text]);
+    this.titleTag.height = h;
+    this.add(this.titleTag);
+  }
+
+  /** 머리 위 끝 y (말풍선·조종 표시를 이 위에): 캐릭터와 칭호 중 더 높은 쪽 */
+  headY() {
+    const top = -this.sprite.displayHeight;
+    return this.titleTag ? Math.min(top, this.titleTag.y - this.titleTag.height) : top;
   }
 
   /** 누르는 영역 = 캐릭터(정면 크기보다 조금 넓게 — 걸어다니는 중에도 잘 잡히게) + 발밑 네임태그 */
@@ -75,6 +108,7 @@ class Character extends Phaser.GameObjects.Container {
   /** 방명록을 수정했을 때: 이름표·말풍선 문구 갱신 */
   updateInfo(info) {
     Object.assign(this.info, info);
+    if ('title' in info) this.setTitle(info.title);
     this.tag.setText(this.info.name);
     this.drawTagBg();
     this.updateHitArea(this.sprite.displayWidth || CHAR_W, this.sprite.displayHeight || CHAR_H);
@@ -88,11 +122,15 @@ class Character extends Phaser.GameObjects.Container {
   scheduleBubble(delay) {
     this.scene.time.delayedCall(delay, () => {
       if (!this.active) return;
-      this.say(this.info.shortMsg);
-      this.scheduleBubble(
-        CONFIG.bubble.duration + Phaser.Math.Between(CONFIG.bubble.minGap, CONFIG.bubble.maxGap)
-      );
+      this.say(this.bubbleText());
+      const gap = Phaser.Math.Between(CONFIG.bubble.minGap, CONFIG.bubble.maxGap) * (this.persona?.bubbleGap ?? 1); // 수다쟁이는 자주
+      this.scheduleBubble(CONFIG.bubble.duration + gap);
     });
+  }
+
+  /** 말풍선에 할 말 (하객은 성향에 따라 가끔 다른 말) */
+  bubbleText() {
+    return this.info.shortMsg;
   }
 
   say(message, duration = CONFIG.bubble.duration) {
@@ -110,7 +148,7 @@ class Character extends Phaser.GameObjects.Container {
 
     const w = text.width + 18;
     const h = text.height + 10;
-    const cy = -this.sprite.displayHeight - 14 - h / 2; // 말풍선 중심 y
+    const cy = this.headY() - 14 - h / 2; // 말풍선 중심 y (칭호 위)
     const bottom = cy + h / 2;
     text.setY(cy);
 
@@ -232,7 +270,8 @@ class GuestCharacter extends Character {
     super(scene, x, floorY(floor, x), info, opts);
 
     this.motions = {}; // 이미지 스프라이트 로드 후 { walk, jump, ladder, rope } 사용 가능 여부
-    this.speed = Phaser.Math.Between(CONFIG.walkSpeed.min, CONFIG.walkSpeed.max);
+    this.baseSpeed = Phaser.Math.Between(CONFIG.walkSpeed.min, CONFIG.walkSpeed.max);
+    this.setPersonality(info.personality);
     this.dir = Math.random() < 0.5 ? -1 : 1;
     this.state = 'idle';
     this.stateTimer = 0;
@@ -284,11 +323,41 @@ class GuestCharacter extends Character {
     }
   }
 
+  /** 성향(CONFIG.personalities 키) → 걷는 속도·상태 비율·특별 동작 */
+  setPersonality(key) {
+    this.persona = CONFIG.personalities[key] ?? null;
+    this.speed = Math.round(this.baseSpeed * (this.persona?.speed ?? 1));
+  }
+
+  updateInfo(info) {
+    super.updateInfo(info);
+    if ('personality' in info) this.setPersonality(info.personality);
+  }
+
+  bubbleText() {
+    const p = this.persona;
+    if (this.idlePose === 'sleep') return 'Zzz…';
+    return p?.lines && Math.random() < p.lineChance ? Phaser.Utils.Array.GetRandom(p.lines) : this.info.shortMsg;
+  }
+
   pickState() {
-    this.state = Math.random() < 0.65 ? 'walk' : 'idle';
-    this.stateTimer = Phaser.Math.Between(1200, 4000);
+    const p = this.persona;
+    this.state = Math.random() < (p?.walk ?? 0.65) ? 'walk' : 'idle';
+    this.stateTimer = Phaser.Math.Between(...(p?.[`${this.state}Time`] ?? [1200, 4000]));
     if (this.state === 'walk' && Math.random() < 0.5) this.dir = -this.dir;
+    // 성향별 서 있을 때 특별 동작
+    this.idlePose = this.state === 'idle' ? p?.idle ?? null : null;
+    if (this.idlePose === 'sleep') this.say('Zzz…', this.stateTimer);
+    if (this.idlePose === 'photo') this.photoFlash();
     this.updatePose();
+  }
+
+  /** 사진광: 머리 옆에서 카메라 플래시가 번쩍 + 찰칵 */
+  photoFlash() {
+    const flash = this.scene.add.circle(this.dir * 10, this.headY() * 0.6, 7, 0xffffff, 0.95);
+    this.add(flash);
+    this.scene.tweens.add({ targets: flash, scale: 3.2, alpha: 0, duration: 380, onComplete: () => flash.destroy() });
+    this.say('찰칵!', 1500);
   }
 
   /** 현재 상태에 맞는 애니메이션/텍스처 */
@@ -316,6 +385,9 @@ class GuestCharacter extends Character {
     if (this.state === 'walk') {
       this.setDir(this.dir);
       this.sprite.play(`${key}_walk`, true);
+    } else if (this.idlePose === 'sleep' && this.motions.prone) {
+      this.setDir(this.dir); // 잠꾸러기: 엎드려 자기
+      this.sprite.play(`${key}_prone`, true);
     } else {
       this.sprite.stop();
       this.sprite.setTexture(`${key}_0`);
@@ -442,6 +514,7 @@ class GuestCharacter extends Character {
     this.climb = null;
     this.jump = null;
     this.leap = null;
+    this.idlePose = null; // 자던 중이었어도 깨어남
     if (on) {
       this.phys = { mode: 'ground', vx: 0, vy: 0, climb: null };
       if (aiClimb) {
@@ -477,7 +550,7 @@ class GuestCharacter extends Character {
   }
 
   placeMarker() {
-    if (this.marker) this.marker.setY(-this.sprite.displayHeight - 4);
+    if (this.marker) this.marker.setY(this.headY() - 4);
   }
 
   /** (x, y) 아래(또는 같은 높이)에 있는 가장 가까운 발판 이름 (설 수 없는 발판 제외) */
@@ -750,7 +823,7 @@ class GuestCharacter extends Character {
           this.continueTo(next);
         } else if (this.canJump !== false && !this.jump && this.scene.time.now >= (this.leapReadyAt ?? 0)) {
           const targets = gapJumpTargets(this.floorName, this.x, edgeDir, (n) => this.canStandOn(n));
-          if (targets.length && Math.random() < m.gapJump.chance) {
+          if (targets.length && Math.random() < m.gapJump.chance * (this.persona?.gap ?? 1)) {
             return this.startLeap(Phaser.Utils.Array.GetRandom(targets));
           }
         }
@@ -764,10 +837,13 @@ class GuestCharacter extends Character {
         );
         if (crossed && this.canClimb !== false && this.scene.time.now >= this.climbReadyAt) {
           this.climbReadyAt = this.scene.time.now + 1500; // 같은 사다리를 지나는 동안 한 번만 판정
-          if (Math.random() < m.climbChance) return this.startClimb(crossed);
+          if (Math.random() < Math.min(0.95, m.climbChance * (this.persona?.climb ?? 1))) return this.startClimb(crossed);
         }
-        if (this.canJump !== false && Math.random() < (m.jumpChance * delta) / 1000) this.startJump();
+        if (this.canJump !== false && Math.random() < (m.jumpChance * (this.persona?.jump ?? 1) * delta) / 1000) this.startJump();
       }
+    } else if (this.idlePose === 'dance' && !this.jump && this.canJump !== false) {
+      this.setDir(-this.dir); // 댄서: 제자리에서 방향을 바꾸며 통통
+      this.startJump();
     }
 
     // 기울어진 구간(계단, 출렁다리)은 x에 맞춰 발 높이를 따라간다. 아래쪽 캐릭터가 앞에 그려지도록 depth도 갱신

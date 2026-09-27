@@ -1,11 +1,13 @@
 // 방명록 쓰기 API (Vercel Serverless Function)
-// POST /api/guestbook  { name, shortMsg, longMsg, password, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
+// POST /api/guestbook  { name, shortMsg, longMsg, password, relation, personality, title?, stats, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
+//   relation(신랑·신부와의 관계)·personality(성향) = 아래 목록의 키 (한글 이름은 js/config.js), title = 칭호(12자, 선택)
+//   stats = { str, dex, int, luk } 각 4~13, 합 25 (브라우저에서 주사위로 굴림)
 //   1) UUID 발급
 //   2) 이미지를 img/guests/<uuid>/front.png, walk.png, jump.png, ladder.png, rope.png 로 저장소에 한 커밋으로 올림
 //   3) GitHub Discussion(방명록 카테고리)에 JSON 본문으로 글 작성
 //   4) 생성된 guest 객체 반환
 // POST /api/guestbook  { action: 'verify' | 'update' | 'delete', number, id, password, (update) name, shortMsg, longMsg }
-//   방명록 수정/삭제. 비밀번호는 등록 때 정한 것, 또는 관리자 비밀번호(DEV_PASSWORD)
+//   방명록 수정/삭제. 비밀번호는 등록 때 정한 것, 또는 관리자 비밀번호(DEV_PASSWORD). 수정은 relation·personality·title도 (능력치는 그대로)
 //
 // 비밀번호 저장: Discussion 본문은 공개라 비밀번호 대신 HMAC-SHA256(서버 비밀키, salt + 비밀번호)만 "pw" 필드에 저장.
 //   서버 비밀키 = GUEST_PASSWORD_SECRET (없으면 DEV_PASSWORD). 비밀키를 바꾸면 기존 비밀번호는 모두 무효가 된다.
@@ -26,7 +28,13 @@ const LIMITS = {
   longMsg: 500,
   password: { min: 4, max: 30 },
   imageBytes: 512 * 1024, // 브라우저에서 축소해서 보내므로 넉넉한 상한
+  title: 12,
 };
+
+// 선택 목록 (키). 한글 이름·성향별 움직임은 js/config.js의 CONFIG.relations / CONFIG.personalities
+const RELATIONS = ['groom', 'bride', 'both', 'family', 'work', 'friend', 'other'];
+const PERSONALITIES = ['chatty', 'explorer', 'foodie', 'sleepy', 'photo', 'dancer', 'calm'];
+const STATS = { keys: ['str', 'dex', 'int', 'luk'], min: 4, max: 13, total: 25 };
 
 // 정면 외의 동작 스트립 (모두 선택). 파일명 = <motion>.png, 본문 필드 = <motion>Url
 const MOTIONS = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프', prone: '엎드리기' };
@@ -52,6 +60,33 @@ function text(value, field, max, { required = true } = {}) {
   if (required && !v) throw new HttpError(400, `${field}: 꼭 입력해 주세요.`);
   if ([...v].length > max) throw new HttpError(400, `${field}: ${max}자 이하로 입력해 주세요.`);
   return v;
+}
+
+function choice(value, list, field) {
+  if (!list.includes(value)) throw new HttpError(400, `${field}: 목록에서 하나를 골라 주세요.`);
+  return value;
+}
+
+/** 능력치 { str, dex, int, luk }: 각 4~13 정수, 합 25 */
+function stats(value) {
+  const out = {};
+  for (const k of STATS.keys) {
+    const v = value?.[k];
+    if (!Number.isInteger(v) || v < STATS.min || v > STATS.max) throw new HttpError(400, '능력치: 주사위를 다시 굴려 주세요.');
+    out[k] = v;
+  }
+  if (Object.values(out).reduce((a, b) => a + b, 0) !== STATS.total) throw new HttpError(400, '능력치: 주사위를 다시 굴려 주세요.');
+  return out;
+}
+
+/** 관계·성향·칭호 (등록·수정 공통). 칭호는 비우면 없음 */
+function profile(body) {
+  const title = text(body.title, '칭호', LIMITS.title, { required: false });
+  return {
+    relation: choice(body.relation, RELATIONS, '신랑·신부와의 관계'),
+    personality: choice(body.personality, PERSONALITIES, '캐릭터 성향'),
+    title: title || null,
+  };
 }
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -80,6 +115,7 @@ async function createGuest(body, env) {
   const name = text(body.name, '이름', LIMITS.name);
   const shortMsg = text(body.shortMsg, '한줄 멘트', LIMITS.shortMsg);
   const longMsg = text(body.longMsg, '방명록', LIMITS.longMsg);
+  const extra = { ...profile(body), stats: stats(body.stats) };
   const pw = hashPassword(checkPassword(body.password));
   const front = pngBase64(body.images?.front, '정면');
   const motions = Object.fromEntries(
@@ -92,7 +128,7 @@ async function createGuest(body, env) {
   const id = crypto.randomUUID();
   const dir = `img/guests/${id}`;
   const files = [];
-  const guest = { id, name, shortMsg, longMsg, spriteUrl: null };
+  const guest = { id, name, shortMsg, longMsg, ...extra, spriteUrl: null };
   if (front) {
     files.push({ path: `${dir}/front.png`, content: front });
     guest.spriteUrl = `${dir}/front.png`;
@@ -189,6 +225,7 @@ async function manageGuest(body, env) {
       name: text(body.name, '이름', LIMITS.name),
       shortMsg: text(body.shortMsg, '한줄 멘트', LIMITS.shortMsg),
       longMsg: text(body.longMsg, '방명록', LIMITS.longMsg),
+      ...profile(body),
     };
     await github.updateDiscussion(discussion.id, `[방명록] ${next.name}`, discussionBody(next));
     const { pw: _pw, ...guest } = next;

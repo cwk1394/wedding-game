@@ -109,6 +109,30 @@ const CONFIG = {
   bgm: { src: 'audio/bgm.mp3', volume: 0.35 },
 
   walkSpeed: { min: 35, max: 70 }, // px/s
+
+  // 하객 캐릭터 생성 때 고르는 신랑·신부와의 관계 (키는 api/guestbook.js RELATIONS와 같아야 함)
+  relations: { groom: '신랑측', bride: '신부측', both: '두 사람 모두', family: '친척', work: '직장', friend: '친구', other: '기타' },
+
+  // 캐릭터 성향 (키는 api/guestbook.js PERSONALITIES와 같아야 함) → 하객이 스스로 돌아다니는 방식 (GuestCharacter)
+  //   speed: 걷는 속도 배율, walk: 새 상태를 고를 때 걸을 확률, walkTime/idleTime: 걷기/서 있기 시간 [최소, 최대] ms
+  //   jump/climb/gap: 점프·사다리 타기·발판 건너뛰기 확률 배율, bubbleGap: 말풍선 간격 배율
+  //   lines + lineChance: 말풍선에 한줄 멘트 대신 가끔 하는 말
+  //   idle: 서 있을 때 특별 동작 — sleep(엎드려 자기 + Zzz), photo(카메라 플래시 + 찰칵), dance(제자리에서 통통 뛰며 방향 바꾸기)
+  personalities: {
+    chatty: { label: '수다쟁이', walk: 0.5, bubbleGap: 0.35, lines: ['그거 알아?', '축하해요~!', '있잖아…', '하하하!'], lineChance: 0.4 },
+    explorer: { label: '탐험가', speed: 1.35, walk: 0.85, walkTime: [2500, 6000], idleTime: [600, 1500], jump: 1.3, climb: 2.2, gap: 1.8, lines: ['저기엔 뭐가 있을까?', '모험이다!'], lineChance: 0.25 },
+    foodie: { label: '먹보', speed: 0.8, walk: 0.45, idleTime: [2500, 5000], jump: 0.6, lines: ['냠냠', '배고파…', '뷔페 언제 열려요?'], lineChance: 0.4 },
+    sleepy: { label: '잠꾸러기', speed: 0.6, walk: 0.3, idleTime: [5000, 10000], jump: 0.2, climb: 0.4, gap: 0.4, idle: 'sleep', lines: ['하암…'], lineChance: 0.3 },
+    photo: { label: '사진광', walk: 0.5, walkTime: [800, 2000], idleTime: [1500, 3000], idle: 'photo', lines: ['김치~', '여기 봐요!'], lineChance: 0.3 },
+    dancer: { label: '댄서', speed: 1.1, walk: 0.5, idleTime: [2000, 4000], jump: 2.5, idle: 'dance', lines: ['♪', '렛츠 댄스!'], lineChance: 0.3 },
+    calm: { label: '얌전이', speed: 0.7, walk: 0.45, jump: 0.15, climb: 0.5, gap: 0.4, bubbleGap: 1.8 },
+  },
+
+  // 능력치 (주사위): 각 min부터 시작해서 남은 점수(total - min×4)를 한 점씩 무작위로 나눔 → 가운데 값이 잘 나오고 끝값(4, 13)은 드묾
+  stats: { keys: ['str', 'dex', 'int', 'luk'], min: 4, total: 25 },
+
+  // 칭호 (메이플 메달처럼 머리 위)
+  titleStyle: { fill: 0x3b2a6e, line: 0xffd76a, text: '#fff3c4' },
   bubble: {
     duration: 5000, // 말풍선 표시 시간 (ms)
     minGap: 3000, // 다음 말풍선까지 최소 대기 (ms)
