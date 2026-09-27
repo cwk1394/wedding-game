@@ -1,0 +1,13 @@
+Create a cute MapleStory-style NPC for a wedding guestbook map game.
+NPC description (what it is): {{DESC}}
+
+[POSE / VIEW]
+- If it is an animal or a creature: full body, standing naturally (four legs for four-legged animals), side / three-quarter view facing LEFT, chibi and round, big shiny eyes, friendly expression.
+- If it is an object or a vehicle: the whole object, clear three-quarter view facing LEFT, chunky toy-like volume, no people.
+- Soft pastel wedding mood (pink, cream, white) where it fits the description.
+
+[STYLE]
+Authentic classic MapleStory-style 2D pixel art sprite: chibi proportions, chunky visible pixels, clean 1px dark outline,
+flat color shading, limited palette, no anti-aliasing, no smooth gradients, no painterly rendering.
+Transparent background (no background at all). No text, no logo, no watermark, no UI, no ground, no shadow, no environment.
+One single subject, centered, fully visible with a small margin on every side.

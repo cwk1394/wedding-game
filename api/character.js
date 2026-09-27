@@ -7,6 +7,9 @@
 //   ladder: 정면 캐릭터 + prompt/create-character-ladder-climbing.txt → 사다리 타기 4프레임 (뒷모습)
 //   rope  : 정면 캐릭터 + prompt/create-character-rope-climbing.txt   → 로프 타기 4프레임 (뒷모습)
 //   prone : 정면 캐릭터 + prompt/create-character-prone.txt           → 엎드리기 2프레임 (왼쪽)
+//   npc-front: (사진) + desc + prompt/npc-front.txt (사진 없으면 npc-front-noref.txt) → NPC 정면 (개발자 모드 NPC 추가)
+//   npc-idle / npc-walk: NPC 정면 + desc + prompt/npc-{idle,walk}.txt → 제자리 / 왼쪽 이동 4프레임
+//   NPC는 password(DEV_PASSWORD)와 desc(무엇인지: 강아지, 택시, 탁자 위 앨범 …)가 필요하고 투명 배경으로 만든다 (흰 털·흰 물건이 배경 제거 때 뚫리지 않게)
 //   → { image: <data URL (webp)> }
 // 한 번에 다 만들면 오래 걸리므로(각 최대 ~2분) 브라우저가 front를 먼저 만들고 나머지를 따로 호출한다.
 // 생성된 이미지는 저장하지 않는다. 저장은 방명록 등록(/api/guestbook) 때 브라우저가 후처리한 PNG로.
@@ -16,7 +19,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
+import { HttpError, checkDevPassword, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 
 const MODELS = (process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2,gpt-image-1.5,gpt-image-1')
   .split(',')
@@ -32,6 +35,9 @@ const TYPES = {
   ladder: { prompt: 'create-character-ladder-climbing.txt', size: '1536x1024' },
   rope: { prompt: 'create-character-rope-climbing.txt', size: '1536x1024' },
   prone: { prompt: 'create-character-prone.txt', size: '1536x1024' },
+  'npc-front': { prompt: 'npc-front.txt', noref: 'npc-front-noref.txt', size: '1024x1024', npc: true },
+  'npc-idle': { prompt: 'npc-idle.txt', size: '1536x1024', npc: true },
+  'npc-walk': { prompt: 'npc-walk.txt', size: '1536x1024', npc: true },
 };
 
 let workingModel = null; // 한 번 성공한 모델은 기억해 두고 계속 사용
@@ -47,6 +53,16 @@ export function POST(request) {
     if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
     const spec = TYPES[body.type];
     if (!spec) throw new HttpError(400, `type은 ${Object.keys(TYPES).join(', ')} 중 하나여야 합니다.`);
+    if (spec.npc) {
+      checkDevPassword(body.password); // NPC 추가는 개발자 모드 전용
+      const desc = typeof body.desc === 'string' ? body.desc.replace(/\s+/g, ' ').trim().slice(0, 100) : '';
+      if (!desc) throw new HttpError(400, 'NPC 설명(무엇인지)을 입력해 주세요.');
+      if (!body.image && !spec.noref) throw new HttpError(400, '정면 이미지가 필요합니다.');
+      const file = body.image ? spec.prompt : spec.noref;
+      const prompt = (await readFile(join(process.cwd(), 'prompt', file), 'utf8')).replaceAll('{{DESC}}', desc);
+      const image = await generate({ prompt, size: spec.size, input: body.image ? decodeImage(body.image) : null, transparent: true });
+      return { status: 200, body: { image } };
+    }
     if (body.type === 'front' && !body.image) {
       // 사진 없이: 무작위 특징을 넣은 프롬프트로 새 캐릭터
       const template = await readFile(join(process.cwd(), 'prompt', 'create-character-noref.txt'), 'utf8');
@@ -97,11 +113,12 @@ function randomTraits() {
 }
 
 /** input이 있으면 이미지 편집(사진 참고), 없으면 글만으로 이미지 생성 */
-async function generate({ prompt, size, input }) {
+async function generate({ prompt, size, input, transparent = false }) {
   const models = workingModel ? [workingModel] : MODELS;
   let lastError;
   for (const model of models) {
     const params = { model, prompt, size, quality: QUALITY, output_format: 'webp', output_compression: 90 };
+    if (transparent) params.background = 'transparent';
     let body;
     let headers = { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` };
     if (input) {

@@ -41,11 +41,16 @@ export class GitHub {
     return data.data;
   }
 
-  /** 여러 파일을 커밋 하나로 브랜치에 올린다. 동시 등록으로 브랜치가 앞서가면 재시도. */
+  /**
+   * 여러 파일을 커밋 하나로 브랜치에 올린다. 동시 등록으로 브랜치가 앞서가면 재시도.
+   * files: { path, content(base64) } | { path, sha } (이미 있는 blob, 파일 옮기기) | { path, sha: null } (삭제)
+   */
   async commitFiles(files, message) {
     const branch = this.env.GITHUB_BRANCH;
     const blobs = await Promise.all(
-      files.map((f) => this.request('POST', `${this.repoPath}/git/blobs`, { content: f.content, encoding: 'base64' }))
+      files.map((f) =>
+        'content' in f ? this.request('POST', `${this.repoPath}/git/blobs`, { content: f.content, encoding: 'base64' }) : { sha: f.sha }
+      )
     );
     const treeItems = files.map((f, i) => ({ path: f.path, mode: '100644', type: 'blob', sha: blobs[i].sha }));
 
@@ -67,6 +72,16 @@ export class GitHub {
       } catch (err) {
         if (err.status !== 422 || attempt === 2) throw err; // 422 = fast-forward 불가 (다른 커밋이 먼저 들어옴)
       }
+    }
+  }
+
+  /** 저장소 파일/폴더 조회 (contents API). 없으면 null */
+  async getContents(path) {
+    try {
+      return await this.request('GET', `${this.repoPath}/contents/${path}?ref=${this.env.GITHUB_BRANCH}`);
+    } catch (err) {
+      if (err.status === 404) return null;
+      throw err;
     }
   }
 

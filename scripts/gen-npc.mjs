@@ -54,7 +54,7 @@ carrying a small woven basket full of pink flower petals. Full body, three-quart
       walk: strip(4, 'Walking/hopping cheerfully to the LEFT while smiling and sprinkling pink flower petals from the basket. A few small petals near the paw, inside the cell.'),
     },
   },
-  zebra: {
+  'zebra': {
     front: `A goofy, mischievous zebra NPC in MapleStory style — a playful class-clown personality: black and white stripes, wild spiky mane,
 cheeky toothy grin, wearing funky oversized novelty sunglasses (bright pink heart-shaped frames with star sparkles), standing upright on two legs like a person
 in a silly confident pose, holding a bubble wand in one hand and a colorful curled paper party blower in the other.
@@ -102,7 +102,7 @@ full body, chibi and round. Ignore the photo background.`,
       sit: strip(4, 'Sitting on the ground holding a pink squeaky dumbbell-shaped chew toy in its mouth, happily chewing it: the toy squishes a little between frames, tail wagging.'),
     },
   },
-  taxi: {
+  'taxi': {
     // 오른쪽 아래 광장(파스텔 분홍·크림색 돌바닥, 위에서 살짝 내려다보는 시점)에 서 있는 웨딩 택시
     front: `A cute MapleStory-style wedding taxi NPC, parked on a pastel pink-and-cream stone plaza in a dreamy flower wedding garden.
 Camera angle: a clear THREE-QUARTER FRONT view with real 3D depth (NOT a flat side view): the car is turned about 35-45 degrees toward the viewer,

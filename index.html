@@ -207,18 +207,60 @@
     </form>
   </div>
 
-  <!-- 개발자 모드: NPC 설정 (NPC를 누르면) -->
+  <!-- 개발자 모드: NPC 설정 (NPC를 누르면) / NPC 추가 (툴바 "NPC 추가" — 위쪽 만들기 칸이 보임) -->
   <div id="npc-modal" class="modal" hidden>
     <form id="npc-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="npc-name" novalidate>
       <div class="modal-header">
-        <span class="modal-title">NPC 설정</span>
+        <span id="npc-title" class="modal-title">NPC 설정</span>
         <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
       </div>
       <div class="modal-body form-body">
-        <div class="modal-profile">
+        <div class="modal-profile npc-profile">
           <div class="modal-avatar"><img id="npc-avatar" alt="" /></div>
           <div id="npc-name" class="modal-name"></div>
         </div>
+        <div class="npc-create" hidden>
+          <div class="char-maker">
+            <label class="photo-pick">
+              <input name="photo" type="file" accept="image/*" />
+              <img class="photo-preview" alt="사진 미리보기" hidden />
+              <span class="photo-empty"><b>＋</b>사진 추가</span>
+            </label>
+            <span class="char-arrow" aria-hidden="true">→</span>
+            <div class="preview">
+              <img class="preview-front" alt="NPC 미리보기" hidden />
+              <span class="preview-empty">NPC</span>
+            </div>
+          </div>
+          <label class="field">
+            <span>NPC 설명 <small>(무엇인지 — 예: 강아지, 토끼, 자동차, 탁자 위에 올려진 앨범, 게시판)</small></span>
+            <input name="desc" maxlength="100" />
+          </label>
+          <div class="npc-create-row">
+            <label class="field">
+              <span>움직임</span>
+              <select name="moving">
+                <option value="walk">걸어다님 (동물·캐릭터)</option>
+                <option value="static">가만히 (사물)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>키 <small>(px)</small></span>
+              <input name="height" type="number" min="10" max="200" value="40" />
+            </label>
+          </div>
+          <button type="button" class="btn btn-secondary npc-generate">캐릭터 생성</button>
+          <p class="gen-status" hidden><span class="spinner" aria-hidden="true"></span><span class="gen-text"></span></p>
+          <small class="note">사진이 없으면 설명만으로 그려요. 정면 → 움직임 순서로 1~3분 걸려요.</small>
+        </div>
+        <label class="field">
+          <span>이름 <small>(15자 이하, 이름표)</small></span>
+          <input name="name" maxlength="15" />
+        </label>
+        <label class="field">
+          <span>디렉토리 <small>(img/npc/이름/ — 영문 소문자·숫자·-, 저장하면 폴더 이름이 바뀌어요)</small></span>
+          <input name="dir" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" />
+        </label>
         <label class="field">
           <span>한줄 멘트 <small>(15자 이하, 말풍선으로 보여요)</small></span>
           <input name="shortMsg" maxlength="15" />
@@ -234,9 +276,11 @@
           <label><input type="radio" name="mode" value="stage" /> 무대에서만 <small>무대(노란 선) 안에서만 돌아다님</small></label>
           <label><input type="radio" name="mode" value="default" /> 기본 <small>정해진 처음 발판에서 돌아다님</small></label>
         </fieldset>
+        <p class="form-error" role="alert" hidden></p>
       </div>
-      <div class="modal-footer modal-footer-end">
-        <button type="submit" class="btn btn-primary">적용</button>
+      <div class="modal-footer modal-footer-split">
+        <button type="button" class="btn btn-danger npc-delete" hidden>NPC 삭제</button>
+        <button type="submit" class="btn btn-primary npc-submit edit-submit">적용</button>
       </div>
     </form>
   </div>

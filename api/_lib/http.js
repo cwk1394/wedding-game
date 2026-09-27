@@ -1,4 +1,5 @@
-// API 함수 공통: CORS, JSON 응답, 에러 처리
+// API 함수 공통: CORS, JSON 응답, 에러 처리, 개발자 비밀번호 확인
+import { timingSafeEqual } from 'node:crypto';
 // (api/ 아래 _로 시작하는 파일은 Vercel이 엔드포인트로 만들지 않는다)
 
 const ALLOWED_ORIGINS = (
@@ -6,6 +7,14 @@ const ALLOWED_ORIGINS = (
 )
   .split(',')
   .map((s) => s.trim());
+
+/** 개발자 모드 비밀번호(DEV_PASSWORD)가 맞는지 (없으면 503) */
+export function checkDevPassword(value) {
+  if (!process.env.DEV_PASSWORD) throw new HttpError(503, '개발자 모드가 설정되지 않았어요. (DEV_PASSWORD)');
+  const a = Buffer.from(String(value ?? ''));
+  const b = Buffer.from(process.env.DEV_PASSWORD);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new HttpError(401, '비밀번호가 맞지 않아요.');
+}
 
 export class HttpError extends Error {
   constructor(status, message) {

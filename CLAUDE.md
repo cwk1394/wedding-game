@@ -44,11 +44,11 @@ img/guests/<uuid>/       하객 스프라이트 (API가 커밋). front.png + 동
 api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion 작성)
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
-api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함
+api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함. NPC 추가용 npc-front|npc-idle|npc-walk (+desc, 투명 배경)
 api/map.js              Vercel 함수: POST {password, map: {floors, climbs, spawn, couple, npcs}} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
-prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용)
+prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용). npc-*.txt = 개발자 모드 NPC 추가용({{DESC}} = NPC 설명)
 ```
 
 ## 데이터 흐름 (읽기)
@@ -124,9 +124,15 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 캐릭터 끌기(추가/지우기 도구가 아닐 때): 캐릭터를 누르고 끌면 따라오고, 놓으면 그 x를 덮는 발판 중 발 아래(위로 30px 여유) 가장 가까운 발판에 선다(`floorForDrop`, 없으면 원래 자리). 끄는 동안 `character.held`(tick 멈춤, 카메라 고정).
   - 하객·NPC는 그 자리로 옮기기만 하고 저장 안 됨(`dropAt`). 조종 중이면 조종 그대로.
   - 신랑·신부는 자리가 `CONFIG.couple` `{groom:{floor,x}, bride:{floor,x}}`에 들어가 되돌리기·저장 대상(`couplePoint(id)`, 없거나 발판이 사라지면 무대 가운데 ±30, `mainStageName()`). 고정 N이면 무대 위에만 놓을 수 있고 무대 조각들 안에서만 돌아다님(사다리 안 탐), 고정 Y면 어느 발판이든 그 자리에 서 있음. 에쏘의 활동 범위(range)는 신랑·신부 사이 가운데 기준.
-- NPC 설정 창: 개발자 모드에서 NPC를 누르면 방명록 팝업 대신 설정 창(`UI.openNpcSettings` → `dev.openNpcSettings`). 한줄 멘트(15자)·소개 글(500자)·배치 방식을 바꾸면 `CONFIG.npcs[id]`(= `MAP_DATA.npcs`, js/npcs.js 값을 덮어씀)에 들어가 되돌리기·저장 대상.
+- NPC 설정 창: 개발자 모드에서 NPC를 누르면 방명록 팝업 대신 설정 창(`UI.openNpcSettings` → `dev.openNpcSettings`). 이름(15자)·디렉토리·한줄 멘트(15자)·소개 글(500자)·배치 방식을 바꾸면 `CONFIG.npcs[id]`(= `MAP_DATA.npcs`, js/npcs.js 값을 덮어씀)에 들어가 되돌리기·저장 대상.
   - 배치(`npcMode`/`npcHome`): 고정(`fixed`, 지금 선 자리 `{floor, x}` 저장 — 끌어서 옮기면 그 자리 저장, 발판이 지워지면 x를 덮는 발판으로 옮기고 없으면 기본으로) / 랜덤(`random`, 접속할 때마다 아무 발판) / 무대에서만(`stage`, 무대 발판 안에서만 — `canStandOn`) / 기본(mode 없음, npcs.js 처음 발판. 택시처럼 `npc.fixed`면 고정).
+  - 디렉토리(= NPC id) 바꾸기: `CONFIG.npcs[id].dir`로 들고 있다가 저장 때 `api/map.js`(`npcRenameFiles`)가 같은 커밋에서 `img/npc/<id>/` 파일을 `img/npc/<dir>/`로 옮기고(같은 blob), `js/npcs.js`·`scripts/gen-npc.mjs`의 `'id'` 문자열을 바꾸고, npcs 키도 바꿈. 저장 후 클라이언트도 새 id로 바꾸고 되돌리기 기록은 비움(`applyNpcRenames`). `origin.jpg`는 저장소에 없으니 로컬에서 직접 옮겨야 함.
   - NPC는 처음 자리가 랜덤일 때 사다리·로프와 겹치지 않는 x를 고름(`xClearOfClimbs`).
+- NPC 추가(툴바 "NPC 추가" → 같은 설정 창의 추가 모드): 사진(선택)·NPC 설명(무엇인지: 강아지, 택시, 탁자 위 앨범 …)·움직임(걸어다님/가만히)·키 → "캐릭터 생성"이 `POST /api/character {type:'npc-front', image?, desc}`(사진 없으면 `npc-front-noref.txt`) → 걸어다니면 정면을 기준으로 `npc-idle`·`npc-walk`를 동시에. 이름·디렉토리(= id, 영문 소문자·숫자·-) 넣고 "추가"하면 화면 가운데에 바로 등장(가만히 = 고정, 화면 가운데 발판).
+  - 설정은 `CONFIG.npcs[id] = {name, …, def: {desc, height, motions}}`(되돌리기 가능, 되돌리면 맵에서도 사라짐 `syncNpcs`), 이미지는 `dev.pendingNpcImages`(스냅샷 제외). 저장 때 가로 768px webp로 줄여(`shrinkWebp`) `npcImages`로 보내면 API가 `img/npc/<id>/{front,idle,walk}.webp`로 커밋(이미 있는 폴더면 거부). 저장 전엔 디렉토리 이름 변경 불가.
+  - 캐릭터 생성(`npc-*` 타입)은 개발자 비밀번호 필요(`checkDevPassword`, 저장과 같은 sessionStorage 비밀번호 — `devPassword()`).
+  - 삭제(설정 창 "NPC 삭제", 되돌리기 가능): 추가 NPC는 `CONFIG.npcs`에서 빼고 저장 때 `npcDeletes`로 보내 API가 `img/npc/<id>/`를 지움. js/npcs.js의 기본 NPC는 코드라 `{deleted: true}`로 숨기기만(이미지 남음, 다시 보이려면 map-data에서 그 항목을 지움). 맵은 `syncNpcs`가 CONFIG.npcs에 맞춰 지우고 되살림.
+  - 불러올 때 `js/npcs.js` 끝에서 `def`가 있는 항목을 `customNpc()`로 NPCS에 붙임. 추가 NPC는 npcs.js·gen-npc.mjs에 없으므로 디렉토리 변경 때 폴더만 옮김.
 - 조종: 상단 툴바 조종 도구는 없음 → 캐릭터 팝업의 "조종하기"로(▼ 표시, 조종 중엔 툴바 안내가 조작법으로 바뀜). 개발자 모드에선 신랑·신부 팝업에도 조종하기가 있음 — `CoupleCharacter`는 `GuestCharacter`를 상속(통통 튀기 모션). 평소엔 고정이면 제자리, 아니면 무대 위에서만 AI로 돌아다니고, 조종을 놓거나 지도를 편집하면 제자리(`couplePoint`)로 복귀. 신랑·신부의 jump/ladder/rope/prone 이미지는 `?dev`일 때만 불러옴. AI가 사다리/점프 중이던 하객은 그 자리에서 이어서 조종 → 직접 조종, 카메라가 따라감. "조종 끝내기"를 누르거나 지도를 편집하면 놓아줌(AI로 복귀).
   - ↓(잡을 사다리/로프 없을 때) = 엎드리기(↓ 떼거나 ←→면 일어섬), 엎드려서 Space = 지금 발판을 통과해 아래 발판으로 떨어짐(아래 발판이 있을 때만). 엎드리기 이미지가 없으면 점프 첫 프레임으로 대신.
   - PC: ←→ 걷기, ↑↓ 사다리/로프(아래 끝 발판에서 ↑, 위 끝 발판에서 ↓), Space 점프. 모바일: 왼쪽 아래 스틱 + 오른쪽 아래 점프 버튼.

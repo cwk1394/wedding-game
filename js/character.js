@@ -852,26 +852,30 @@ class CoupleCharacter extends GuestCharacter {
 /** js/npcs.js 설정 → 캐릭터 info */
 function npcInfo(npc) {
   const dir = `img/npc/${npc.id}`;
+  const url = (m) => npc.images?.[m] ?? `${dir}/${m}.webp`; // 막 추가해서 아직 저장 안 한 NPC는 data URL
   const info = {
     id: `npc-${npc.id}`,
-    name: npc.name,
     npc: true,
     ...npcTexts(npc),
-    spriteUrl: `${dir}/front.webp`,
-    walkUrl: npc.motions.includes('walk') ? `${dir}/walk.webp` : null,
+    spriteUrl: url('front'),
+    walkUrl: npc.motions.includes('walk') ? url('walk') : null,
     extraMotions: npc.motions.filter((m) => m !== 'walk'),
     height: npc.height,
     motionFrames: npc.motionFrames,
     motionHeight: npc.motionHeight,
   };
-  for (const m of info.extraMotions) info[`${m}Url`] = `${dir}/${m}.webp`;
+  for (const m of info.extraMotions) info[`${m}Url`] = url(m);
   return info;
 }
 
-/** NPC 한줄 멘트·소개 글: 개발자 모드 설정(CONFIG.npcs)이 있으면 그것, 없으면 js/npcs.js */
+/** NPC 이름·한줄 멘트·소개 글: 개발자 모드 설정(CONFIG.npcs)이 있으면 그것, 없으면 js/npcs.js */
 function npcTexts(npc) {
   const s = CONFIG.npcs[npc.id] ?? {};
-  return { shortMsg: s.shortMsg ?? npc.popup?.shortMsg ?? '', longMsg: s.longMsg ?? npc.popup?.longMsg ?? '' };
+  return {
+    name: s.name || npc.name,
+    shortMsg: s.shortMsg ?? npc.popup?.shortMsg ?? '',
+    longMsg: s.longMsg ?? npc.popup?.longMsg ?? '',
+  };
 }
 
 /**
@@ -1015,7 +1019,7 @@ class NpcCharacter extends GuestCharacter {
   }
 
   onMapChanged() {
-    Object.assign(this.info, npcTexts(this.npc)); // 되돌리기로 멘트가 바뀌었을 수 있음
+    this.updateInfo(npcTexts(this.npc)); // 되돌리기로 이름·멘트가 바뀌었을 수 있음
     // 배치 방식이 바뀌었거나, 고정인데 자리가 바뀌었거나, 서 있던 발판에 설 수 없으면 새 자리로
     const home = npcHome(this.npc);
     const moved = this.mode === 'fixed' && (home.floor !== this.floorName || home.x !== this.x);

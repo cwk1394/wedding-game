@@ -80,18 +80,143 @@ const UI = (() => {
   const npcModal = setupModal(document.getElementById('npc-modal'));
   const npcForm = document.getElementById('npc-form');
   let npcApply = null;
-  npcForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const f = npcForm.elements;
+  const npcError = npcForm.querySelector('.form-error');
+  const setNpcError = (msg) => {
+    npcError.textContent = msg || '';
+    npcError.hidden = !msg;
+  };
+  const npcCreate = npcForm.querySelector('.npc-create');
+  const npcGenerate = npcForm.querySelector('.npc-generate');
+  const npcSubmit = npcForm.querySelector('.npc-submit');
+  const npcStatus = npcCreate.querySelector('.gen-status');
+  const npcPhoto = npcCreate.querySelector('.photo-preview');
+  const npcPreview = npcCreate.querySelector('.preview-front');
+  let npcImages = null; // NPC 추가: 생성한 이미지 { front, idle?, walk? } (webp data URL)
+  let npcPhotoUrl = null;
+  let npcDelete = null; // 설정 창의 삭제 콜백
+  const npcDeleteBtn = npcForm.querySelector('.npc-delete');
+  npcDeleteBtn.addEventListener('click', () => {
+    if (!confirm(`"${npcForm.elements.name.value || 'NPC'}"를 삭제할까요? (저장 전엔 되돌리기로 살릴 수 있어요)`)) return;
     npcModal.close();
-    npcApply?.({ shortMsg: f.shortMsg.value.trim(), longMsg: f.longMsg.value.trim(), mode: f.mode.value });
+    npcDelete?.();
   });
 
-  /** NPC 설정 창. onApply({ shortMsg, longMsg, mode }) */
-  function openNpcSettings({ name, shortMsg, longMsg, mode, avatarUrl }, onApply) {
+  npcForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (npcGenerate.disabled) return; // 생성 중
     const f = npcForm.elements;
+    const error = npcApply?.({
+      name: f.name.value.trim(),
+      dir: f.dir.value.trim(),
+      shortMsg: f.shortMsg.value.trim(),
+      longMsg: f.longMsg.value.trim(),
+      mode: f.mode.value,
+      // NPC 추가일 때만
+      desc: f.desc.value.trim(),
+      height: Number(f.height.value),
+      images: npcImages,
+    });
+    if (error) return setNpcError(error);
+    npcModal.close();
+  });
+
+  const setImgSrc = (img, src) => {
+    img.hidden = !src;
+    if (src) img.src = src;
+    else img.removeAttribute('src');
+  };
+
+  npcForm.elements.photo.addEventListener('change', () => {
+    if (npcPhotoUrl) URL.revokeObjectURL(npcPhotoUrl);
+    const file = npcForm.elements.photo.files[0];
+    npcPhotoUrl = file ? URL.createObjectURL(file) : null;
+    setImgSrc(npcPhoto, npcPhotoUrl);
+    npcCreate.querySelector('.photo-empty').hidden = Boolean(file);
+  });
+  // 사물은 보통 가만히 서 있으니 배치도 고정으로
+  npcForm.elements.moving.addEventListener('change', (e) => {
+    npcForm.elements.mode.value = e.target.value === 'static' ? 'fixed' : 'random';
+  });
+
+  // 캐릭터 생성: (사진) + 설명 → 정면, 걸어다니면 정면을 기준으로 제자리(idle)·걷기(walk)를 동시에
+  npcGenerate.addEventListener('click', async () => {
+    const f = npcForm.elements;
+    const desc = f.desc.value.trim();
+    if (!desc) return setNpcError('NPC 설명(무엇인지)을 입력해 주세요.');
+    const password = devPassword(); // NPC 캐릭터 생성은 개발자 비밀번호 필요 (dev.js)
+    if (!password) return setNpcError('개발자 비밀번호를 입력해야 캐릭터를 만들 수 있어요.');
+    setNpcError('');
+    const started = Date.now();
+    let text = '';
+    const render = () => (npcStatus.querySelector('.gen-text').textContent = `${text} ${Math.floor((Date.now() - started) / 1000)}초`);
+    const timer = setInterval(render, 1000);
+    const step = (t) => {
+      text = t;
+      render();
+    };
+    npcGenerate.disabled = npcSubmit.disabled = true;
+    npcStatus.hidden = false;
+    try {
+      const photo = f.photo.files[0];
+      step('NPC 도트 찍는 중... (1/2)');
+      const front = await generateCharacter('npc-front', photo ? await resizePhoto(photo) : null, { desc, password });
+      rememberDevPassword(password);
+      npcImages = { front };
+      setImgSrc(npcPreview, front);
+      npcCreate.querySelector('.preview-empty').hidden = true;
+      if (f.moving.value === 'walk') {
+        step('움직임 만드는 중... (2/2)');
+        const failed = [];
+        await Promise.all(
+          ['idle', 'walk'].map((m) =>
+            generateCharacter(`npc-${m}`, front, { desc, password })
+              .then((img) => (npcImages[m] = img))
+              .catch(() => failed.push(m === 'idle' ? '제자리' : '걷기'))
+          )
+        );
+        if (failed.length) setNpcError(`${failed.join('·')} 움직임은 만들지 못했어요. 그대로 추가하거나 다시 생성해 주세요.`);
+      }
+      npcGenerate.textContent = '다시 만들기';
+    } catch (err) {
+      rememberDevPassword(password, err);
+      setNpcError(err.message);
+    } finally {
+      clearInterval(timer);
+      npcStatus.hidden = true;
+      npcGenerate.disabled = npcSubmit.disabled = false;
+    }
+  });
+
+  /**
+   * NPC 설정 창. onApply({ name, dir, shortMsg, longMsg, mode, (추가일 때) desc, height, images }) → 오류 문구를 돌려주면 창을 닫지 않고 보여줌
+   * opts.create = NPC 추가 (사진·설명·캐릭터 생성 칸), opts.dirLocked = 디렉토리 칸 잠금 (아직 저장 안 한 추가 NPC)
+   * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼
+   */
+  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null } = {}) {
+    npcDelete = onDelete;
+    npcDeleteBtn.hidden = !onDelete;
+    const f = npcForm.elements;
+    setNpcError('');
+    document.getElementById('npc-title').textContent = create ? 'NPC 추가' : 'NPC 설정';
+    npcForm.querySelector('.npc-profile').hidden = create;
+    npcCreate.hidden = !create;
+    npcSubmit.textContent = create ? '추가' : '적용';
+    f.dir.disabled = dirLocked;
+    if (create) {
+      npcImages = null;
+      f.photo.value = '';
+      f.photo.dispatchEvent(new Event('change'));
+      f.desc.value = '';
+      f.moving.value = 'walk';
+      f.height.value = 40;
+      setImgSrc(npcPreview, null);
+      npcCreate.querySelector('.preview-empty').hidden = false;
+      npcGenerate.textContent = '캐릭터 생성';
+    }
     document.getElementById('npc-name').textContent = name;
-    document.getElementById('npc-avatar').src = avatarUrl;
+    f.name.value = name;
+    f.dir.value = dir;
+    if (avatarUrl) document.getElementById('npc-avatar').src = avatarUrl;
     f.shortMsg.value = shortMsg ?? '';
     f.longMsg.value = longMsg ?? '';
     f.mode.value = mode;

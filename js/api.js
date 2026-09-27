@@ -67,9 +67,12 @@ async function postJson(path, body) {
   return data;
 }
 
-/** AI 캐릭터 생성. type: 'front'(사진 → 정면) | 'walk'(정면 → 걷기 4프레임). 결과는 data URL. */
-async function generateCharacter(type, image) {
-  const { image: result } = await postJson('/api/character', { type, image });
+/**
+ * AI 캐릭터 생성. type: 'front'(사진 → 정면) | 'walk'(정면 → 걷기 4프레임) … | 'npc-front' | 'npc-idle' | 'npc-walk'.
+ * extra: NPC는 { desc } (무엇인지). 결과는 data URL.
+ */
+async function generateCharacter(type, image, extra = {}) {
+  const { image: result } = await postJson('/api/character', { type, image, ...extra });
   return result;
 }
 

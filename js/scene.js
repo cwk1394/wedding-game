@@ -66,7 +66,8 @@ class MapScene extends Phaser.Scene {
     guests.forEach((info) => this.addGuest(info));
 
     // NPC (js/npcs.js): 토끼 푸딩, 얼룩말, 고양이 4마리, 강아지 에쏘, 택시
-    this.npcs = NPCS.map((npc) => new NpcCharacter(this, npc, { onSelect: this.onSelect }));
+    // 개발자 모드에서 삭제한 기본 NPC(CONFIG.npcs[id].deleted)는 빼고
+    this.npcs = NPCS.filter((npc) => !CONFIG.npcs[npc.id]?.deleted).map((npc) => new NpcCharacter(this, npc, { onSelect: this.onSelect }));
 
     // 처음 스폰한 캐릭터들의 이미지가 모두 적용되면 로딩 화면을 걷는다
     const initial = [...this.couple, ...this.guests, ...this.npcs];

@@ -1,0 +1,22 @@
+Using the NPC from the reference image, create a 4-frame horizontal sprite sheet animation.
+NPC description (what it is): {{DESC}}
+Keep the exact same design, colors, proportions and pixel-art style as the reference.
+
+[DIRECTION — ALWAYS LEFT]
+The NPC faces LEFT (left-facing side / three-quarter view) in every frame.
+
+[ACTION]
+Idle loop in place (NOT moving sideways): a small natural looping motion that fits what it is — an animal breathes, blinks, looks around, wags its tail; an object or vehicle gently bobs or sparkles a little.
+
+[FRAME SPACING / SAFE MARGIN] (VERY IMPORTANT — the game slices frames automatically)
+- Exactly 4 frames in ONE horizontal row, 4 equal-width cells, identical scale in every frame.
+- One NPC centered in each cell, all at the same baseline (feet/bottom on the same line).
+- Keep a clear EMPTY gap between neighboring frames of at least 15% of a cell width,
+  and at least 10% margin on the left and right of the NPC inside its own cell.
+- No part of the NPC (ears, tail, wheels, effects) may touch or cross into a neighboring cell.
+- Do not draw borders, separators, or grid lines.
+
+[STYLE]
+Authentic classic MapleStory-style 2D pixel art sprite: chibi proportions, chunky visible pixels, clean 1px dark outline,
+flat color shading, limited palette, no anti-aliasing, no smooth gradients, no painterly rendering.
+Transparent background (no background at all). No text, no logo, no watermark, no UI, no ground, no shadow, no environment.

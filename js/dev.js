@@ -5,7 +5,9 @@
 // - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
 // - 신랑신부 도구: 누른 곳 발판 위에 신랑·신부를 나란히 (CONFIG.couple)
 // - 캐릭터 끌기(편집 도구가 아닐 때): 누르고 끌면 놓은 곳의 발판으로 옮김. 신랑·신부·고정 NPC는 그 자리가 저장됨
-// - NPC를 누르면 NPC 설정 창: 한줄 멘트·소개 글, 배치 방식(고정/랜덤/무대/기본) → CONFIG.npcs (저장·되돌리기 대상)
+// - NPC를 누르면 NPC 설정 창: 이름·디렉토리·한줄 멘트·소개 글, 배치 방식(고정/랜덤/무대/기본) → CONFIG.npcs (저장·되돌리기 대상)
+//   디렉토리 이름을 바꾸면 저장할 때 API가 img/npc/<id>/ 폴더와 js/npcs.js의 id를 같이 바꾼다
+// - NPC 추가(툴바): 사진·설명으로 AI 캐릭터 생성 → 화면 가운데 발판에 바로 등장. 저장하면 이미지가 img/npc/<id>/에 커밋되고 설정은 map-data npcs[id].def
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
@@ -20,6 +22,8 @@ class DevMode {
     this.savedSnap = this.snapshot(); // 마지막으로 저장된(또는 처음) 상태 → 이것과 다르면 저장 안 된 변경
     this.dirty = false;
     this.stroke = null; // 드래그 중인 점들 (월드 좌표)
+    this.deletedNpcDirs = new Set(); // 저장된 추가 NPC 중 삭제한 것 → 저장 때 img/npc/<id>/ 폴더도 지움
+    this.pendingNpcImages = {}; // 추가했지만 아직 저장 안 한 NPC 이미지 { <id>: { front, idle?, walk? } } (스냅샷엔 안 넣음 — 너무 큼)
 
     this.gfx = scene.add.graphics().setDepth(20000);
     this.preview = scene.add.graphics().setDepth(20001);
@@ -80,6 +84,7 @@ class DevMode {
         <button type="button" class="dev-btn dev-save" data-act="save">저장</button>
         <label class="dev-check"><input type="checkbox" data-act="hide" /> 하객 숨기기</label>
         <label class="dev-check" title="켜면 신랑·신부가 자리에 서 있고, 끄면 무대 안에서만 돌아다녀요"><input type="checkbox" data-act="fixed" /> 신랑신부 고정</label>
+        <button type="button" class="dev-btn" data-act="npc-add">NPC 추가</button>
       </div>
       <div class="dev-hint"></div>`;
     document.body.append(bar);
@@ -98,6 +103,7 @@ class DevMode {
     bar.querySelector('[data-act="hide"]').addEventListener('change', (e) => {
       for (const g of this.scene.guests) g.setVisible(!e.target.checked);
     });
+    bar.querySelector('[data-act="npc-add"]').addEventListener('click', () => this.openNpcCreator());
     bar.querySelector('[data-act="fixed"]').addEventListener('change', (e) => {
       this.checkpoint();
       CONFIG.couple = { ...coupleData(), fixed: e.target.checked };
@@ -354,6 +360,7 @@ class DevMode {
 
   changed() {
     this.releaseGuest();
+    this.syncNpcs();
     // 시작점·신랑신부 자리의 발판이 지워졌거나 잘렸으면 그 x를 덮는 발판으로 옮기고, 없으면 해제
     CONFIG.spawn = relocatePoint(CONFIG.spawn);
     if (CONFIG.couple) {
@@ -392,21 +399,115 @@ class DevMode {
     this.changed();
   }
 
+  /** 저장 후: 디렉토리 이름을 바꾼 NPC는 새 id로 (서버가 폴더·npcs.js를 바꿨으므로. 이미지는 이미 불러와 있어 다시 안 불러옴). 바꾼 게 있으면 true */
+  applyNpcRenames() {
+    let renamed = false;
+    for (const c of this.scene.npcs) {
+      const { dir, ...rest } = CONFIG.npcs[c.npc.id] ?? {};
+      if (!dir) continue;
+      delete CONFIG.npcs[c.npc.id];
+      if (Object.keys(rest).length) CONFIG.npcs[dir] = rest;
+      c.npc.id = dir;
+      c.info.id = `npc-${dir}`;
+      renamed = true;
+    }
+    return renamed;
+  }
+
   /** NPC 설정 창: 한줄 멘트·소개 글·배치 방식을 바꾸면 CONFIG.npcs에 넣는다 (저장 버튼으로 사이트에 반영) */
   openNpcSettings(c) {
     const { id } = c.npc;
-    UI.openNpcSettings({ ...c.info, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ shortMsg, longMsg, mode }) => {
-      const next = { shortMsg, longMsg };
+    const cur = CONFIG.npcs[id] ?? {};
+    const pending = Boolean(this.pendingNpcImages[id]);
+    UI.openNpcSettings({ ...c.info, dir: cur.dir ?? id, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ name, dir, shortMsg, longMsg, mode }) => {
+      if (pending) dir = id; // 아직 저장 안 한 추가 NPC는 폴더가 없어서 이름을 못 바꿈
+      if (!name) return '이름을 입력해 주세요.';
+      if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(dir)) return '디렉토리 이름은 영문 소문자·숫자·-만 쓸 수 있어요.';
+      const taken = this.scene.npcs.some((o) => o !== c && (o.npc.id === dir || CONFIG.npcs[o.npc.id]?.dir === dir));
+      if (taken) return `"${dir}"는 다른 NPC가 쓰고 있어요.`;
+      const next = { name: name === c.npc.name && !cur.def ? undefined : name, dir: dir === id ? undefined : dir, shortMsg, longMsg, def: cur.def };
       if (mode === 'fixed') Object.assign(next, { mode, floor: c.floorName, x: Math.round(c.x) }); // 지금 서 있는 자리에 고정
       else if (mode !== 'default') next.mode = mode;
       const texts = npcTexts(c.npc);
-      if (shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode) return; // 바뀐 것 없음
+      if (name === texts.name && dir === (cur.dir ?? id) && shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode) return; // 바뀐 것 없음
       this.checkpoint();
       CONFIG.npcs = { ...CONFIG.npcs, [id]: next };
       c.updateInfo(npcTexts(c.npc));
       this.changed();
       UI.showToast('저장 버튼을 누르면 사이트에 반영돼요');
+    }, { dirLocked: pending, onDelete: () => this.deleteNpc(c) });
+  }
+
+  /**
+   * NPC 삭제 (되돌리기 가능). 추가한 NPC는 설정을 지우고 저장 때 이미지 폴더도 지운다.
+   * js/npcs.js의 기본 NPC는 코드에 있어서 deleted 표시로 숨기기만 (이미지는 남김)
+   */
+  deleteNpc(c) {
+    const { id } = c.npc;
+    this.checkpoint();
+    const npcs = { ...CONFIG.npcs };
+    if (c.npc.custom) {
+      delete npcs[id];
+      this.deletedNpcDirs.add(id);
+    } else npcs[id] = { deleted: true };
+    CONFIG.npcs = npcs;
+    this.changed();
+    UI.showToast(`${c.info.name}을(를) 삭제했어요. 저장 버튼을 누르면 사이트에 반영돼요`, 3000);
+  }
+
+  /** NPC 추가 창: 사진·설명으로 캐릭터를 만들어 추가 (화면 가운데 발판) */
+  openNpcCreator() {
+    UI.openNpcSettings({ name: '', dir: '', shortMsg: '', longMsg: '', mode: 'random' }, (v) => this.addNpc(v), { create: true });
+  }
+
+  /** NPC 추가 창에서 "추가": 검사 후 CONFIG.npcs에 넣고 맵에 바로 만든다. 오류 문구를 돌려주면 창이 그대로 */
+  addNpc({ name, dir, shortMsg, longMsg, mode, desc, height, images }) {
+    if (!images?.front) return '캐릭터를 먼저 생성해 주세요.';
+    if (!desc) return 'NPC 설명(무엇인지)을 입력해 주세요.';
+    if (!name) return '이름을 입력해 주세요.';
+    if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(dir)) return '디렉토리 이름(영문 소문자·숫자·-)을 입력해 주세요.';
+    const taken = CONFIG.npcs[dir] || this.scene.npcs.some((o) => o.npc.id === dir || CONFIG.npcs[o.npc.id]?.dir === dir);
+    if (taken || this.deletedNpcDirs.has(dir) || ['groom', 'bride'].includes(dir)) return `"${dir}"는 이미 있는 이름이에요.`;
+
+    const motions = ['idle', 'walk'].filter((m) => images[m]);
+    const entry = { name, shortMsg, longMsg, def: { desc, height: Phaser.Math.Clamp(Math.round(height) || 40, 10, 200), motions } };
+    if (mode === 'fixed') {
+      // 화면 가운데에서 가장 가까운 발판 위 (없으면 무대 가운데)
+      const cam = this.scene.cameras.main;
+      const p = cam.getWorldPoint(cam.width / 2, cam.height / 2);
+      const floor = floorForDrop(p.x, p.y) ?? mainStageName();
+      const { x1, x2 } = floorSpan(CONFIG.floors[floor]);
+      Object.assign(entry, { mode, floor, x: Math.round(Phaser.Math.Clamp(p.x, x1, x2)) });
+    } else if (mode !== 'default') entry.mode = mode;
+
+    this.checkpoint();
+    CONFIG.npcs = { ...CONFIG.npcs, [dir]: entry };
+    this.pendingNpcImages[dir] = images;
+    const npc = { ...customNpc(dir, entry), images };
+    this.scene.npcs.push(new NpcCharacter(this.scene, npc, { onSelect: this.scene.onSelect }));
+    this.changed();
+    UI.showToast('NPC를 추가했어요. 저장 버튼을 누르면 사이트에 반영돼요', 3000);
+  }
+
+  /** 맵 위 NPC를 CONFIG.npcs에 맞춘다: 삭제됐거나 되돌리기로 빠진 NPC는 지우고, 되돌리기로 살아난 NPC는 다시 만든다 */
+  syncNpcs() {
+    const gone = (npc) => (npc.custom ? !CONFIG.npcs[npc.id]?.def : CONFIG.npcs[npc.id]?.deleted);
+    this.scene.npcs = this.scene.npcs.filter((c) => {
+      if (!gone(c.npc)) return true;
+      c.destroy();
+      return false;
     });
+    const shown = new Set(this.scene.npcs.map((c) => c.npc.id));
+    const all = [
+      ...NPCS.filter((npc) => !npc.custom),
+      ...Object.entries(CONFIG.npcs)
+        .filter(([, s]) => s.def)
+        .map(([id, s]) => ({ ...customNpc(id, s), images: this.pendingNpcImages[id] })),
+    ];
+    for (const npc of all) {
+      if (shown.has(npc.id) || gone(npc)) continue;
+      this.scene.npcs.push(new NpcCharacter(this.scene, npc, { onSelect: this.scene.onSelect }));
+    }
   }
 
   /** 누른 점과 뗀 점을 직선으로 잇는 발판 (계단처럼 기울어져도 됨) */
@@ -499,30 +600,33 @@ class DevMode {
   // ---------- 저장 ----------
 
   async save() {
-    let password = null;
-    try {
-      password = sessionStorage.getItem('devPassword');
-    } catch {}
-    if (!password) password = prompt('개발자 모드 저장 비밀번호');
+    const password = devPassword();
     if (!password) return;
 
     const btn = this.bar.querySelector('.dev-save');
     btn.disabled = true;
     btn.textContent = '저장 중...';
     try {
-      await postJson('/api/map', { password, map: mapData() });
-      try {
-        sessionStorage.setItem('devPassword', password);
-      } catch {}
+      // 추가한 NPC 이미지 (아직 저장 안 했고, 되돌리기로 빠지지 않은 것만)
+      const npcImages = {};
+      for (const [id, imgs] of Object.entries(this.pendingNpcImages)) {
+        if (!CONFIG.npcs[id]?.def) continue;
+        npcImages[id] = {};
+        for (const [m, src] of Object.entries(imgs)) npcImages[id][m] = await shrinkWebp(src);
+      }
+      // 삭제한 추가 NPC 폴더 (되돌리기로 살아난 것·저장 전 추가였던 것은 빼고)
+      const npcDeletes = [...this.deletedNpcDirs].filter((id) => !CONFIG.npcs[id] && !this.pendingNpcImages[id]);
+      await postJson('/api/map', { password, map: mapData(), npcImages, npcDeletes });
+      rememberDevPassword(password);
+      this.deletedNpcDirs.clear();
+      this.pendingNpcImages = Object.fromEntries(Object.entries(this.pendingNpcImages).filter(([id]) => !CONFIG.npcs[id]?.def)); // 올린 것만 비움
+      // NPC 폴더를 만들었거나·지웠거나·이름을 바꿨으면 되돌리기 기록을 비운다 (저장소 폴더와 안 맞는 스냅샷으로 되돌리면 꼬임)
+      if (this.applyNpcRenames() || npcDeletes.length || Object.keys(npcImages).length) this.history = [];
       this.savedSnap = this.snapshot();
       this.dirty = false;
       UI.showToast('저장했어요! 1~2분 뒤 사이트에 반영돼요', 3000);
     } catch (err) {
-      if (/비밀번호/.test(err.message)) {
-        try {
-          sessionStorage.removeItem('devPassword');
-        } catch {}
-      }
+      rememberDevPassword(password, err);
       UI.showToast(err.message, 3500);
     } finally {
       btn.disabled = false;
@@ -533,6 +637,37 @@ class DevMode {
 }
 
 // ---------- 편집용 도우미 ----------
+
+/** 개발자 비밀번호: 처음 한 번 묻고 탭을 닫을 때까지 기억 (저장·NPC 캐릭터 생성). 취소하면 null */
+function devPassword() {
+  let password = null;
+  try {
+    password = sessionStorage.getItem('devPassword');
+  } catch {}
+  return password || prompt('개발자 모드 비밀번호') || null;
+}
+
+/** 서버 응답에 따라 비밀번호 기억: 맞으면 저장, 틀렸다는 오류면 지움 */
+function rememberDevPassword(password, err) {
+  try {
+    if (!err) sessionStorage.setItem('devPassword', password);
+    else if (/비밀번호/.test(err.message)) sessionStorage.removeItem('devPassword');
+  } catch {}
+}
+
+/** 이미지 data URL을 가로 maxWidth 이하 webp로 줄인다 (NPC 이미지 커밋 용량 절약, gen-npc와 같은 768px). webp로 못 만드는 브라우저면 그대로 */
+async function shrinkWebp(src, maxWidth = 768) {
+  const img = await loadImage(src);
+  if (img.naturalWidth <= maxWidth) return src;
+  const canvas = document.createElement('canvas');
+  canvas.width = maxWidth;
+  canvas.height = Math.round((img.naturalHeight * maxWidth) / img.naturalWidth);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const out = canvas.toDataURL('image/webp', 0.9);
+  return out.startsWith('data:image/webp') ? out : src;
+}
 
 /** 저장·되돌리기 대상인 지도 데이터 전체 (js/map-data.js 내용) */
 function mapData() {

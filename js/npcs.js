@@ -77,3 +77,11 @@ const NPCS = [
     popup: { shortMsg: '빵빵~ 타세요!', longMsg: NPC_POPUP_TBD },
   },
 ];
+
+// 개발자 모드(?dev)에서 추가한 NPC: js/map-data.js npcs[id].def = { desc, height, motions } (이미지는 img/npc/<id>/)
+NPCS.push(...Object.entries(CONFIG.npcs).filter(([, s]) => s.def).map(([id, s]) => customNpc(id, s)));
+
+/** 추가한 NPC 설정 → NPCS 항목 (처음 발판 없음 → 배치 방식대로, 기본이면 랜덤) */
+function customNpc(id, s) {
+  return { id, name: s.name, custom: true, height: s.def.height, speed: [18, 32], motions: s.def.motions, popup: {} };
+}
