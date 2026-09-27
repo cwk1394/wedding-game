@@ -80,7 +80,7 @@ const MAP_DATA = {
     {"type":"rope","x":870,"floors":["heartBridge"],"end":1200},
     {"type":"rope","x":266,"floors":["f23","f2"]},
   ],
-  spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
+  spawn: {"floor":"f2","x":281}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
   couple: {"groom":{"floor":"stage1","x":727},"bride":{"floor":"stage1","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
   // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x, y } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김
   npcs: {
