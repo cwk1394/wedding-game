@@ -717,3 +717,46 @@ html, body {
   width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 9px 12px;
   border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 16px;
 }
+
+/* 처음 접속: 캐릭터 생성·선택을 맵을 가리는 전체 화면으로 (PC는 가운데 세로 한 줄) */
+.modal.fullscreen, .modal.select-screen {
+  padding: 0;
+  background: radial-gradient(circle at 50% 40%, #fff, #ffe6df 75%);
+}
+.modal.fullscreen .modal-card, .modal.select-screen .modal-card {
+  width: min(520px, 100%);
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border-width: 0 1px;
+  box-shadow: 0 0 40px rgba(120, 45, 35, .12);
+}
+.modal.fullscreen .modal-body, .modal.select-screen .modal-body { flex: 1; }
+
+/* 캐릭터 선택 화면: 카드 격자 (메이플 캐릭터 선택창 느낌) */
+.modal.select-screen .modal-card { width: min(720px, 100%); }
+.char-grid { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.char-card {
+  position: relative; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 14px 8px 10px; border: 2px solid var(--line); border-radius: 16px;
+  background: linear-gradient(180deg, #fff, var(--soft)); color: var(--ink);
+  font: inherit; text-align: center; cursor: pointer;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.char-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(216, 88, 74, .15); }
+.char-card.selected { border-color: var(--coral-deep); box-shadow: 0 0 0 3px rgba(255, 143, 126, .35), 0 6px 16px rgba(216, 88, 74, .2); }
+.char-card-mine {
+  margin: -6px 0 2px; padding: 1px 8px; border-radius: 999px;
+  background: var(--coral); color: #fff; font-size: 10.5px; font-weight: bold;
+}
+.char-card .char-card-title { margin: 0 0 2px; font-size: 11px; padding: 0 7px; }
+.char-card-title[hidden] { display: none; }
+.char-card-avatar {
+  width: 72px; height: 72px; object-fit: contain; image-rendering: pixelated;
+  border-radius: 50%; background: radial-gradient(circle at 50% 40%, #fff, #ffe0d8); border: 1px solid var(--line);
+}
+.char-card-name { font-size: 15px; margin-top: 2px; }
+.char-card-meta { font-size: 11.5px; color: var(--ink-soft); }
+.char-card-meta:empty { display: none; }
+.char-card-stats { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: pre; }

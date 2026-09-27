@@ -26,11 +26,13 @@ const UI = (() => {
     const setOpen = (open) => {
       el.hidden = !open;
       if (open) openedAt = Date.now();
+      else el.classList.remove('fullscreen'); // 전체 화면(처음 접속)은 한 번만
       notifyModalChange();
     };
     // 모바일에서 캐릭터 터치 직후 따라오는 click 이벤트가 배경에 맞아 바로 닫히는 것 방지
     el.addEventListener('click', (e) => {
       if (Date.now() - openedAt < 400) return;
+      if (e.target === el && el.matches('.fullscreen, .select-screen')) return; // 전체 화면은 배경을 눌러도 안 닫힘
       if (e.target === el || e.target.closest('[data-close]')) setOpen(false);
     });
     closers.set(el, () => setOpen(false));
@@ -363,7 +365,8 @@ const UI = (() => {
   });
 
   // ---------- 방명록 작성 (1단계: 방명록 → 2단계: 캐릭터) ----------
-  const writeModal = setupModal(document.getElementById('write-modal'));
+  const writeEl = document.getElementById('write-modal');
+  const writeModal = setupModal(writeEl);
   const form = document.getElementById('write-form');
   const fields = form.elements;
   const errorBox = form.querySelector('.form-error');
@@ -443,7 +446,7 @@ const UI = (() => {
   nextBtn.addEventListener('click', goNext);
   form.querySelector('.have-char-btn').addEventListener('click', () => {
     writeModal.close();
-    openList(true);
+    openSelect();
   });
   prevBtn.addEventListener('click', () => showStep(1));
 
@@ -622,9 +625,8 @@ const UI = (() => {
   const listEl = document.querySelector('#list-modal .guest-list');
 
   const listSearch = document.querySelector('#list-modal .list-search');
-  let listPick = false; // true = "내 캐릭터 선택" (누르면 그 캐릭터로 시작), false = 방명록 보기
 
-  /** 이 기기에서 만들거나 고른 내 캐릭터 id (다음 접속 때 선택 목록 맨 위에) */
+  /** 이 기기에서 만들거나 고른 내 캐릭터 id (다음 접속 때 캐릭터 선택 화면 맨 위에) */
   const myGuest = {
     get: () => {
       try {
@@ -640,25 +642,18 @@ const UI = (() => {
     },
   };
 
-  /**
-   * UI.getGuests()가 돌려주는 맵 위 하객 [{ info, avatarUrl() }]로 목록을 그린다 (최신순, 이름 검색).
-   * pick이면 "내 캐릭터 선택": 내 캐릭터를 맨 위에, 누르면 UI.onGuestPicked(info)
-   */
-  function openList(pick = false) {
-    listPick = pick;
+  /** UI.getGuests()가 돌려주는 맵 위 하객 [{ info, avatarUrl() }]로 목록을 그린다 (최신순, 이름 검색) */
+  function openList() {
     listSearch.value = '';
     renderList();
     listModal.open();
   }
 
   function renderList() {
-    const mine = listPick ? myGuest.get() : null;
-    const all = (UI.getGuests?.() ?? []).slice().sort((a, b) =>
-      (b.info.id === mine) - (a.info.id === mine) || String(b.info.createdAt ?? '9').localeCompare(String(a.info.createdAt ?? '9'))
-    );
+    const all = sortedGuests();
     const query = listSearch.value.trim();
     const guests = query ? all.filter((g) => g.info.name.includes(query)) : all;
-    document.getElementById('list-title').textContent = listPick ? '내 캐릭터 선택' : `방명록 목록 (${all.length})`;
+    document.getElementById('list-title').textContent = `방명록 목록 (${all.length})`;
     const empty = document.querySelector('#list-modal .empty-note');
     empty.hidden = guests.length > 0;
     empty.innerHTML = query ? '찾는 이름이 없어요.' : '아직 등록된 방명록이 없어요.<br />첫 번째 하객이 되어 주세요!';
@@ -675,7 +670,7 @@ const UI = (() => {
         const text = document.createElement('span');
         text.className = 'guest-text';
         const name = document.createElement('b');
-        name.textContent = g.info.name + (g.info.id === mine ? ' (내 캐릭터)' : '');
+        name.textContent = g.info.name;
         // 칭호 · 이름 / 관계 · 능력치 / 한줄 멘트
         if (g.info.title) {
           const title = document.createElement('span');
@@ -691,18 +686,95 @@ const UI = (() => {
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
         text.append(name, ...(meta.textContent ? [meta] : []), msg);
         btn.append(avatar, text);
-        btn.addEventListener('click', () => {
-          if (!listPick) return openGuestbook({ ...g.info, avatarUrl: avatar.src });
-          myGuest.set(g.info.id);
-          listModal.close();
-          UI.onGuestPicked?.(g.info);
-        });
+        btn.addEventListener('click', () => openGuestbook({ ...g.info, avatarUrl: avatar.src }));
         li.append(btn);
         return li;
       })
     );
   }
   listSearch.addEventListener('input', renderList);
+
+  /** 맵 위 하객 최신순 (mine이면 그 캐릭터를 맨 위로) */
+  function sortedGuests(mine = null) {
+    return (UI.getGuests?.() ?? []).slice().sort((a, b) =>
+      (b.info.id === mine) - (a.info.id === mine) || String(b.info.createdAt ?? '9').localeCompare(String(a.info.createdAt ?? '9'))
+    );
+  }
+
+  // ---------- 캐릭터 선택 (전체 화면) ----------
+  // 카드를 고르고 "이 캐릭터로 시작" (카드를 두 번 눌러도 시작) → UI.onGuestPicked(info): 시작점에서 조종
+  const selectEl = document.getElementById('select-modal');
+  const selectModal = setupModal(selectEl);
+  const selectGrid = selectEl.querySelector('.char-grid');
+  const selectSearch = selectEl.querySelector('.list-search');
+  const selectStart = selectEl.querySelector('.select-start');
+  let selected = null; // 고른 캐릭터 info
+
+  function openSelect() {
+    selectSearch.value = '';
+    selected = null;
+    renderSelect();
+    selectModal.open();
+  }
+
+  function renderSelect() {
+    const mine = myGuest.get();
+    const query = selectSearch.value.trim();
+    const guests = sortedGuests(mine).filter((g) => !query || g.info.name.includes(query));
+    if (selected && !guests.some((g) => g.info === selected)) selected = null;
+    selectStart.disabled = !selected;
+    const empty = selectEl.querySelector('.empty-note');
+    empty.hidden = guests.length > 0;
+    empty.textContent = query ? '찾는 이름이 없어요.' : '아직 만든 캐릭터가 없어요. 새 캐릭터를 만들어 주세요!';
+    selectGrid.replaceChildren(
+      ...guests.map((g) => {
+        const { info } = g;
+        const li = document.createElement('li');
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'char-card';
+        card.classList.toggle('selected', info === selected);
+        card.setAttribute('aria-pressed', String(info === selected));
+        const add = (tag, cls, text) => {
+          const el = document.createElement(tag);
+          el.className = cls;
+          if (text != null) el.textContent = text;
+          card.append(el);
+          return el;
+        };
+        if (info.id === mine) add('span', 'char-card-mine', '내 캐릭터');
+        add('span', 'guest-title char-card-title', info.title || '').hidden = !info.title;
+        const avatar = add('img', 'char-card-avatar');
+        avatar.alt = '';
+        avatar.loading = 'lazy';
+        avatar.src = g.avatarUrl();
+        add('b', 'char-card-name', info.name);
+        add('small', 'char-card-meta', profileTags(info).join(' · '));
+        if (info.stats) add('span', 'char-card-stats', CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${info.stats[k]}`).join('  '));
+        card.addEventListener('click', () => {
+          selected = info;
+          renderSelect();
+        });
+        card.addEventListener('dblclick', startSelected);
+        li.append(card);
+        return li;
+      })
+    );
+  }
+
+  function startSelected() {
+    if (!selected) return;
+    myGuest.set(selected.id);
+    selectModal.close();
+    UI.onGuestPicked?.(selected);
+  }
+
+  selectSearch.addEventListener('input', renderSelect);
+  selectStart.addEventListener('click', startSelected);
+  selectEl.querySelector('.select-new').addEventListener('click', () => {
+    selectModal.close();
+    openStart();
+  });
 
   // ---------- 웨딩 갤러리 ----------
   // 사진 목록은 배포 때 img/gallery/ 폴더를 읽어 만든 data/gallery.json (scripts/build-gallery.mjs)
@@ -867,8 +939,11 @@ const UI = (() => {
     play();
   })();
 
-  /** 처음 접속: 캐릭터 생성부터 (창을 닫으면 그냥 둘러보기) */
-  const openStart = openWrite;
+  /** 처음 접속: 맵을 가리는 전체 화면으로 캐릭터 생성부터 (창을 닫으면 그냥 둘러보기) */
+  function openStart() {
+    writeEl.classList.add('fullscreen');
+    openWrite();
+  }
 
   return { openGuestbook, openNpcSettings, openStart, showToast, onGuestCreated: null, onGuestPicked: null, onModalChange: null, getGuests: null };
 })();
