@@ -869,13 +869,36 @@ function npcInfo(npc) {
   return info;
 }
 
+/** 발판 위 minX~maxX에서 사다리/로프와 겹치지 않는 랜덤 x (못 찾으면 null) */
+function xClearOfClimbs(floor, minX, maxX) {
+  const onClimb = (x) => {
+    const y = floorY(floor, x);
+    return CONFIG.climbs.some((c) => {
+      if (Math.abs(c.x - x) >= CHAR_W) return false;
+      const { top, bottom } = climbEnds(c);
+      return top.y < y + 2 && bottom.y > y - CHAR_H; // 캐릭터 높이 구간과 사다리 세로 구간이 겹침
+    });
+  };
+  for (let i = 0; i < 30; i++) {
+    const x = Phaser.Math.Between(Math.ceil(minX), Math.floor(maxX));
+    if (!onClimb(x)) return x;
+  }
+  return null;
+}
+
 /**
  * NPC: 자기 발판(이어진 발판 포함) 위만 돌아다니고 점프·사다리·로프는 안 쓴다. 조종 불가.
  * 서기(idle)/걷기(walk)/자기(sleep) 애니메이션을 쓰고, 효과(꽃가루·비눗방울·음표)를 낼 수 있다.
  */
 class NpcCharacter extends GuestCharacter {
   constructor(scene, npc, opts) {
-    const floor = CONFIG.floors[npc.floor] ?? pickGuestFloor();
+    let floor = CONFIG.floors[npc.floor];
+    // 처음 발판이 없어졌으면 랜덤 — 사다리/로프로 거의 덮인 짧은 발판은 피한다
+    for (let i = 0; !floor && i < 10; i++) {
+      const f = pickGuestFloor();
+      const { x1, x2 } = floorSpan(f);
+      if (i === 9 || xClearOfClimbs(f, x1, x2) != null) floor = f;
+    }
     super(scene, floor, npcInfo(npc), { ...opts, x: npc.x, tagColor: '#c9f2ff' });
     this.npc = npc;
     this.canClimb = false;
@@ -883,6 +906,7 @@ class NpcCharacter extends GuestCharacter {
     this.pose = 'idle'; // 현재 동작 (idle | walk | sleep | scratch …)
     if (npc.speed) this.speed = Phaser.Math.Between(...npc.speed);
     this.setFloor(this.floorName); // range 적용
+    if (npc.x == null) this.x = xClearOfClimbs(this.floor, this.minX, this.maxX) ?? this.x; // 사다리/로프 위에 서 있지 않게
     this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
     this.y = floorY(this.floor, this.x);
     this.effect = npc.effect ? new NpcEffect(scene, this, npc.effect) : null;

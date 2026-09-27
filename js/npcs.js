@@ -48,7 +48,7 @@ const NPCS = [
   {
     id: 'dog-esso',
     name: '에쏘',
-    floor: 'f9', // 웰컴 무대: 신랑·신부 주변을 뛰어다님
+    floor: 'stage', // 웰컴 무대: 신랑·신부 주변을 뛰어다님
     range: 170, // 신랑·신부(무대 가운데)에서 좌우 이만큼 안에서만
     height: 36,
     speed: [75, 100],
