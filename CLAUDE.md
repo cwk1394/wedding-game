@@ -146,6 +146,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 캐릭터 생성(`npc-*` 타입)은 개발자 비밀번호 필요(`checkDevPassword`, 저장과 같은 sessionStorage 비밀번호 — `devPassword()`).
   - 삭제(설정 창 "NPC 삭제", 되돌리기 가능): 추가 NPC는 `CONFIG.npcs`에서 빼고 저장 때 `npcDeletes`로 보내 API가 `img/npc/<id>/`를 지움. js/npcs.js의 기본 NPC는 코드라 `{deleted: true}`로 숨기기만(이미지 남음, 다시 보이려면 map-data에서 그 항목을 지움). 맵은 `syncNpcs`가 CONFIG.npcs에 맞춰 지우고 되살림.
   - 불러올 때 `js/npcs.js` 끝에서 `def`가 있는 항목을 `customNpc()`로 NPCS에 붙임. 추가 NPC는 npcs.js·gen-npc.mjs에 없으므로 디렉토리 변경 때 폴더만 옮김.
+- NPC 분류(추가·설정 창): 일반 / 앨범. 앨범이면 앨범 디렉토리(`CONFIG.npcs[id].album`, 영문 소문자·숫자·-) → 일반 방문자가 누르면 캐릭터창 대신 그 앨범 사진. 저장 때 `img/gallery/<album>/`이 없으면 API가 `.gitkeep`을 커밋해 폴더를 만듦(사진은 직접 넣어 push). `album-studio` = `studio`.
 - 신랑·신부 설정: 개발자 모드에서 신랑·신부 캐릭터창의 "수정" → NPC 설정 창을 이름·한줄 멘트·소개 글만 보이게(`textsOnly`) 열어 `CONFIG.npcs.groom/bride`에 저장(js/data.js COUPLE 값을 덮어씀, `coupleTexts`, 되돌리기·저장 대상).
 - 조종: 상단 툴바 조종 도구는 없음 → 캐릭터 팝업의 "조종하기"로(▼ 표시, 조종 중엔 툴바 안내가 조작법으로 바뀜). 개발자 모드에선 신랑·신부 팝업에도 조종하기가 있음 — `CoupleCharacter`는 `GuestCharacter`를 상속(통통 튀기 모션). 평소엔 고정이면 제자리, 아니면 무대 위에서만 AI로 돌아다니고, 조종을 놓거나 지도를 편집하면 제자리(`couplePoint`)로 복귀. 신랑·신부의 jump/ladder/rope/prone 이미지는 `?dev`일 때만 불러옴. AI가 사다리/점프 중이던 하객은 그 자리에서 이어서 조종 → 직접 조종, 카메라가 따라감. "조종 끝내기"를 누르거나 지도를 편집하면 놓아줌(AI로 복귀).
   - ↓(잡을 사다리/로프 없을 때) = 엎드리기(↓ 떼거나 ←→면 일어섬), 엎드려서 Space = 지금 발판을 통과해 아래 발판으로 떨어짐(아래 발판이 있을 때만). 엎드리기 이미지가 없으면 점프 첫 프레임으로 대신.
@@ -173,7 +174,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 ## 메뉴 / 팝업
 - 왼쪽 위 메뉴 버튼 → 아래로 3개 항목: 캐릭터 생성(작성 폼), 방명록 목록(맵 위 하객 최신순, 이름 검색, 누르면 방명록 창 `#letter-modal`: 모습·칭호·이름·관계/성향 + 방명록 글, 능력치·버튼 없음), 웨딩 갤러리(썸네일 → 크게 보기: 사진 좌우 가장자리 35% 터치·클릭/스와이프/방향키로 넘김, 사진 영역 높이 62vh 고정).
 - 방명록 목록은 `UI.getGuests()`(main.js에서 scene.guests 연결)로 맵 위 하객을 그대로 사용 → 방금 등록한 하객도 바로 보임.
-- 갤러리: 배포 때 `build-gallery.mjs`가 sharp로 `img/gallery/thumb/*.webp`(목록)·`view/*.webp`(크게 보기)를 만들고 `data/gallery.json`(`{thumb, src}` 목록) 생성. 사진이 없으면 "준비하고 있어요" 문구.
+- 갤러리: `img/gallery/<앨범>/` 하위 폴더 = 앨범(지금은 `studio`). 배포 때 `build-gallery.mjs`가 sharp로 `img/gallery/thumb/<앨범>/*.webp`(목록)·`view/<앨범>/*.webp`(크게 보기)를 만들고 `data/gallery.json`(`{thumb, src, album}` 목록) 생성. 메뉴 "웨딩 갤러리"는 모든 사진, 앨범 NPC를 누르면 그 앨범만(`UI.openAlbum`, 창 제목 = NPC 이름). 사진이 없으면 "준비하고 있어요" 문구.
   - 원본(장당 수 MB)은 저장소에만 두고 사이트에는 올리지 않음. 변환 결과는 Actions cache(`.cache/gallery`, 이름+파일 크기 기준)라 새 사진만 변환.
 - 메뉴·팝업이 떠 있는 동안 맵 입력 off(`UI.onModalChange`). 팝업이 겹치면 ESC는 맨 위 하나만 닫음.
 

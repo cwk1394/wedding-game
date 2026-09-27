@@ -34,6 +34,9 @@ class MapScene extends Phaser.Scene {
 
     this.onSelect = (character) => {
       if (this.dev && character instanceof NpcCharacter) return this.dev.openNpcSettings(character); // 개발자 모드: NPC 설정 창
+      // 앨범 NPC: 그 앨범 사진 (img/gallery/<album>/)
+      const album = character instanceof NpcCharacter && CONFIG.npcs[character.npc.id]?.album;
+      if (album) return UI.openAlbum(album, character.info.name);
       const isCouple = character instanceof CoupleCharacter;
       // 일반 방문자는 내 캐릭터만 메뉴(모드 전환·캐릭터 수정)로 조종·수정 → 캐릭터창엔 버튼 없음.
       // 개발자 모드에선 테스트용으로 하객·신랑신부 조종, 하객 수정, 신랑·신부 멘트 수정 버튼을 보여준다

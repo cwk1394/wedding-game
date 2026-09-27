@@ -158,6 +158,7 @@ const UI = (() => {
       shortMsg: f.shortMsg.value.trim(),
       longMsg: f.longMsg.value.trim(),
       mode: f.mode.value,
+      album: f.kind.value === 'album' ? f.album.value.trim() : null, // 일반 NPC면 null
       // NPC 추가일 때만
       desc: f.desc.value.trim(),
       height: Number(f.height.value),
@@ -180,6 +181,9 @@ const UI = (() => {
     setImgSrc(npcPhoto, npcPhotoUrl);
     npcCreate.querySelector('.photo-empty').hidden = Boolean(file);
   });
+  // 분류가 앨범일 때만 앨범 디렉토리 칸
+  const showAlbum = () => (npcForm.querySelector('.npc-album').hidden = npcForm.elements.kind.value !== 'album');
+  npcForm.elements.kind.addEventListener('change', showAlbum);
   // 사물은 보통 가만히 서 있으니 배치도 고정으로
   npcForm.elements.moving.addEventListener('change', (e) => {
     npcForm.elements.mode.value = e.target.value === 'static' ? 'fixed' : 'random';
@@ -239,8 +243,12 @@ const UI = (() => {
    * opts.create = NPC 추가 (사진·설명·캐릭터 생성 칸), opts.dirLocked = 디렉토리 칸 잠금 (아직 저장 안 한 추가 NPC)
    * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼, opts.textsOnly = 이름·멘트·소개 글만 (신랑·신부)
    */
-  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false } = {}) {
+  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, album, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false } = {}) {
     npcForm.elements.dir.closest('label').hidden = textsOnly;
+    npcForm.querySelector('.npc-kind').hidden = textsOnly;
+    npcForm.elements.kind.value = album ? 'album' : 'normal';
+    npcForm.elements.album.value = album ?? '';
+    showAlbum();
     npcForm.querySelector('.npc-modes').hidden = textsOnly;
     npcDelete = onDelete;
     npcDeleteBtn.hidden = !onDelete;
@@ -800,25 +808,27 @@ const UI = (() => {
 
   // ---------- 웨딩 갤러리 ----------
   // 사진 목록은 배포 때 img/gallery/ 폴더를 읽어 만든 data/gallery.json (scripts/build-gallery.mjs)
+  // 메뉴 "웨딩 갤러리"는 모든 사진, 앨범 NPC를 누르면 그 앨범(img/gallery/<album>/)만
   const galleryEl = document.getElementById('gallery-modal');
   const galleryModal = setupModal(galleryEl);
   const grid = galleryEl.querySelector('.gallery-grid');
   const viewer = galleryEl.querySelector('.gallery-viewer');
   const photo = galleryEl.querySelector('.gallery-photo');
-  let photos = null;
+  let allPhotos = null;
+  let photos = []; // 지금 보는 사진들 (앨범이면 그 앨범만)
   let photoIndex = 0;
 
   async function loadPhotos() {
-    if (photos) return photos;
+    if (allPhotos) return allPhotos;
     try {
       const res = await fetch(`data/gallery.json?t=${Date.now()}`);
-      // 항목: { thumb: 목록용 썸네일, src: 크게 보기용 } (예전 형식인 문자열도 허용)
+      // 항목: { thumb: 목록용 썸네일, src: 크게 보기용, album: 하위 폴더 } (예전 형식인 문자열도 허용)
       const list = res.ok ? (await res.json()).photos ?? [] : [];
-      photos = list.map((p) => (typeof p === 'string' ? { thumb: p, src: p } : p));
+      allPhotos = list.map((p) => (typeof p === 'string' ? { thumb: p, src: p, album: '' } : p));
     } catch {
-      photos = [];
+      allPhotos = [];
     }
-    return photos;
+    return allPhotos;
   }
 
   function showPhoto(i) {
@@ -836,11 +846,15 @@ const UI = (() => {
     grid.hidden = photos.length === 0;
   }
 
-  async function openGallery() {
+  /** 갤러리 열기. album이 있으면 그 앨범 사진만, title은 창 제목 (앨범 NPC 이름) */
+  async function openGallery(album = null, title = '웨딩 갤러리') {
+    document.getElementById('gallery-title').textContent = title;
+    grid.replaceChildren();
     galleryModal.open();
-    await loadPhotos();
+    const all = await loadPhotos();
+    photos = album ? all.filter((p) => p.album === album) : all;
     galleryEl.querySelector('.empty-note').hidden = photos.length > 0;
-    if (!grid.childElementCount) {
+    {
       grid.append(
         ...photos.map(({ thumb }, i) => {
           const btn = document.createElement('button');
@@ -899,7 +913,7 @@ const UI = (() => {
     edit: () => UI.onEditMine?.(),
     write: openWrite,
     list: openList,
-    gallery: openGallery,
+    gallery: () => openGallery(),
   };
 
   /** 메뉴의 모드 전환 글자: 지금 플레이 모드면 관람 모드로, 관람 모드면 플레이 모드로 */
@@ -980,6 +994,7 @@ const UI = (() => {
 
   return {
     openGuestbook,
+    openAlbum: (album, title) => openGallery(album, title), // 앨범 NPC
     openEdit, // { info, onUpdated(guest), onDeleted() } → 비밀번호 확인 → 수정 폼
     openNpcSettings,
     openStart,

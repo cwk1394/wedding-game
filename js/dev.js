@@ -419,17 +419,19 @@ class DevMode {
     const { id } = c.npc;
     const cur = CONFIG.npcs[id] ?? {};
     const pending = Boolean(this.pendingNpcImages[id]);
-    UI.openNpcSettings({ ...c.info, dir: cur.dir ?? id, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ name, dir, shortMsg, longMsg, mode }) => {
+    UI.openNpcSettings({ ...c.info, dir: cur.dir ?? id, album: cur.album, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ name, dir, shortMsg, longMsg, mode, album }) => {
       if (pending) dir = id; // 아직 저장 안 한 추가 NPC는 폴더가 없어서 이름을 못 바꿈
       if (!name) return '이름을 입력해 주세요.';
+      const albumError = checkAlbum(album);
+      if (albumError) return albumError;
       if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(dir)) return '디렉토리 이름은 영문 소문자·숫자·-만 쓸 수 있어요.';
       const taken = this.scene.npcs.some((o) => o !== c && (o.npc.id === dir || CONFIG.npcs[o.npc.id]?.dir === dir));
       if (taken) return `"${dir}"는 다른 NPC가 쓰고 있어요.`;
-      const next = { name: name === c.npc.name && !cur.def ? undefined : name, dir: dir === id ? undefined : dir, shortMsg, longMsg, def: cur.def };
+      const next = { name: name === c.npc.name && !cur.def ? undefined : name, dir: dir === id ? undefined : dir, shortMsg, longMsg, album: album ?? undefined, def: cur.def };
       if (mode === 'fixed') Object.assign(next, { mode, floor: c.floorName, x: Math.round(c.x) }); // 지금 서 있는 자리에 고정
       else if (mode !== 'default') next.mode = mode;
       const texts = npcTexts(c.npc);
-      if (name === texts.name && dir === (cur.dir ?? id) && shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode) return; // 바뀐 것 없음
+      if (name === texts.name && dir === (cur.dir ?? id) && shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode && (album ?? null) === (cur.album ?? null)) return; // 바뀐 것 없음
       this.checkpoint();
       CONFIG.npcs = { ...CONFIG.npcs, [id]: next };
       c.updateInfo(npcTexts(c.npc));
@@ -480,8 +482,10 @@ class DevMode {
   }
 
   /** NPC 추가 창에서 "추가": 검사 후 CONFIG.npcs에 넣고 맵에 바로 만든다. 오류 문구를 돌려주면 창이 그대로 */
-  addNpc({ name, dir, shortMsg, longMsg, mode, desc, height, images }) {
+  addNpc({ name, dir, shortMsg, longMsg, mode, album, desc, height, images }) {
     if (!images?.front) return '캐릭터를 먼저 생성해 주세요.';
+    const albumError = checkAlbum(album);
+    if (albumError) return albumError;
     if (!desc) return 'NPC 설명(무엇인지)을 입력해 주세요.';
     if (!name) return '이름을 입력해 주세요.';
     if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(dir)) return '디렉토리 이름(영문 소문자·숫자·-)을 입력해 주세요.';
@@ -489,7 +493,7 @@ class DevMode {
     if (taken || this.deletedNpcDirs.has(dir) || ['groom', 'bride'].includes(dir)) return `"${dir}"는 이미 있는 이름이에요.`;
 
     const motions = ['idle', 'walk'].filter((m) => images[m]);
-    const entry = { name, shortMsg, longMsg, def: { desc, height: Phaser.Math.Clamp(Math.round(height) || 40, 10, 200), motions } };
+    const entry = { name, shortMsg, longMsg, ...(album ? { album } : {}), def: { desc, height: Phaser.Math.Clamp(Math.round(height) || 40, 10, 200), motions } };
     if (mode === 'fixed') {
       // 화면 가운데에서 가장 가까운 발판 위 (없으면 무대 가운데)
       const cam = this.scene.cameras.main;
@@ -656,6 +660,12 @@ class DevMode {
 }
 
 // ---------- 편집용 도우미 ----------
+
+/** 앨범 디렉토리 이름 검사 (album이 null이면 일반 NPC라 통과). 오류 문구 또는 null */
+function checkAlbum(album) {
+  if (album == null) return null;
+  return /^[a-z0-9][a-z0-9-]{0,39}$/.test(album) ? null : '앨범 디렉토리 이름(영문 소문자·숫자·-)을 입력해 주세요.';
+}
 
 /** 개발자 비밀번호: 처음 한 번 묻고 탭을 닫을 때까지 기억 (저장·NPC 캐릭터 생성). 취소하면 null */
 function devPassword() {

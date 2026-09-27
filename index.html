@@ -352,6 +352,19 @@
           <span>디렉토리 <small>(img/npc/이름/ — 영문 소문자·숫자·-, 저장하면 폴더 이름이 바뀌어요)</small></span>
           <input name="dir" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" />
         </label>
+        <div class="npc-kind">
+          <label class="field">
+            <span>NPC 분류 <small>(앨범이면 누를 때 사진 앨범이 열려요)</small></span>
+            <select name="kind">
+              <option value="normal">일반</option>
+              <option value="album">앨범</option>
+            </select>
+          </label>
+          <label class="field npc-album">
+            <span>앨범 디렉토리 <small>(img/gallery/이름/ — 영문 소문자·숫자·-, 저장하면 폴더가 생겨요)</small></span>
+            <input name="album" maxlength="40" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="예: studio" />
+          </label>
+        </div>
         <label class="field">
           <span>한줄 멘트 <small>(15자 이하, 말풍선으로 보여요)</small></span>
           <input name="shortMsg" maxlength="15" />
