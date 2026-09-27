@@ -64,9 +64,18 @@ Full body, three-quarter view facing LEFT, chibi proportions.`,
       walk: strip(4, 'Strutting/bouncing goofily to the LEFT while blowing a colorful paper party blower: the curled party blower unrolls and extends straight out in some frames and curls back in others, cheeks puffed, funky sunglasses on. Walking legs clearly alternate.'),
     },
   },
-  'cat-mimi': { look: 'pure white fur with blue eyes and a small pink nose' },
-  'cat-ongi': { look: 'orange cheese tabby fur with darker orange stripes and green eyes' },
-  'cat-boksil': { look: 'very fluffy long-haired light grey fur with a big fluffy tail and yellow eyes' },
+  'cat-mimi': {
+    origin: true,
+    look: 'the real cat in the reference photo (ignore the mirror reflection behind it): a sleek black-and-white tuxedo cat, mostly glossy black short fur with a white chin spot, white chest and belly and white paw tips, a long black tail, and yellow-green eyes',
+  },
+  'cat-ongi': {
+    origin: true,
+    look: 'the real cat in the reference photo: a brown tabby cat with short dark brown and black mackerel stripes, a striped ringed tail with a dark tip, a light muzzle, a pinkish-brown nose and yellow-green eyes',
+  },
+  'cat-boksil': {
+    origin: true,
+    look: 'the real cat in the reference photo: a slim grey tabby-and-white cat with a grey striped head, back and tail, a white muzzle, chest, belly and white paws, a pink nose, big green eyes and tall pointy ears',
+  },
   'cat-byeol': {
     origin: true,
     look: 'the real cat in the reference photo: a pure white, very fluffy long-haired Persian-style cat with a flat round face, blue-grey eyes and a small pink nose',
