@@ -45,6 +45,7 @@ const MAP_DATA = {
     "f7": { "path": [[660,1277],[1045,1347]] },
     "stage1": { "path": [[699,310],[890,312]] },
     "f9": { "path": [[506,326],[1076,331]] },
+    "f32": { "path": [[120,147],[272,150]] },
   },
   climbs: [
     {"type":"ladder","x":767,"floors":["upperRoute_1","middleRoute"]},
@@ -74,6 +75,9 @@ const MAP_DATA = {
     {"type":"rope","x":670,"floors":["f9"],"end":427},
     {"type":"ladder","x":766,"floors":["f9","upperRoute_1"]},
     {"type":"rope","x":826,"floors":["f9"],"end":419},
+    {"type":"rope","x":265,"floors":["f32"],"end":248},
+    {"type":"rope","x":125,"floors":["f32","balloon"]},
+    {"type":"rope","x":870,"floors":["heartBridge"],"end":1200},
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
   couple: {"groom":{"floor":"stage1","x":727},"bride":{"floor":"stage1","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
