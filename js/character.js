@@ -909,6 +909,7 @@ class CoupleCharacter extends GuestCharacter {
 
   /** 조종을 놓거나 지도가 바뀌면 제자리로 (하객처럼 다른 발판으로 가지 않음) */
   onMapChanged() {
+    this.updateInfo(coupleTexts(this.info.id)); // 되돌리기로 멘트가 바뀌었을 수 있음
     this.phys = null;
     this.climb = null;
     this.jump = null;
@@ -952,6 +953,12 @@ function npcTexts(npc) {
     shortMsg: s.shortMsg ?? npc.popup?.shortMsg ?? '',
     longMsg: s.longMsg ?? npc.popup?.longMsg ?? '',
   };
+}
+
+/** 신랑·신부 이름·한줄 멘트·소개 글: 개발자 모드 설정(CONFIG.npcs.groom/bride)이 있으면 그것, 없으면 js/data.js COUPLE */
+function coupleTexts(id) {
+  const base = COUPLE.find((c) => c.id === id);
+  return npcTexts({ id, name: base.name, popup: base });
 }
 
 /**

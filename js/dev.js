@@ -438,6 +438,25 @@ class DevMode {
     }, { dirLocked: pending, onDelete: () => this.deleteNpc(c) });
   }
 
+  /** 신랑·신부 설정 창: 이름·한줄 멘트·소개 글 → CONFIG.npcs.groom/bride (js/data.js COUPLE 값을 덮어씀, 저장·되돌리기 대상) */
+  openCoupleSettings(c) {
+    const { id } = c.info;
+    UI.openNpcSettings(
+      { ...c.info, dir: id, avatarUrl: c.getAvatarUrl(), mode: 'default' },
+      ({ name, shortMsg, longMsg }) => {
+        if (!name) return '이름을 입력해 주세요.';
+        const texts = coupleTexts(id);
+        if (name === texts.name && shortMsg === texts.shortMsg && longMsg === texts.longMsg) return; // 바뀐 것 없음
+        this.checkpoint();
+        CONFIG.npcs = { ...CONFIG.npcs, [id]: { name, shortMsg, longMsg } };
+        c.updateInfo(coupleTexts(id));
+        this.changed();
+        UI.showToast('저장 버튼을 누르면 사이트에 반영돼요');
+      },
+      { textsOnly: true }
+    );
+  }
+
   /**
    * NPC 삭제 (되돌리기 가능). 추가한 NPC는 설정을 지우고 저장 때 이미지 폴더도 지운다.
    * js/npcs.js의 기본 NPC는 코드에 있어서 deleted 표시로 숨기기만 (이미지는 남김)

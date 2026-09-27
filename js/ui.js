@@ -21,7 +21,7 @@ const UI = (() => {
     closers.get(top)?.();
   });
 
-  /** 모달 공통 동작: 배경/닫기 버튼/ESC로 닫기 */
+  /** 모달 공통 동작: 닫기 버튼/ESC로 닫기 */
   function setupModal(el) {
     let openedAt = 0;
     const setOpen = (open) => {
@@ -30,11 +30,11 @@ const UI = (() => {
       else el.classList.remove('fullscreen'); // 전체 화면(처음 접속)은 한 번만
       notifyModalChange();
     };
-    // 모바일에서 캐릭터 터치 직후 따라오는 click 이벤트가 배경에 맞아 바로 닫히는 것 방지
+    // 닫기 버튼으로만 닫는다 (바깥 맵을 눌러도 안 닫힘).
+    // 모바일에서 캐릭터 터치 직후 따라오는 click이 같은 자리의 닫기 버튼에 맞는 것 방지로 400ms는 무시
     el.addEventListener('click', (e) => {
       if (Date.now() - openedAt < 400) return;
-      if (e.target === el && el.matches('.fullscreen, .select-screen')) return; // 전체 화면은 배경을 눌러도 안 닫힘
-      if (e.target === el || e.target.closest('[data-close]')) setOpen(false);
+      if (e.target.closest('[data-close]')) setOpen(false);
     });
     closers.set(el, () => setOpen(false));
     return { open: () => setOpen(true), close: () => setOpen(false) };
@@ -87,13 +87,15 @@ const UI = (() => {
   });
   editBtn.addEventListener('click', () => {
     viewModal.close();
-    openEdit(manageTarget);
+    if (manageTarget?.onEdit) manageTarget.onEdit(); // 개발자 모드 신랑·신부: 멘트 수정 창
+    else openEdit(manageTarget);
   });
 
   /**
    * 방명록 보기.
    * control: { controlling, onControl, onRelease } — 오른쪽 아래 버튼이 조종 중이면 "조종 끝내기", 아니면 "조종하기"
    * manage: { info, onUpdated(guest), onDeleted() } — 있으면 조종하기 왼쪽에 "수정" 버튼 (하객만)
+   *         { onEdit() } — 개발자 모드 신랑·신부: "수정"을 누르면 onEdit (멘트·소개 글 창)
    */
   function openGuestbook({ name, shortMsg, longMsg, avatarUrl, title, relation, personality, stats }, control = null, manage = null) {
     controlBtn.hidden = !control;
@@ -234,14 +236,16 @@ const UI = (() => {
   /**
    * NPC 설정 창. onApply({ name, dir, shortMsg, longMsg, mode, (추가일 때) desc, height, images }) → 오류 문구를 돌려주면 창을 닫지 않고 보여줌
    * opts.create = NPC 추가 (사진·설명·캐릭터 생성 칸), opts.dirLocked = 디렉토리 칸 잠금 (아직 저장 안 한 추가 NPC)
-   * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼
+   * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼, opts.textsOnly = 이름·멘트·소개 글만 (신랑·신부)
    */
-  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null } = {}) {
+  function openNpcSettings({ name, dir, shortMsg, longMsg, mode, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false } = {}) {
+    npcForm.elements.dir.closest('label').hidden = textsOnly;
+    npcForm.querySelector('.npc-modes').hidden = textsOnly;
     npcDelete = onDelete;
     npcDeleteBtn.hidden = !onDelete;
     const f = npcForm.elements;
     setNpcError('');
-    document.getElementById('npc-title').textContent = create ? 'NPC 추가' : 'NPC 설정';
+    document.getElementById('npc-title').textContent = create ? 'NPC 추가' : textsOnly ? `${name} 설정` : 'NPC 설정';
     npcForm.querySelector('.npc-profile').hidden = create;
     npcCreate.hidden = !create;
     npcSubmit.textContent = create ? '추가' : '적용';

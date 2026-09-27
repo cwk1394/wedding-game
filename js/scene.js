@@ -37,8 +37,9 @@ class MapScene extends Phaser.Scene {
       const isCouple = character instanceof CoupleCharacter;
       // 조종: 하객은 누구나, 신랑·신부는 개발자 모드에서만, NPC는 불가
       const canControl = !character.info.npc && (!isCouple || this.dev);
-      // 수정/삭제: 등록된 하객만 (방명록 번호가 있을 때)
+      // 수정/삭제: 등록된 하객만 (방명록 번호가 있을 때). 개발자 모드에선 신랑·신부 멘트·소개 글 수정
       const canManage = !character.info.npc && !isCouple && character.info.number;
+      const coupleEdit = isCouple && this.dev ? { onEdit: () => this.dev.openCoupleSettings(character) } : null;
       UI.openGuestbook(
         { ...character.info, avatarUrl: character.getAvatarUrl() },
         canControl
@@ -54,18 +55,19 @@ class MapScene extends Phaser.Scene {
               },
             }
           : null,
-        canManage
+        coupleEdit ??
+        (canManage
           ? {
               info: character.info,
               onUpdated: (guest) => character.updateInfo(guest),
               onDeleted: () => this.removeGuest(character),
             }
-          : null
+          : null)
       );
     };
 
     // 신랑/신부: 제자리 고정 (CONFIG.couple, 기본은 무대 가운데)
-    this.couple = COUPLE.map((info) => new CoupleCharacter(this, info, { onSelect: this.onSelect }));
+    this.couple = COUPLE.map((info) => new CoupleCharacter(this, { ...info, ...coupleTexts(info.id) }, { onSelect: this.onSelect }));
 
     this.guests = [];
     this.guestIds = new Set();
