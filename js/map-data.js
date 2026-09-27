@@ -75,7 +75,7 @@ const MAP_DATA = {
   ],
   spawn: {"floor":"f1","x":36}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }
   couple: {"groom":{"floor":"stage","x":727},"bride":{"floor":"stage","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
-  // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, deleted면 기본 NPC 숨김
+  // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김
   npcs: {
     "dog-mongsil": {"shortMsg":"멍멍! 삑삑~","longMsg":"신랑이 초등학생 때부터 함께 지낸 페키니즈 강아지다.\n페키니즈 특유의 귀여운 멍청미를 지니고 있다.\n지금은 강아지별에 살고 있지만, 결혼 소식을 듣고 잠시 놀러왔다.\n분홍색 삑삑이 장난감을 무척 아껴 언제나 품에 지니고 다닌다."},
     "dog-esso": {"shortMsg":"멍멍! 헤헤","longMsg":"신랑 부모님이 키우는 보더콜리 강아지다.\n아주 영리하고 리더십이 강하다.\n최근 질투심에 고양이밥을 몰래 훔쳐 먹다가 살이 쪄, 리트리버와 분간이 잘 되지 않는다.\n현재는 포도밭을 누비며 행복하게 살고 있다."},
@@ -87,6 +87,6 @@ const MAP_DATA = {
     "cat-byeol": {"shortMsg":"미야옹~","longMsg":"신랑의 누나가 키우는 고양이다.\n가끔 신랑 집에 머물며 자연스럽게 신랑의 주인 노릇을 한다.\n겁이 많아 낯선 사람이 오면 숨어서 바들바들 떨지만, 30분쯤 지나면 호기심을 못 참고 슬그머니 나와 부비댄다.\n지금은 누나 집에서 아기와 동고동락 중이다."},
     "groom": {"name":"경태","shortMsg":"와줘서 고마워!","longMsg":"바쁘신 와중에 저희 결혼식에 와주셔서 진심으로 감사드립니다.\n행복하게 잘 살겠습니다!"},
     "bride": {"name":"민지","shortMsg":"행복하게 살게요","longMsg":"함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요 :)"},
-    "album-studio": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"스튜디오 사진 앨범","mode":"fixed","floor":"gazebo","x":1065,"album":"studio","def":{"desc":"탁자 위에 펼쳐서 세워져 있게 놓여진 사진앨범","height":40,"motions":[]}},
+    "album-studio": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"스튜디오 사진 앨범","mode":"fixed","floor":"gazebo","x":996,"def":{"desc":"탁자 위에 펼쳐서 세워져 있게 놓여진 사진앨범","height":40,"motions":[]}},
   },
 };
