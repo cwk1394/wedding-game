@@ -119,7 +119,7 @@ const CONFIG = {
   //   speed: 걷는 속도 배율, walk: 새 상태를 고를 때 걸을 확률, walkTime/idleTime: 걷기/서 있기 시간 [최소, 최대] ms
   //   jump/climb/gap: 점프·사다리 타기·발판 건너뛰기 확률 배율, bubbleGap: 말풍선 간격 배율
   //   lines + lineChance: 말풍선에 한줄 멘트 대신 가끔 하는 말
-  //   idle: 서 있을 때 특별 동작 — sleep(엎드려 자기 + Zzz), photo(카메라 플래시 + 찰칵), dance(제자리에서 통통 뛰며 방향 바꾸기)
+  //   idle: 서 있을 때 특별 동작 — sleep(엎드려 자기 + Zzz), photo(카메라 플래시 + 찰칵), dance(통통 점프 또는 셔플 스텝 — 한 방향으로 가며 걷기 모션만 좌우로)
   personalities: {
     chatty: { label: '수다쟁이', walk: 0.5, bubbleGap: 0.35, lines: ['그거 알아?', '축하해요~!', '있잖아…', '하하하!'], lineChance: 0.4 },
     explorer: { label: '탐험가', speed: 1.35, walk: 0.85, walkTime: [2500, 6000], idleTime: [600, 1500], jump: 1.3, climb: 2.2, gap: 1.8, lines: ['저기엔 뭐가 있을까?', '모험이다!'], lineChance: 0.25 },

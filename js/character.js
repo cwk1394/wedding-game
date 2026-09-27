@@ -413,7 +413,26 @@ class GuestCharacter extends Character {
     this.idlePose = this.state === 'idle' ? p?.idle ?? null : null;
     if (this.idlePose === 'sleep') this.say('Zzz…', this.stateTimer);
     if (this.idlePose === 'photo') this.photoFlash();
+    if (this.idlePose === 'dance') {
+      // 댄서: 통통 점프(hop) 또는 셔플 스텝(shuffle: 한 방향으로 직진하면서 걷기 모션만 좌우로 번갈아)
+      this.danceStyle = Math.random() < 0.5 ? 'hop' : 'shuffle';
+      Object.assign(this, { danceDir: this.dir, danceFace: this.dir, danceFlip: 0 });
+    }
     this.updatePose();
+  }
+
+  /** 셔플 스텝: 천천히 한 방향으로 가면서 0.24초마다 바라보는 쪽만 좌우로 뒤집는다 (발판 끝이면 반대로) */
+  tickShuffle(delta) {
+    this.x += (this.danceDir * this.speed * 0.6 * delta) / 1000;
+    if (this.x <= this.minX || this.x >= this.maxX) {
+      this.x = Phaser.Math.Clamp(this.x, this.minX, this.maxX);
+      this.danceDir = -this.danceDir;
+    }
+    this.danceFlip -= delta;
+    if (this.danceFlip > 0) return;
+    this.danceFlip = 240;
+    this.danceFace = -this.danceFace;
+    this.sprite.setFlipX(this.facesLeft ? this.danceFace > 0 : this.danceFace < 0);
   }
 
   /** 사진광: 머리 옆에서 카메라 플래시가 번쩍 + 찰칵 */
@@ -449,6 +468,8 @@ class GuestCharacter extends Character {
     if (this.state === 'walk') {
       this.setDir(this.dir);
       this.sprite.play(`${key}_walk`, true);
+    } else if (this.idlePose === 'dance' && this.danceStyle === 'shuffle' && this.motions.walk) {
+      this.sprite.play(`${key}_walk`, true); // 셔플 스텝: 걷기 모션 (좌우 뒤집기는 tickShuffle)
     } else if (this.idlePose === 'sleep' && this.motions.prone) {
       this.setDir(this.dir); // 잠꾸러기: 엎드려 자기
       this.sprite.play(`${key}_prone`, true);
@@ -905,6 +926,8 @@ class GuestCharacter extends Character {
         }
         if (this.canJump !== false && Math.random() < (m.jumpChance * (this.persona?.jump ?? 1) * delta) / 1000) this.startJump();
       }
+    } else if (this.idlePose === 'dance' && this.danceStyle === 'shuffle') {
+      this.tickShuffle(delta);
     } else if (this.idlePose === 'dance' && !this.jump && this.canJump !== false) {
       this.setDir(-this.dir); // 댄서: 제자리에서 방향을 바꾸며 통통
       this.startJump();

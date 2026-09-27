@@ -111,7 +111,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 목록 키는 `CONFIG.sides`/`CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `SIDES`/`RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
 - 능력치 STR/DEX/INT/LUK: 각 4에서 시작해 남은 9점을 한 점씩 무작위로(`rollStats`) → 합 25, 4~13, 6 근처가 잘 나오고 끝값은 드묾. API가 범위·합 검사. 팝업에 표시만(움직임엔 영향 없음).
 - 칭호: 캐릭터 머리 위 메달(`setTitle`, `CONFIG.titleStyle`). 말풍선·조종 표시는 `headY()`(칭호 위)에.
-- 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(제자리에서 방향 바꾸며 통통).
+- 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(반반 랜덤: 제자리에서 방향 바꾸며 통통 / 셔플 스텝 — 한 방향으로 천천히 가며 걷기 모션만 0.24초마다 좌우로 뒤집기 `tickShuffle`).
 
 ## 캐릭터 조종 (일반 방문자)
 - 처음 접속(로딩이 끝나면, `?dev` 제외): 캐릭터 생성 창이 맵을 가리는 전체 화면(`.modal.fullscreen`, 로딩 화면이 걷히기 전에 열림, 배경 눌러도 안 닫힘, 닫으면 일반 팝업으로 복귀)으로 자동으로 뜸(`UI.openStart`). 창을 닫으면 그냥 둘러보기.
