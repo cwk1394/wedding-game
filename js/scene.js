@@ -33,6 +33,7 @@ class MapScene extends Phaser.Scene {
     else if (params.has('debug')) this.drawFloorGuides();
 
     this.onSelect = (character) => {
+      if (this.dev && character instanceof NpcCharacter) return this.dev.openNpcSettings(character); // 개발자 모드: NPC 설정 창
       const isCouple = character instanceof CoupleCharacter;
       // 조종: 하객은 누구나, 신랑·신부는 개발자 모드에서만, NPC는 불가
       const canControl = !character.info.npc && (!isCouple || this.dev);

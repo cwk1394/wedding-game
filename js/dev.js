@@ -4,7 +4,8 @@
 // - 조종: 캐릭터 팝업의 "조종하기" (개발자 모드에선 신랑·신부도). 조종 자체는 js/control.js의 Controller
 // - 시작점 도구: 방명록 등록 직후 새 캐릭터가 나타나는 위치(CONFIG.spawn)를 지정
 // - 신랑신부 도구: 누른 곳 발판 위에 신랑·신부를 나란히 (CONFIG.couple)
-// - 캐릭터 끌기(편집 도구가 아닐 때): 누르고 끌면 놓은 곳의 발판으로 옮김. 신랑·신부는 그 자리(CONFIG.couple)가 저장됨
+// - 캐릭터 끌기(편집 도구가 아닐 때): 누르고 끌면 놓은 곳의 발판으로 옮김. 신랑·신부·고정 NPC는 그 자리가 저장됨
+// - NPC를 누르면 NPC 설정 창: 한줄 멘트·소개 글, 배치 방식(고정/랜덤/무대/기본) → CONFIG.npcs (저장·되돌리기 대상)
 // 편집 내용은 CONFIG.floors / CONFIG.climbs 를 바로 바꾸고, 돌아다니는 하객에게도 즉시 적용된다.
 
 const DEV_COLORS = { walk: 0xff4d6d, ladder: 0x00c853, rope: 0x2979ff, stage: 0xffc107, gapJump: 0xb04dff };
@@ -301,11 +302,20 @@ class DevMode {
     if (!d?.moved) return;
     const c = d.character;
     const isCouple = c instanceof CoupleCharacter;
-    const name = floorForDrop(c.x, c.y, isCouple ? coupleFloorOk : undefined);
-    if (!name) UI.showToast(isCouple && !coupleFixed() ? '무대(노란 선) 위에 놓아 주세요 (신랑신부 고정이 꺼져 있어요)' : '발판(빨간·노란 선) 위에 놓아 주세요');
+    const npc = c instanceof NpcCharacter ? c.npc : null;
+    const stageOnly = isCouple ? !coupleFixed() : npc && c.mode === 'stage';
+    const name = floorForDrop(c.x, c.y, stageOnly ? isStage : undefined);
+    if (!name) UI.showToast(stageOnly ? '무대(노란 선) 위에 놓아 주세요' : '발판(빨간·노란 선) 위에 놓아 주세요');
     if (isCouple && name) {
       this.checkpoint();
       CONFIG.couple = { ...coupleData(), [c.info.id]: { floor: name, x: Math.round(c.x) } };
+    }
+    if (npc && name && c.mode === 'fixed') {
+      // 고정 NPC는 놓은 자리가 저장된다
+      this.checkpoint();
+      CONFIG.npcs = { ...CONFIG.npcs, [npc.id]: { ...CONFIG.npcs[npc.id], mode: 'fixed', floor: name, x: Math.round(c.x) } };
+      c.dropAt(name, c.x);
+      return this.changed();
     }
     if (isCouple && !c.controlled) {
       c.held = false;
@@ -354,6 +364,16 @@ class DevMode {
         else delete CONFIG.couple[id]; // 기본 자리(무대 가운데)로
       }
     }
+    // 고정 NPC 자리도 같은 방식으로 (못 옮기면 고정 해제 → 기본)
+    for (const [id, n] of Object.entries(CONFIG.npcs)) {
+      if (n.mode !== 'fixed') continue;
+      const p = relocatePoint({ floor: n.floor, x: n.x });
+      if (p) CONFIG.npcs[id] = { ...n, ...p };
+      else {
+        const { mode, floor, x, ...rest } = n;
+        CONFIG.npcs[id] = rest;
+      }
+    }
     this.dirty = this.snapshot() !== this.savedSnap;
     this.draw();
     this.updateToolbar();
@@ -363,12 +383,30 @@ class DevMode {
   undo() {
     const snap = this.history.pop();
     if (!snap) return;
-    const { floors, climbs, spawn, couple } = JSON.parse(snap);
+    const { floors, climbs, spawn, couple, npcs } = JSON.parse(snap);
     CONFIG.floors = floors;
     CONFIG.climbs = climbs;
     CONFIG.spawn = spawn;
     CONFIG.couple = couple;
+    CONFIG.npcs = npcs ?? {};
     this.changed();
+  }
+
+  /** NPC 설정 창: 한줄 멘트·소개 글·배치 방식을 바꾸면 CONFIG.npcs에 넣는다 (저장 버튼으로 사이트에 반영) */
+  openNpcSettings(c) {
+    const { id } = c.npc;
+    UI.openNpcSettings({ ...c.info, avatarUrl: c.getAvatarUrl(), mode: c.mode }, ({ shortMsg, longMsg, mode }) => {
+      const next = { shortMsg, longMsg };
+      if (mode === 'fixed') Object.assign(next, { mode, floor: c.floorName, x: Math.round(c.x) }); // 지금 서 있는 자리에 고정
+      else if (mode !== 'default') next.mode = mode;
+      const texts = npcTexts(c.npc);
+      if (shortMsg === texts.shortMsg && longMsg === texts.longMsg && mode === c.mode) return; // 바뀐 것 없음
+      this.checkpoint();
+      CONFIG.npcs = { ...CONFIG.npcs, [id]: next };
+      c.updateInfo(npcTexts(c.npc));
+      this.changed();
+      UI.showToast('저장 버튼을 누르면 사이트에 반영돼요');
+    });
   }
 
   /** 누른 점과 뗀 점을 직선으로 잇는 발판 (계단처럼 기울어져도 됨) */
@@ -498,7 +536,7 @@ class DevMode {
 
 /** 저장·되돌리기 대상인 지도 데이터 전체 (js/map-data.js 내용) */
 function mapData() {
-  return { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn, couple: CONFIG.couple };
+  return { floors: CONFIG.floors, climbs: CONFIG.climbs, spawn: CONFIG.spawn, couple: CONFIG.couple, npcs: CONFIG.npcs };
 }
 
 /** 지금 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (지정 안 된 쪽은 기본 자리) */

@@ -1,5 +1,5 @@
 // 개발자 모드 지도 저장 API (Vercel Serverless Function)
-// POST /api/map  { password, map: { floors, climbs, spawn, couple } }
+// POST /api/map  { password, map: { floors, climbs, spawn, couple, npcs } }
 //   → 검증 후 js/map-data.js 를 다시 만들어 저장소에 커밋 → Pages 재배포(1~2분)로 반영
 // GET /api/map → 상태 확인용 { ok, configured }
 //
@@ -10,7 +10,8 @@ import { GITHUB_ENV, GitHub } from './_lib/github.js';
 import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 
 const FILE = 'js/map-data.js';
-const LIMITS = { floors: 200, points: 300, climbs: 200, coord: 10000 };
+const LIMITS = { floors: 200, points: 300, climbs: 200, coord: 10000, npcs: 50, shortMsg: 15, longMsg: 500 };
+const NPC_MODES = ['fixed', 'random', 'stage'];
 
 export const OPTIONS = preflight;
 
@@ -87,12 +88,36 @@ function validateMap(map) {
     if (!Object.keys(couple).length) couple = null;
   }
 
+  // NPC 설정 { <id>: { shortMsg, longMsg, mode, floor, x } } — mode 없으면 js/npcs.js 기본, fixed면 floor·x 자리
+  const npcEntries = Object.entries(map.npcs ?? {});
+  if (npcEntries.length > LIMITS.npcs) throw bad(`NPC 설정은 ${LIMITS.npcs}개 이하`);
+  const npcs = {};
+  for (const [id, n] of npcEntries) {
+    if (!/^[\w-]{1,40}$/.test(id) || !n || typeof n !== 'object') throw bad(`NPC "${id}"`);
+    const out = {};
+    for (const key of ['shortMsg', 'longMsg']) {
+      if (n[key] == null) continue;
+      if (typeof n[key] !== 'string' || [...n[key]].length > LIMITS[key]) throw bad(`${id}: ${key}는 ${LIMITS[key]}자 이하`);
+      out[key] = n[key];
+    }
+    if (n.mode != null) {
+      if (!NPC_MODES.includes(n.mode)) throw bad(`${id}: 배치 방식`);
+      out.mode = n.mode;
+    }
+    if (out.mode === 'fixed') {
+      if (!floors[n.floor] || !isCoord(n.x)) throw bad(`${id}: 고정 자리`);
+      Object.assign(out, { floor: n.floor, x: Math.round(n.x) });
+    }
+    if (Object.keys(out).length) npcs[id] = out;
+  }
+
   const climbs = map.climbs ?? [];
   if (!Array.isArray(climbs) || climbs.length > LIMITS.climbs) throw bad(`사다리/로프는 ${LIMITS.climbs}개 이하`);
   return {
     floors,
     spawn,
     couple,
+    npcs,
     climbs: climbs.map((c, i) => {
       if (!['ladder', 'rope'].includes(c?.type)) throw bad(`${i}번째 사다리/로프 종류`);
       if (!isCoord(c.x)) throw bad(`${i}번째 사다리/로프 x`);
@@ -110,7 +135,7 @@ function validateMap(map) {
 }
 
 /** js/map-data.js 내용 (사람이 읽기 좋게 한 줄에 발판 하나) */
-function renderMapFile({ floors, climbs, spawn, couple }) {
+function renderMapFile({ floors, climbs, spawn, couple, npcs }) {
   return [
     '// 이동 가능 영역 (발판 · 사다리 · 로프). 개발자 모드(?dev)에서 저장하면 이 파일이 통째로 다시 만들어진다.',
     '// floors: { 이름: { path: [[x, y], ...] } } — 배경 이미지 픽셀 좌표, x 오름차순 꺾은선. stage로 시작하는 이름 = 신랑/신부 무대',
@@ -124,6 +149,10 @@ function renderMapFile({ floors, climbs, spawn, couple }) {
     '  ],',
     `  spawn: ${JSON.stringify(spawn)}, // 방명록 등록 직후 새 캐릭터가 나타나는 곳 { floor, x }`,
     `  couple: ${JSON.stringify(couple)}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)`,
+    '  // NPC 설정 (js/npcs.js 값을 덮어씀) { shortMsg, longMsg, mode: fixed|random|stage, floor, x } — mode 없으면 처음 발판에서 돌아다님',
+    '  npcs: {',
+    ...Object.entries(npcs).map(([id, n]) => `    ${JSON.stringify(id)}: ${JSON.stringify(n)},`),
+    '  },',
     '};',
     '',
   ].join('\n');

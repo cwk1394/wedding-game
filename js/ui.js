@@ -76,6 +76,29 @@ const UI = (() => {
     viewModal.open();
   }
 
+  // ---------- 개발자 모드: NPC 설정 ----------
+  const npcModal = setupModal(document.getElementById('npc-modal'));
+  const npcForm = document.getElementById('npc-form');
+  let npcApply = null;
+  npcForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = npcForm.elements;
+    npcModal.close();
+    npcApply?.({ shortMsg: f.shortMsg.value.trim(), longMsg: f.longMsg.value.trim(), mode: f.mode.value });
+  });
+
+  /** NPC 설정 창. onApply({ shortMsg, longMsg, mode }) */
+  function openNpcSettings({ name, shortMsg, longMsg, mode, avatarUrl }, onApply) {
+    const f = npcForm.elements;
+    document.getElementById('npc-name').textContent = name;
+    document.getElementById('npc-avatar').src = avatarUrl;
+    f.shortMsg.value = shortMsg ?? '';
+    f.longMsg.value = longMsg ?? '';
+    f.mode.value = mode;
+    npcApply = onApply;
+    npcModal.open();
+  }
+
   // ---------- 방명록 수정/삭제 ----------
   const editModal = setupModal(document.getElementById('edit-modal'));
   const editForm = document.getElementById('edit-form');
@@ -587,5 +610,5 @@ const UI = (() => {
     play();
   })();
 
-  return { openGuestbook, showToast, onGuestCreated: null, onModalChange: null, getGuests: null };
+  return { openGuestbook, openNpcSettings, showToast, onGuestCreated: null, onModalChange: null, getGuests: null };
 })();

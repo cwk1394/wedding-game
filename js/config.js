@@ -18,6 +18,9 @@ const CONFIG = {
   // { groom: { floor, x }, bride: { floor, x }, fixed } — 없으면 무대 가운데 (개발자 모드 신랑신부 도구·끌기로 지정)
   //   fixed: true = 그 자리에 고정, false(기본) = 무대(stage*) 안에서만 돌아다님 (자리도 무대 위로 한정)
   couple: MAP_DATA.couple ?? null,
+  // NPC 설정 { <npc id>: { shortMsg, longMsg, mode, floor, x } } — 개발자 모드에서 NPC를 눌러 수정 (js/npcs.js 값을 덮어씀)
+  //   mode: fixed(floor·x 자리에 서 있음) | random(접속할 때마다 아무 발판) | stage(무대 안에서만) | 없으면 npcs.js 처음 발판에서 돌아다님
+  npcs: MAP_DATA.npcs ?? {},
 
   // 하객 움직임
   motion: {

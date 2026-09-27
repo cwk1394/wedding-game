@@ -207,6 +207,40 @@
     </form>
   </div>
 
+  <!-- 개발자 모드: NPC 설정 (NPC를 누르면) -->
+  <div id="npc-modal" class="modal" hidden>
+    <form id="npc-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="npc-name" novalidate>
+      <div class="modal-header">
+        <span class="modal-title">NPC 설정</span>
+        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body form-body">
+        <div class="modal-profile">
+          <div class="modal-avatar"><img id="npc-avatar" alt="" /></div>
+          <div id="npc-name" class="modal-name"></div>
+        </div>
+        <label class="field">
+          <span>한줄 멘트 <small>(15자 이하, 말풍선으로 보여요)</small></span>
+          <input name="shortMsg" maxlength="15" />
+        </label>
+        <label class="field">
+          <span>소개 글 <small>(누르면 팝업에 보여요)</small></span>
+          <textarea name="longMsg" maxlength="500" rows="4"></textarea>
+        </label>
+        <fieldset class="npc-modes">
+          <legend>배치</legend>
+          <label><input type="radio" name="mode" value="fixed" /> 고정 <small>지금 자리에 서 있기 (끌어서 옮기면 그 자리)</small></label>
+          <label><input type="radio" name="mode" value="random" /> 랜덤 위치 <small>접속할 때마다 아무 발판에서 돌아다님</small></label>
+          <label><input type="radio" name="mode" value="stage" /> 무대에서만 <small>무대(노란 선) 안에서만 돌아다님</small></label>
+          <label><input type="radio" name="mode" value="default" /> 기본 <small>정해진 처음 발판에서 돌아다님</small></label>
+        </fieldset>
+      </div>
+      <div class="modal-footer modal-footer-end">
+        <button type="submit" class="btn btn-primary">적용</button>
+      </div>
+    </form>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
 
   <!-- 배경음악 켜기/끄기 (audio/bgm.mp3 가 있을 때만 보임) -->
