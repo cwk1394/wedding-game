@@ -40,15 +40,7 @@ const UI = (() => {
   }
 
   // ---------- 관계·성향 목록, 능력치 ----------
-  // 모든 관계/성향 선택 칸(작성·수정 폼)을 CONFIG 목록으로 채운다
-  const fillSelect = (name, map) =>
-    document.querySelectorAll(`select[name="${name}"]`).forEach((sel) => {
-      sel.replaceChildren(new Option('선택해 주세요', ''), ...Object.entries(map).map(([k, v]) => new Option(typeof v === 'string' ? v : v.label, k)));
-    });
-  fillSelect('side', CONFIG.sides);
-  fillSelect('relation', CONFIG.relations);
-  fillSelect('personality', CONFIG.personalities);
-  // 캐릭터 만들기 창은 선택 칸 대신 눌러서 고르는 칩 (라디오라 form.elements[name].value로 읽힘)
+  // 관계/성향(작성·수정 폼)은 눌러서 고르는 칩을 CONFIG 목록으로 채운다 (라디오라 form.elements[name].value로 읽고 씀)
   const fillChips = (name, map) =>
     document.querySelectorAll(`[data-chips="${name}"]`).forEach((box) => {
       box.replaceChildren(

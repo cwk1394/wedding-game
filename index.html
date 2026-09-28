@@ -316,26 +316,27 @@
         <div class="edit-step" data-edit-step="form" hidden>
           <div class="edit-char form-body">
           <label class="field">
-            <span>이름 <small>(15자 이하)</small></span>
+            <span>이름 <small>15자 이하</small></span>
             <input name="name" maxlength="15" required />
           </label>
-          <div class="field">
-            <span>신랑·신부와의 관계</span>
-            <div class="relation-row">
-              <select name="side" required aria-label="신랑측·신부측"></select>
-              <select name="relation" required aria-label="관계"></select>
-            </div>
-          </div>
+          <fieldset class="field chip-field">
+            <legend>누구의 하객인가요</legend>
+            <div class="chips chips-3" data-chips="side"></div>
+          </fieldset>
+          <fieldset class="field chip-field">
+            <legend>어떤 사이인가요</legend>
+            <div class="chips chips-4" data-chips="relation"></div>
+          </fieldset>
+          <fieldset class="field chip-field">
+            <legend>성향</legend>
+            <div class="chips chips-personality" data-chips="personality"></div>
+          </fieldset>
           <label class="field">
-            <span>캐릭터 성향</span>
-            <select name="personality" required></select>
-          </label>
-          <label class="field">
-            <span>칭호 <small>(선택, 12자 이하)</small></span>
+            <span>칭호 <small>선택 · 12자 이하</small></span>
             <input name="title" maxlength="12" />
           </label>
           <label class="field">
-            <span>한줄 멘트 <small>(20자 이하)</small></span>
+            <span>한줄 멘트 <small>20자 이하</small></span>
             <input name="shortMsg" maxlength="20" required />
           </label>
           </div>
