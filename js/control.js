@@ -43,7 +43,7 @@ class Controller {
     if (zoom) {
       const view = this.scene.view;
       view.touched = true;
-      view.zoom = Math.max(view.zoom, CONFIG.view.controlZoom * DPR);
+      view.zoom = CONFIG.view.controlZoom * DPR;
       view.center = { x: character.x, y: character.y - 40 };
       view.apply();
     }

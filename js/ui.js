@@ -17,7 +17,7 @@ const UI = (() => {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     const top = [...document.querySelectorAll('.modal:not([hidden])')].pop();
-    if (top?.matches('.fullscreen, .select-screen')) return; // 처음 접속 화면(생성·선택)은 닫지 않음
+    if (top?.matches('.lobby, .fullscreen, .select-screen')) return; // 로비·캐릭터 만들기·선택 화면은 닫지 않음
     closers.get(top)?.();
   });
 
@@ -27,7 +27,6 @@ const UI = (() => {
     const setOpen = (open) => {
       el.hidden = !open;
       if (open) openedAt = Date.now();
-      else el.classList.remove('fullscreen'); // 전체 화면(처음 접속)은 한 번만
       notifyModalChange();
     };
     // 닫기 버튼으로만 닫는다 (바깥 맵을 눌러도 안 닫힘).
@@ -637,9 +636,9 @@ const UI = (() => {
   }
 
   nextBtn.addEventListener('click', goNext);
-  form.querySelector('.have-char-btn').addEventListener('click', () => {
+  form.querySelector('.to-lobby').addEventListener('click', () => {
     writeModal.close();
-    openSelect();
+    openLobby();
   });
   prevBtn.addEventListener('click', () => showStep(1));
 
@@ -811,6 +810,7 @@ const UI = (() => {
   function openWrite() {
     if (!CONFIG.apiUrl) return showToast('방명록 작성은 곧 오픈됩니다!');
     writeModal.open();
+    return true;
   }
 
   // ---------- 방명록 목록 ----------
@@ -873,8 +873,7 @@ const UI = (() => {
         }
         const meta = document.createElement('small');
         meta.className = 'guest-meta';
-        const stats = g.info.stats && CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${g.info.stats[k]}`).join(' ');
-        meta.textContent = [...relationTags(g.info), stats].filter(Boolean).join(' · ');
+        meta.textContent = relationTags(g.info).join(' · ');
         const msg = document.createElement('small');
         msg.textContent = g.info.shortMsg || g.info.longMsg || '';
         text.append(name, ...(meta.textContent ? [meta] : []), msg);
@@ -980,9 +979,21 @@ const UI = (() => {
 
   selectSearch.addEventListener('input', renderSelect);
   selectStart.addEventListener('click', startSelected);
-  selectEl.querySelector('.select-new').addEventListener('click', () => {
+  selectEl.querySelector('.to-lobby').addEventListener('click', () => {
     selectModal.close();
-    openStart();
+    openLobby();
+  });
+
+  // ---------- 로비 (처음 접속, 메뉴 "로비로 돌아가기") ----------
+  const lobbyEl = document.getElementById('lobby-modal');
+  const lobbyModal = setupModal(lobbyEl);
+  const openLobby = () => lobbyModal.open();
+  lobbyEl.querySelector('.lobby-play').addEventListener('click', () => {
+    lobbyModal.close();
+    openSelect();
+  });
+  lobbyEl.querySelector('.lobby-new').addEventListener('click', () => {
+    if (openWrite()) lobbyModal.close();
   });
 
   // ---------- 웨딩 갤러리 ----------
@@ -991,6 +1002,7 @@ const UI = (() => {
   const galleryEl = document.getElementById('gallery-modal');
   const galleryModal = setupModal(galleryEl);
   const grid = galleryEl.querySelector('.gallery-grid');
+  const tabs = galleryEl.querySelector('.gallery-tabs');
   const viewer = galleryEl.querySelector('.gallery-viewer');
   const photo = galleryEl.querySelector('.gallery-photo');
   let allPhotos = null;
@@ -1016,22 +1028,49 @@ const UI = (() => {
     // 좌우 사진은 미리 받아 두어 넘길 때 바로 보이게
     for (const d of [-1, 1]) new Image().src = photos[(photoIndex + d + photos.length) % photos.length].src;
     galleryEl.querySelector('.gallery-count').textContent = `${photoIndex + 1} / ${photos.length}`;
-    grid.hidden = true;
+    grid.hidden = tabs.hidden = true;
     viewer.hidden = false;
   }
 
   function showGrid() {
     viewer.hidden = true;
     grid.hidden = photos.length === 0;
+    tabs.hidden = tabs.childElementCount < 2;
   }
 
-  /** 갤러리 열기. album이 있으면 그 앨범 사진만, title은 창 제목 (앨범 NPC 이름) */
+  /** 앨범 탭 이름: 그 앨범을 연 NPC 이름, 없으면 폴더 이름 */
+  function albumTitle(album) {
+    const npc = Object.values(CONFIG.npcs ?? {}).find((n) => n.album === album && !n.deleted);
+    return npc?.name ?? (album || '웨딩 사진');
+  }
+
+  /** 갤러리 열기. album이 있으면 그 앨범 사진만, title은 창 제목 (앨범 NPC 이름). 메뉴에서 열면 앨범별 탭 */
   async function openGallery(album = null, title = '웨딩 갤러리') {
     document.getElementById('gallery-title').textContent = title;
     grid.replaceChildren();
+    tabs.replaceChildren();
+    tabs.hidden = true;
     galleryModal.open();
     const all = await loadPhotos();
-    photos = album ? all.filter((p) => p.album === album) : all;
+    if (album) return showPhotos(all.filter((p) => p.album === album));
+    const albums = [...new Set(all.map((p) => p.album))];
+    const tabBtns = albums.map((a) => {
+      const btn = Object.assign(document.createElement('button'), { type: 'button', textContent: albumTitle(a) });
+      btn.setAttribute('role', 'tab');
+      btn.addEventListener('click', () => {
+        tabBtns.forEach((b) => b.setAttribute('aria-selected', String(b === btn)));
+        showPhotos(all.filter((p) => p.album === a));
+      });
+      return btn;
+    });
+    tabs.append(...tabBtns);
+    if (tabBtns.length) tabBtns[0].click();
+    else showPhotos([]);
+  }
+
+  function showPhotos(list) {
+    photos = list;
+    grid.replaceChildren();
     galleryEl.querySelector('.empty-note').hidden = photos.length > 0;
     {
       grid.append(
@@ -1090,9 +1129,9 @@ const UI = (() => {
   const actions = {
     mode: () => UI.onToggleMode?.(),
     edit: () => UI.onEditMine?.(),
-    write: openWrite,
     list: openList,
     gallery: () => openGallery(),
+    lobby: () => UI.onLobby?.(),
   };
 
   /** 메뉴의 모드 전환 글자: 지금 플레이 모드면 관람 모드로, 관람 모드면 플레이 모드로 */
@@ -1165,18 +1204,12 @@ const UI = (() => {
     play();
   })();
 
-  /** 처음 접속: 맵을 가리는 전체 화면으로 캐릭터 생성부터 (창을 닫으면 그냥 둘러보기) */
-  function openStart() {
-    writeEl.classList.add('fullscreen');
-    openWrite();
-  }
-
   return {
     openGuestbook,
     openAlbum: (album, title) => openGallery(album, title), // 앨범 NPC
     openEdit, // { info, onUpdated(guest), onDeleted() } → 비밀번호 확인 → 수정 폼
     openNpcSettings,
-    openStart,
+    openLobby,
     setMode,
     showToast,
     forgetMyGuest: () => myGuest.set(''),
@@ -1184,6 +1217,7 @@ const UI = (() => {
     onGuestPicked: null,
     onToggleMode: null, // 메뉴 "모드 전환"
     onEditMine: null, // 메뉴 "캐릭터 수정"
+    onLobby: null, // 메뉴 "로비로 돌아가기"
     onModalChange: null,
     getGuests: null,
   };

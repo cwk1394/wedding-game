@@ -26,9 +26,9 @@
     bar.style.width = '100%';
     loading.classList.add('done');
     setTimeout(() => loading.remove(), 500);
-    // 처음 접속: 캐릭터 생성부터 ("이미 생성한 캐릭터가 있어요"면 선택). 개발자 모드는 바로 편집
+    // 처음 접속: 로비(내 캐릭터로 접속 / 캐릭터 만들기). 개발자 모드는 바로 편집
     // 로딩 화면이 걷히기 전에 열어 두어 맵이 먼저 보이지 않게
-    if (!new URLSearchParams(location.search).has('dev')) UI.openStart();
+    if (!new URLSearchParams(location.search).has('dev')) UI.openLobby();
   };
   setTimeout(showMain, 20000); // 이미지 서버가 느려도 무한정 기다리지 않게
 
@@ -101,9 +101,15 @@
         mine = null;
         UI.forgetMyGuest();
         UI.setMode(false);
-        UI.openStart();
+        UI.openLobby();
       },
     });
+  };
+
+  // 메뉴 "로비로 돌아가기": 조종을 놓고 로비로 (내 캐릭터는 맵에 남아 알아서 돌아다님)
+  UI.onLobby = () => {
+    watch();
+    UI.openLobby();
   };
 
   // 방금 등록한 하객은 배포를 기다리지 않고 바로 맵에 등장시킨다
