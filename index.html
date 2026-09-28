@@ -161,7 +161,7 @@
       <div class="lobby-actions">
         <!-- 이 브라우저에 내 캐릭터가 있으면 "접속", 없으면 "만들기"를 강조하고 그 아래 안내 (UI.openLobby) -->
         <button type="button" class="btn btn-ghost lobby-new">캐릭터 만들기</button>
-        <button type="button" class="btn btn-ghost lobby-play">내 캐릭터로 접속</button>
+        <button type="button" class="btn btn-ghost lobby-play">캐릭터 접속</button>
         <p class="lobby-guide" aria-live="polite"></p>
       </div>
     </div>
@@ -291,9 +291,18 @@
         <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
       </div>
       <div class="modal-body">
-        <input type="search" class="list-search" placeholder="이름으로 찾기" aria-label="이름으로 찾기" />
-        <ul class="char-grid"></ul>
-        <p class="empty-note" hidden></p>
+        <!-- 내 캐릭터: 이 브라우저에서 만든 캐릭터 3칸 (빈 칸 = 캐릭터 만들기) -->
+        <div class="select-mine">
+          <ul class="char-grid my-slots"></ul>
+          <button type="button" class="btn btn-ghost select-others-btn">다른 캐릭터로 플레이 해보기</button>
+        </div>
+        <!-- 다른 캐릭터: 내가 만들지 않은 하객 목록 -->
+        <div class="select-others" hidden>
+          <button type="button" class="have-char-btn select-back">← 내 캐릭터</button>
+          <input type="search" class="list-search" placeholder="이름으로 찾기" aria-label="이름으로 찾기" />
+          <ul class="char-grid other-grid"></ul>
+          <p class="empty-note" hidden></p>
+        </div>
       </div>
       <div class="modal-footer modal-footer-split">
         <button type="button" class="btn btn-ghost to-lobby">← 로비로</button>

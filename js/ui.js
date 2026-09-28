@@ -869,6 +869,7 @@ const UI = (() => {
       const images = await (preparing ?? Promise.resolve(null));
       const guest = await submitGuestbook({ name, shortMsg, longMsg, password, side, relation, personality, title, stats, images });
       myGuest.set(guest.id);
+      myCreated.add(guest.id);
       createdCount.set(createdCount.get() + 1);
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
@@ -918,6 +919,25 @@ const UI = (() => {
     set: (id) => {
       try {
         localStorage.setItem('myGuestId', id);
+      } catch {}
+    },
+  };
+
+  /** 이 브라우저에서 만든 캐릭터 id 목록 (캐릭터 선택 화면 "내 캐릭터" 칸). 예전에 저장된 myGuestId도 내 캐릭터로 */
+  const myCreated = {
+    get: () => {
+      try {
+        const ids = JSON.parse(localStorage.getItem('myGuestIds') ?? 'null');
+        if (Array.isArray(ids)) return ids;
+        const legacy = localStorage.getItem('myGuestId');
+        return legacy ? [legacy] : [];
+      } catch {
+        return [];
+      }
+    },
+    add: (id) => {
+      try {
+        localStorage.setItem('myGuestIds', JSON.stringify([...myCreated.get().filter((x) => x !== id), id]));
       } catch {}
     },
   };
@@ -1033,64 +1053,94 @@ const UI = (() => {
   }
 
   // ---------- 캐릭터 선택 (전체 화면) ----------
+  // 처음엔 내 캐릭터 3칸(이 브라우저에서 만든 캐릭터, 빈 칸 = 캐릭터 만들기).
+  // "다른 캐릭터로 플레이 해보기" → 내가 만들지 않은 하객 목록(이름 검색).
   // 카드를 고르고 "이 캐릭터로 시작" (카드를 두 번 눌러도 시작) → UI.onGuestPicked(info): 시작점에서 조종
   const selectEl = document.getElementById('select-modal');
   const selectModal = setupModal(selectEl);
-  const selectGrid = selectEl.querySelector('.char-grid');
+  const slotGrid = selectEl.querySelector('.my-slots');
+  const otherGrid = selectEl.querySelector('.other-grid');
   const selectSearch = selectEl.querySelector('.list-search');
   const selectStart = selectEl.querySelector('.select-start');
   let selected = null; // 고른 캐릭터 info
+  let showOthers = false;
 
   function openSelect() {
     selectSearch.value = '';
     selected = null;
+    showOthers = false;
     renderSelect();
     selectModal.open();
   }
 
   function renderSelect() {
-    const mine = myGuest.get();
-    const query = selectSearch.value.trim();
-    const guests = sortedGuests(mine).filter((g) => !query || g.info.name.includes(query));
-    if (selected && !guests.some((g) => g.info === selected)) selected = null;
+    const mineIds = myCreated.get();
+    const all = sortedGuests();
+    selectEl.querySelector('#select-title').textContent = showOthers ? '다른 캐릭터' : '내 캐릭터';
+    selectEl.querySelector('.select-mine').hidden = showOthers;
+    selectEl.querySelector('.select-others').hidden = !showOthers;
+
+    let shown;
+    if (showOthers) {
+      const query = selectSearch.value.trim();
+      shown = all.filter((g) => !mineIds.includes(g.info.id) && (!query || g.info.name.includes(query)));
+      const empty = selectEl.querySelector('.empty-note');
+      empty.hidden = shown.length > 0;
+      empty.textContent = query ? '찾는 이름이 없어요.' : '아직 다른 하객 캐릭터가 없어요.';
+      otherGrid.replaceChildren(...shown.map(charCard));
+    } else {
+      // 만든 순서대로 3칸. 지워진 캐릭터(맵에 없음)는 빈 칸
+      shown = mineIds.map((id) => all.find((g) => g.info.id === id)).filter(Boolean).slice(0, MAX_CREATED);
+      const slots = shown.map(charCard);
+      while (slots.length < MAX_CREATED) slots.push(emptySlot());
+      slotGrid.replaceChildren(...slots);
+    }
+    if (selected && !shown.some((g) => g.info === selected)) selected = null;
     selectStart.disabled = !selected;
-    const empty = selectEl.querySelector('.empty-note');
-    empty.hidden = guests.length > 0;
-    empty.textContent = query ? '찾는 이름이 없어요.' : '아직 만든 캐릭터가 없어요. 새 캐릭터를 만들어 주세요!';
-    selectGrid.replaceChildren(
-      ...guests.map((g) => {
-        const { info } = g;
-        const li = document.createElement('li');
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'char-card';
-        card.classList.toggle('selected', info === selected);
-        card.setAttribute('aria-pressed', String(info === selected));
-        const add = (tag, cls, text) => {
-          const el = document.createElement(tag);
-          el.className = cls;
-          if (text != null) el.textContent = text;
-          card.append(el);
-          return el;
-        };
-        if (info.id === mine) add('span', 'char-card-mine', '내 캐릭터');
-        add('span', 'guest-title char-card-title', info.title || '').hidden = !info.title;
-        const avatar = add('img', 'char-card-avatar');
-        avatar.alt = '';
-        avatar.loading = 'lazy';
-        avatar.src = g.avatarUrl();
-        add('b', 'char-card-name', info.name);
-        add('small', 'char-card-meta', profileTags(info).join(' · '));
-        if (info.stats) add('span', 'char-card-stats', CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${info.stats[k]}`).join('  '));
-        card.addEventListener('click', () => {
-          selected = info;
-          renderSelect();
-        });
-        card.addEventListener('dblclick', startSelected);
-        li.append(card);
-        return li;
-      })
-    );
+  }
+
+  function charCard(g) {
+    const { info } = g;
+    const li = document.createElement('li');
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'char-card';
+    card.classList.toggle('selected', info === selected);
+    card.setAttribute('aria-pressed', String(info === selected));
+    const add = (tag, cls, text) => {
+      const el = document.createElement(tag);
+      el.className = cls;
+      if (text != null) el.textContent = text;
+      card.append(el);
+      return el;
+    };
+    add('span', 'guest-title char-card-title', info.title || '').hidden = !info.title;
+    const avatar = add('img', 'char-card-avatar');
+    avatar.alt = '';
+    avatar.loading = 'lazy';
+    avatar.src = g.avatarUrl();
+    add('b', 'char-card-name', info.name);
+    add('small', 'char-card-meta', profileTags(info).join(' · '));
+    if (info.stats) add('span', 'char-card-stats', CONFIG.stats.keys.map((k) => `${STAT_LABELS[k]} ${info.stats[k]}`).join('  '));
+    card.addEventListener('click', () => {
+      selected = info;
+      renderSelect();
+    });
+    card.addEventListener('dblclick', startSelected);
+    li.append(card);
+    return li;
+  }
+
+  /** 빈 칸: 누르면 캐릭터 만들기 (3개를 다 만들었으면 openWrite가 안내) */
+  function emptySlot() {
+    const li = document.createElement('li');
+    const card = Object.assign(document.createElement('button'), { type: 'button', className: 'char-card empty' });
+    card.append(Object.assign(document.createElement('b'), { textContent: '+' }), Object.assign(document.createElement('small'), { textContent: '캐릭터 만들기' }));
+    card.addEventListener('click', () => {
+      if (openWrite()) selectModal.close();
+    });
+    li.append(card);
+    return li;
   }
 
   function startSelected() {
@@ -1101,6 +1151,14 @@ const UI = (() => {
   }
 
   selectSearch.addEventListener('input', renderSelect);
+  const setOthers = (on) => {
+    showOthers = on;
+    selected = null;
+    renderSelect();
+    selectEl.querySelector('.modal-body').scrollTop = 0;
+  };
+  selectEl.querySelector('.select-others-btn').addEventListener('click', () => setOthers(true));
+  selectEl.querySelector('.select-back').addEventListener('click', () => setOthers(false));
   selectStart.addEventListener('click', startSelected);
   selectEl.querySelector('.to-lobby').addEventListener('click', () => {
     selectModal.close();
@@ -1112,7 +1170,7 @@ const UI = (() => {
   const lobbyModal = setupModal(lobbyEl);
   // 이 브라우저에 내 캐릭터(만들거나 고른 기록)가 있으면 "내 캐릭터로 접속", 없으면 "캐릭터 만들기"를 강조 + 바로 아래 안내
   const openLobby = () => {
-    const has = Boolean(myGuest.get());
+    const has = myCreated.get().length > 0;
     const target = lobbyEl.querySelector(has ? '.lobby-play' : '.lobby-new');
     lobbyEl.querySelectorAll('.lobby-actions .btn').forEach((b) => b.classList.toggle('hl', b === target));
     const guide = lobbyEl.querySelector('.lobby-guide');
