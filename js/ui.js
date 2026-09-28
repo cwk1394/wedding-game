@@ -48,6 +48,23 @@ const UI = (() => {
   fillSelect('side', CONFIG.sides);
   fillSelect('relation', CONFIG.relations);
   fillSelect('personality', CONFIG.personalities);
+  // 캐릭터 만들기 창은 선택 칸 대신 눌러서 고르는 칩 (라디오라 form.elements[name].value로 읽힘)
+  const fillChips = (name, map) =>
+    document.querySelectorAll(`[data-chips="${name}"]`).forEach((box) => {
+      box.replaceChildren(
+        ...Object.entries(map).map(([k, v]) => {
+          const chip = document.createElement('label');
+          chip.className = 'chip';
+          const input = Object.assign(document.createElement('input'), { type: 'radio', name, value: k });
+          const text = Object.assign(document.createElement('span'), { textContent: typeof v === 'string' ? v : v.label });
+          chip.append(input, text);
+          return chip;
+        })
+      );
+    });
+  fillChips('side', CONFIG.sides);
+  fillChips('relation', CONFIG.relations);
+  fillChips('personality', CONFIG.personalities);
 
   const STAT_LABELS = { str: 'STR', dex: 'DEX', int: 'INT', luk: 'LUK' };
 
@@ -565,7 +582,8 @@ const UI = (() => {
     });
   });
 
-  // ---------- 방명록 작성 (1단계: 방명록 → 2단계: 캐릭터) ----------
+  // ---------- 캐릭터 만들기 (4단계: 내 정보 → 캐릭터 → 한마디·방명록 → 비밀번호·등록) ----------
+  // 한 단계씩 옆으로 밀려 들어옴. AI 생성(1~3분)은 기다리지 않고 다음 단계로 넘어갈 수 있고, 등록만 생성이 끝날 때까지 막음
   const writeEl = document.getElementById('write-modal');
   const writeModal = setupModal(writeEl);
   const form = document.getElementById('write-form');
@@ -611,17 +629,54 @@ const UI = (() => {
     errorBox.hidden = !message;
   }
 
+  const LAST_STEP = 4;
   function showStep(n) {
+    const dir = n >= step ? 'fwd' : 'back';
     step = n;
     showError('');
-    form.querySelectorAll('[data-step]').forEach((el) => (el.hidden = Number(el.dataset.step) !== n));
-    form.querySelectorAll('[data-step-dot]').forEach((el) =>
-      el.classList.toggle('active', Number(el.dataset.stepDot) <= n)
-    );
+    form.querySelectorAll('[data-step]').forEach((el) => {
+      const on = Number(el.dataset.step) === n;
+      el.hidden = !on;
+      el.classList.remove('slide-fwd', 'slide-back');
+      if (on) {
+        void el.offsetWidth; // 같은 방향으로 연달아 넘어가도 애니메이션이 다시 돌게
+        el.classList.add(`slide-${dir}`);
+      }
+    });
+    form.querySelectorAll('.wiz-progress span').forEach((el, i) => el.classList.toggle('on', i < n));
+    form.querySelector('.wiz-count b').textContent = n;
     prevBtn.hidden = n === 1;
-    nextBtn.hidden = n !== 1;
-    submitBtn.hidden = n !== 2;
+    nextBtn.hidden = n === LAST_STEP;
+    submitBtn.hidden = n !== LAST_STEP;
+    if (n === LAST_STEP) renderSummary();
     form.querySelector('.modal-body').scrollTop = 0;
+  }
+
+  /** 단계별 필수 입력 확인 → 틀린 곳 안내 문구 (없으면 '') */
+  function checkStep(n) {
+    const { name, shortMsg, longMsg, password, side, relation, personality } = readTexts();
+    if (n === 1) {
+      if (!name) return '이름을 입력해 주세요.';
+      if (!side) return '누구의 하객인지 골라 주세요.';
+      if (!relation) return '어떤 사이인지 골라 주세요.';
+    }
+    if (n === 2 && !personality) return '캐릭터 성향을 골라 주세요.';
+    if (n === 3 && (!shortMsg || !longMsg)) return '한줄 멘트와 방명록을 모두 입력해 주세요.';
+    if (n === 4 && [...password].length < 4) return '비밀번호를 4자 이상 입력해 주세요.';
+    return '';
+  }
+
+  /** 4단계 위쪽: 지금까지 입력한 내용 확인용 카드 */
+  function renderSummary() {
+    const t = readTexts();
+    const q = (sel) => form.querySelector(sel);
+    q('.summary-name').textContent = t.name;
+    q('.summary-tags').textContent = profileTags(t).join(' · ');
+    q('.summary-short').textContent = t.shortMsg;
+    q('.summary-title').textContent = t.title;
+    q('.summary-title').hidden = !t.title;
+    setImg(q('.summary-avatar'), frontPreview.hidden ? null : frontPreview.src);
+    q('.wiz-summary .modal-avatar').hidden = frontPreview.hidden; // 캐릭터 없이 등록하면 빈 원 대신 글만
   }
 
   function readTexts() {
@@ -638,11 +693,9 @@ const UI = (() => {
   }
 
   function goNext() {
-    const { name, shortMsg, longMsg, password, side, relation } = readTexts();
-    if (!name || !shortMsg || !longMsg) return showError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
-    if (!side || !relation) return showError('신랑·신부와의 관계를 두 가지 모두 골라 주세요. (신랑측·신부측, 친척·직장·친구·기타)');
-    if ([...password].length < 4) return showError('비밀번호를 4자 이상 입력해 주세요.');
-    showStep(2);
+    const err = checkStep(step);
+    if (err) return showError(err);
+    if (step < LAST_STEP) showStep(step + 1);
   }
 
   nextBtn.addEventListener('click', goNext);
@@ -650,7 +703,14 @@ const UI = (() => {
     writeModal.close();
     openLobby();
   });
-  prevBtn.addEventListener('click', () => showStep(1));
+  prevBtn.addEventListener('click', () => showStep(step - 1));
+  // 칩을 고르면 남아 있던 "골라 주세요" 안내를 지움
+  form.addEventListener('change', (e) => {
+    if (e.target.type === 'radio') showError('');
+  });
+  const longCount = form.querySelector('.long-count');
+  fields.longMsg.addEventListener('input', () => (longCount.textContent = [...fields.longMsg.value].length));
+  showStep(1);
 
   function setImg(img, src) {
     img.hidden = !src;
@@ -688,7 +748,7 @@ const UI = (() => {
     generating = busy;
     generateBtn.disabled = busy;
     submitBtn.disabled = busy;
-    prevBtn.disabled = busy;
+    submitBtn.textContent = busy ? '캐릭터 완성 기다리는 중...' : '방명록 등록하기';
     genStatus.hidden = !busy;
     genStatus.querySelector('.gen-text').textContent = text;
   }
@@ -769,23 +829,24 @@ const UI = (() => {
     preparing = null;
     setImg(frontPreview, null);
     previewEmpty.hidden = false;
+    longCount.textContent = '0';
+    step = 1;
     showStep(1);
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (step === 1) return goNext(); // 1단계에서 엔터
+    if (step < LAST_STEP) return goNext(); // 입력 칸에서 엔터 = 다음
     if (generating) return;
     showError('');
+    // 앞 단계에서 빠진 게 있으면 그 단계로 돌아가서 안내
+    for (let n = 1; n <= LAST_STEP; n++) {
+      const err = checkStep(n);
+      if (!err) continue;
+      if (n !== step) showStep(n);
+      return showError(err);
+    }
     const { name, shortMsg, longMsg, password, side, relation, personality, title } = readTexts();
-    if (!name || !shortMsg || !longMsg || [...password].length < 4 || !side || !relation) {
-      showStep(1);
-      return goNext();
-    }
-    if (!personality) {
-      fields.personality.focus();
-      return showError('캐릭터 성향을 골라 주세요.');
-    }
 
     submitBtn.disabled = true;
     prevBtn.disabled = true;
@@ -813,7 +874,7 @@ const UI = (() => {
     } finally {
       submitBtn.disabled = false;
       prevBtn.disabled = false;
-      submitBtn.textContent = '등록하기';
+      submitBtn.textContent = '방명록 등록하기';
     }
   });
 

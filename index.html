@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>경태 & 민지 결혼식 - 방명록</title>
+  <!-- 캐릭터 만들기 창 글꼴 (쓰는 글자만 나눠 받음) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -163,86 +165,116 @@
 
   <!-- 방명록 작성 폼 (로비의 "캐릭터 만들기"): 항상 전체 화면 -->
   <div id="write-modal" class="modal fullscreen" hidden>
-    <form id="write-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="write-title" novalidate>
-      <div class="modal-header">
-        <span id="write-title" class="modal-title">캐릭터 생성</span>
-        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+    <form id="write-form" class="modal-card wizard" role="dialog" aria-modal="true" aria-label="캐릭터 만들기" novalidate>
+      <!-- 위: 로비로 · 단계 수 + 4칸 진행 막대 -->
+      <div class="wiz-top">
+        <button type="button" class="wiz-back to-lobby"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>로비</button>
+        <span class="wiz-count" aria-live="polite"><b>1</b> / 4</span>
       </div>
-      <ol class="steps" aria-label="작성 단계">
-        <li class="active" data-step-dot="1"><b>1</b> 방명록 쓰기</li>
-        <li data-step-dot="2"><b>2</b> 캐릭터 만들기</li>
-      </ol>
-      <div class="modal-body form-body">
-        <!-- 1단계: 방명록 -->
-        <div class="step" data-step="1">
-          <button type="button" class="have-char-btn to-lobby">← 로비로 돌아가기</button>
+      <div class="wiz-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+      <div class="modal-body wiz-body">
+        <!-- 1) 내 정보 -->
+        <section class="step" data-step="1">
+          <header class="wiz-head">
+            <h2>반가워요!<br />어떤 하객인지 알려주세요</h2>
+          </header>
           <label class="field">
-            <span>이름 <small>(15자 이하)</small></span>
-            <input name="name" maxlength="15" required autocomplete="name" />
+            <span>이름 <small>15자 이하</small></span>
+            <input name="name" maxlength="15" required autocomplete="name" placeholder="맵에서 이름표로 보여요" />
+          </label>
+          <fieldset class="field chip-field">
+            <legend>누구의 하객인가요</legend>
+            <div class="chips chips-3" data-chips="side"></div>
+          </fieldset>
+          <fieldset class="field chip-field">
+            <legend>어떤 사이인가요</legend>
+            <div class="chips chips-4" data-chips="relation"></div>
+          </fieldset>
+        </section>
+
+        <!-- 2) 캐릭터 -->
+        <section class="step" data-step="2" hidden>
+          <header class="wiz-head">
+            <h2>맵을 돌아다닐<br />내 캐릭터를 만들어요</h2>
+          </header>
+          <fieldset class="field chip-field">
+            <legend>성향 <small>움직이는 방식이 달라져요</small></legend>
+            <div class="chips chips-personality" data-chips="personality"></div>
+          </fieldset>
+          <label class="field">
+            <span>칭호 <small>선택 · 머리 위에 보여요</small></span>
+            <input name="title" maxlength="12" placeholder="예: 신랑의 15년지기" />
           </label>
           <div class="field">
-            <span>신랑·신부와의 관계</span>
-            <div class="relation-row">
-              <select name="side" required aria-label="신랑측·신부측"></select>
-              <select name="relation" required aria-label="관계"></select>
+            <span>능력치 <small>주사위를 굴려 정해요</small></span>
+            <div class="stat-roll">
+              <div class="stat-grid"></div>
+              <button type="button" class="dice-btn" aria-label="주사위 굴리기">🎲</button>
             </div>
           </div>
-          <label class="field">
-            <span>한줄 멘트 <small>(20자 이하, 말풍선으로 보여요)</small></span>
-            <input name="shortMsg" maxlength="20" required />
-          </label>
-          <label class="field">
-            <span>방명록</span>
-            <textarea name="longMsg" maxlength="500" rows="5" required></textarea>
-          </label>
-          <label class="field">
-            <span>비밀번호 <small>(4자 이상, 방명록을 수정·삭제할 때 필요해요)</small></span>
-            <input name="password" type="password" minlength="4" maxlength="30" required autocomplete="new-password" />
-          </label>
-        </div>
-
-        <!-- 2단계: 캐릭터 -->
-        <div class="step" data-step="2" hidden>
-          <div class="char-settings">
-            <label class="field">
-              <span>캐릭터 성향 <small>(맵에서 움직이는 방식이 달라져요)</small></span>
-              <select name="personality" required></select>
-            </label>
-            <label class="field">
-              <span>칭호 <small>(선택, 12자 이하 — 캐릭터 머리 위에 보여요)</small></span>
-              <input name="title" maxlength="12" placeholder="예: 신랑의 15년지기" />
-            </label>
-            <div class="field">
-              <span>능력치 <small>(주사위를 굴려 정해요, 총합 25)</small></span>
-              <div class="stat-roll">
-                <div class="stat-grid"></div>
-                <button type="button" class="dice-btn" aria-label="주사위 굴리기">🎲</button>
+          <div class="field">
+            <span>모습 <small>사진이 없으면 랜덤으로 그려요</small></span>
+            <div class="char-maker">
+              <label class="photo-pick">
+                <input name="photo" type="file" accept="image/*" />
+                <img class="photo-preview" alt="내 사진 미리보기" hidden />
+                <span class="photo-empty"><b>＋</b>사진 선택</span>
+              </label>
+              <span class="char-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+              <div class="preview">
+                <img class="preview-front" alt="캐릭터 미리보기" hidden />
+                <span class="preview-empty">캐릭터</span>
               </div>
-            </div>
-          </div>
-          <p class="step-intro">사진을 올리면 메이플 캐릭터로 바꿔드려요.<br />사진 없이 만들면 랜덤 캐릭터를 그려드려요.</p>
-          <div class="char-maker">
-            <label class="photo-pick">
-              <input name="photo" type="file" accept="image/*" />
-              <img class="photo-preview" alt="내 사진 미리보기" hidden />
-              <span class="photo-empty"><b>＋</b>사진 선택</span>
-            </label>
-            <span class="char-arrow" aria-hidden="true">→</span>
-            <div class="preview">
-              <img class="preview-front" alt="캐릭터 미리보기" hidden />
-              <span class="preview-empty">캐릭터</span>
             </div>
           </div>
           <button type="button" class="btn btn-secondary generate-btn">캐릭터 생성</button>
           <p class="gen-status" hidden><span class="spinner" aria-hidden="true"></span><span class="gen-text"></span></p>
-          <small class="note">사진은 캐릭터를 만드는 데만 쓰이고 저장되지 않아요.<br/>생성에 1~3분 정도 걸려요.<br/>캐릭터 없이 등록해도 괜찮아요.</small>
-        </div>
+          <small class="note">1~3분 걸려요. 기다리는 동안 다음 단계를 써도 돼요.<br />사진은 캐릭터를 만드는 데만 쓰고 저장하지 않아요.</small>
+        </section>
+
+        <!-- 3) 한줄 멘트 · 방명록 -->
+        <section class="step" data-step="3" hidden>
+          <header class="wiz-head">
+            <h2>두 사람에게<br />축하 한마디 남겨 주세요</h2>
+          </header>
+          <label class="field">
+            <span>한줄 멘트 <small>20자 이하 · 말풍선으로 보여요</small></span>
+            <input name="shortMsg" maxlength="20" required placeholder="예: 결혼 축하해!" />
+          </label>
+          <label class="field">
+            <span>방명록</span>
+            <textarea name="longMsg" maxlength="500" rows="8" required placeholder="두 사람에게 전하고 싶은 이야기"></textarea>
+            <small class="count"><span class="long-count">0</span> / 500</small>
+          </label>
+        </section>
+
+        <!-- 4) 비밀번호 · 저장 -->
+        <section class="step" data-step="4" hidden>
+          <header class="wiz-head">
+            <h2>마지막으로<br />비밀번호를 정해 주세요</h2>
+          </header>
+          <div class="wiz-summary">
+            <div class="modal-avatar"><img class="summary-avatar" alt="" hidden /></div>
+            <div class="summary-text">
+              <span class="guest-title summary-title" hidden></span>
+              <b class="summary-name"></b>
+              <small class="summary-tags"></small>
+              <span class="modal-short summary-short"></span>
+            </div>
+          </div>
+          <label class="field">
+            <span>비밀번호 <small>4자 이상 · 방명록을 수정하거나 지울 때 필요해요</small></span>
+            <input name="password" type="password" minlength="4" maxlength="30" required autocomplete="new-password" />
+          </label>
+        </section>
         <p class="form-error" role="alert" hidden></p>
       </div>
-      <div class="modal-footer">
+
+      <div class="modal-footer wiz-foot">
         <button type="button" class="btn btn-ghost prev-btn" hidden>이전</button>
-        <button type="button" class="btn btn-primary next-btn">다음</button>
-        <button type="submit" class="btn btn-primary submit-btn" hidden>등록하기</button>
+        <button type="button" class="btn next-btn">다음</button>
+        <button type="submit" class="btn submit-btn" hidden>방명록 등록하기</button>
       </div>
     </form>
   </div>

@@ -24,7 +24,7 @@ js/data.js              COUPLE(고정), DUMMY_GUESTS(폴백 = 개발 때 테스�
 js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스프라이트 처리(removeBackground, buildSpriteCanvases, loadSpriteTextures)
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
-js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 2단계 작성 폼(1: 이름·멘트·방명록 → 2: 사진 미리보기·AI 캐릭터 생성), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 4단계 캐릭터 만들기 위저드(1 내 정보 → 2 캐릭터 → 3 한마디·방명록 → 4 비밀번호·등록), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
 js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/control.js           Controller: 캐릭터 직접 조종(방향키/Space, 터치 스틱·점프 버튼, 카메라 따라가기). 일반 방문자·개발자 모드 공용
@@ -102,17 +102,24 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 신랑신부 스프라이트 원본(`img/npc/*/walk.png` 등): 가로 4프레임, **왼쪽을 바라봄**, **흰 배경(투명 아님)** → 로드 시 배경 제거 + 프레임 분할 필요. 기존 임시 캐릭터와 방향이 반대인 점 주의.
 
 ## 방명록 수정/삭제 (비밀번호)
-- 등록 폼 1단계에 비밀번호(4~30자). 서버는 Discussion 본문에 `pw: "salt:HMAC-SHA256(비밀키, salt:비밀번호)"`만 저장(본문은 공개라 평문 금지). 비밀키 = Vercel `GUEST_PASSWORD_SECRET`(없으면 `DEV_PASSWORD`) — 바꾸면 기존 비밀번호 전부 무효.
+- 등록 위저드 4단계에 비밀번호(4~30자). 서버는 Discussion 본문에 `pw: "salt:HMAC-SHA256(비밀키, salt:비밀번호)"`만 저장(본문은 공개라 평문 금지). 비밀키 = Vercel `GUEST_PASSWORD_SECRET`(없으면 `DEV_PASSWORD`) — 바꾸면 기존 비밀번호 전부 무효.
 - guests.json에는 `number`(Discussion 번호)가 들어가고 pw는 빠짐. `POST /api/guestbook {action: verify|update|delete, number, id, password, ...}` → 번호로 글을 읽고 카테고리·id 확인 후 비밀번호 검사.
 - `DEV_PASSWORD`는 관리자 비밀번호로 모든 방명록(비밀번호 없는 옛 글 포함)을 수정/삭제 가능.
 - 팝업: 하객이면 조종하기 왼쪽에 "수정" → 비밀번호 확인 → 이름·멘트·방명록 수정 폼 + "캐릭터 삭제". 수정하면 맵의 이름표/멘트 즉시 갱신, 삭제하면 맵에서 제거(`scene.removeGuest`). 이미지 폴더는 매일 정리 작업이 지움.
 
 ## 하객 프로필: 관계·성향·칭호·능력치
-- 작성 1단계에 신랑·신부와의 관계(필수, 두 칸: 어느 쪽 `side` 신랑측·신부측·양측 + 어떤 관계 `relation` 친척·직장·친구·기타. 예전 글은 relation에 groom/bride/both → fetch-guests·화면이 side로 읽음), 2단계(캐릭터 만들기) 위쪽에 성향(필수)·칭호(선택, 12자)·능력치 주사위. 수정 폼에서 관계·성향·칭호는 바꿀 수 있고 능력치는 그대로.
+- 위저드 1단계에 신랑·신부와의 관계(필수, 칩 두 줄: 어느 쪽 `side` 신랑측·신부측·양측 + 어떤 관계 `relation` 친척·직장·친구·기타. 예전 글은 relation에 groom/bride/both → fetch-guests·화면이 side로 읽음), 2단계(캐릭터)에 성향(필수, 칩)·칭호(선택, 12자)·능력치 주사위·사진으로 AI 생성. 수정 폼에서 관계·성향·칭호는 바꿀 수 있고 능력치는 그대로.
 - 목록 키는 `CONFIG.sides`/`CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `SIDES`/`RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
 - 능력치 STR/DEX/INT/LUK: 각 4에서 시작해 남은 9점을 한 점씩 무작위로(`rollStats`) → 합 25, 4~13, 6 근처가 잘 나오고 끝값은 드묾. API가 범위·합 검사. 팝업에 표시만(움직임엔 영향 없음).
 - 칭호: 캐릭터 머리 위 메달(`setTitle`, `CONFIG.titleStyle`). 말풍선·조종 표시는 `headY()`(칭호 위)에.
 - 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(반반 랜덤: 제자리에서 방향 바꾸며 통통 / 셔플 스텝 — 한 방향으로 천천히 가며 걷기 모션만 0.24초마다 좌우로 뒤집기 `tickShuffle`).
+
+## 캐릭터 만들기 위저드 (`#write-form.wizard`)
+- 전체 화면 4단계: 1 이름·관계(side/relation 칩) → 2 성향 칩·칭호·능력치·사진 → AI 캐릭터 → 3 한줄 멘트·방명록(글자 수) → 4 입력 내용 확인 카드 + 비밀번호 → 등록. 위: "로비" 버튼, "n / 4", 4칸 진행 막대.
+- 단계 이동은 `showStep(n)`(앞으로 = 오른쪽에서, 뒤로 = 왼쪽에서 밀려 들어옴 `slide-fwd/back`, reduced-motion이면 없음), 필수 확인은 `checkStep(n)`. 등록할 때 앞 단계에 빠진 게 있으면 그 단계로 돌아가 안내.
+- 관계·성향은 선택 칸 대신 라디오 칩(`fillChips`, `data-chips`). 수정 폼은 그대로 select.
+- AI 생성 중에도 다음 단계로 넘어갈 수 있음 → 등록 버튼만 생성이 끝날 때까지 "캐릭터 완성 기다리는 중...".
+- 글꼴: 위저드만 Pretendard(jsDelivr, dynamic subset).
 
 ## 캐릭터 조종 (일반 방문자)
 - 로비(`#lobby-modal`, `UI.openLobby`): 처음 접속(로딩이 끝나면, `?dev` 제외, 로딩 화면이 걷히기 전에 열림) 때와 메뉴 맨 아래 "로비로 돌아가기"(`UI.onLobby`: 조종 놓고 관람 모드로 바꾼 뒤 로비). 맵을 가리는 전체 화면, 닫기 없음. "내 캐릭터로 접속" → 캐릭터 선택 화면, "캐릭터 만들기" → 작성 폼(`#write-modal`, 항상 전체 화면 `.fullscreen`). 선택·작성 화면도 닫기 버튼·ESC 없이 "← 로비로" 버튼으로만 로비로 돌아감.

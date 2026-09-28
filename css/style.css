@@ -308,30 +308,6 @@ html, body {
   box-shadow: 0 0 0 3px rgba(255, 143, 126, .25);
 }
 
-/* 단계 표시 */
-.steps {
-  display: flex;
-  gap: 8px;
-  margin: 0;
-  padding: 14px 18px 0;
-  list-style: none;
-  font-size: 13px;
-  color: #c9a49c;
-}
-.steps li { flex: 1; display: flex; align-items: center; gap: 6px; padding-bottom: 8px; border-bottom: 3px solid #f3e4e0; }
-.steps b {
-  width: 22px;
-  height: 22px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #f3e4e0;
-  color: #fff;
-  font-size: 12px;
-}
-.steps li.active { color: var(--coral-deep); font-weight: bold; border-color: var(--coral); }
-.steps li.active b { background: var(--coral); }
-
 .step { display: flex; flex-direction: column; gap: 14px; }
 .step-intro { margin: 0; font-size: 14px; color: var(--ink); text-align: center; line-height: 1.6; }
 .step-intro small { color: var(--ink-soft); }
@@ -786,6 +762,91 @@ html, body {
 .modal.fullscreen .modal-body, .modal.select-screen .modal-body { flex: 1; }
 /* 닫기 버튼 없음 — 로비로 돌아가기 버튼으로만 나감 */
 .modal.fullscreen .modal-close, .modal.select-screen .modal-close { display: none; }
+
+/* ---------- 캐릭터 만들기 (4단계 위저드) ---------- */
+.wizard { font-family: "Pretendard Variable", Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+.wiz-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 10px;
+}
+.wiz-back {
+  display: inline-flex; align-items: center; gap: 2px; padding: 6px 10px 6px 4px;
+  border: 0; border-radius: 10px; background: none; color: var(--ink-soft);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.wiz-back:hover { background: var(--soft); }
+.wiz-back svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.wiz-count { font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.wiz-count b { color: var(--ink); }
+.wiz-progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0 16px; }
+.wiz-progress span { position: relative; height: 4px; border-radius: 2px; background: #f6e3de; overflow: hidden; }
+.wiz-progress span::after {
+  content: ""; position: absolute; inset: 0; background: var(--coral-deep);
+  transform: scaleX(0); transform-origin: left; transition: transform .35s ease;
+}
+.wiz-progress span.on::after { transform: none; }
+
+.modal-body.wiz-body { padding: 26px 20px 20px; overflow-x: hidden; display: flex; flex-direction: column; gap: 14px; }
+.wizard .step { gap: 22px; }
+.wiz-head h2 {
+  margin: 0; font-size: 24px; line-height: 1.38; font-weight: 700; letter-spacing: -.025em;
+  color: var(--ink); word-break: keep-all;
+}
+@keyframes wiz-in-fwd { from { opacity: 0; transform: translateX(32px); } }
+@keyframes wiz-in-back { from { opacity: 0; transform: translateX(-32px); } }
+.step.slide-fwd { animation: wiz-in-fwd .34s cubic-bezier(.2, .8, .2, 1); }
+.step.slide-back { animation: wiz-in-back .34s cubic-bezier(.2, .8, .2, 1); }
+
+.wizard .field { gap: 8px; font-size: 14px; font-weight: 600; }
+.wizard .field small { margin-left: 4px; font-weight: 400; color: #c3897e; }
+.wizard .field input:not([type="file"]), .wizard .field textarea { padding: 13px 14px; border: 1.5px solid var(--line); border-radius: 14px; }
+.wizard .field input::placeholder, .wizard .field textarea::placeholder { color: #d9b3aa; }
+.wizard .field .count { align-self: flex-end; margin: -2px 2px 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+fieldset.chip-field { display: block; min-width: 0; margin: 0; padding: 0; border: 0; }
+fieldset.chip-field legend { margin-bottom: 8px; padding: 0; }
+
+/* 칩: 라디오를 숨기고 라벨 전체를 버튼처럼 */
+.chips { display: grid; gap: 8px; }
+.chips-3 { grid-template-columns: repeat(3, 1fr); }
+.chips-4 { grid-template-columns: repeat(4, 1fr); }
+/* 성향은 7개라 4칸 두 줄로 작게 */
+.chips-personality { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.chips-personality .chip { min-height: 40px; padding: 8px 4px; border-radius: 12px; font-size: 14px; }
+.chip {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 50px; padding: 10px 8px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff;
+  color: var(--ink); font-size: 15px; font-weight: 600; text-align: center; cursor: pointer;
+  transition: border-color .15s, background-color .15s, color .15s, transform .1s;
+}
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip:hover { border-color: var(--coral-light); }
+.chip:active { transform: scale(.97); }
+.chip:has(input:checked) { border-color: var(--coral-deep); background: var(--soft); color: var(--coral-deep); box-shadow: inset 0 0 0 1px var(--coral-deep); }
+.chip:has(input:focus-visible) { outline: 2px solid var(--coral-deep); outline-offset: 2px; }
+
+.wizard .char-arrow svg { width: 22px; height: 22px; fill: none; stroke: var(--coral); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 4단계: 입력한 내용 확인 카드 */
+.wiz-summary { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); }
+.wiz-summary .modal-avatar { width: 76px; height: 76px; padding: 11px; }
+.summary-text { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.summary-text .guest-title { margin: 0; }
+.summary-name { font-size: 18px; color: var(--ink); }
+.summary-tags { font-size: 13px; color: var(--ink-soft); }
+.wiz-summary .modal-short { margin-top: 2px; background: #fff; }
+
+.modal-footer.wiz-foot { display: flex; gap: 10px; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #fbe7e2; }
+.wiz-foot .btn { padding: 15px 22px; border-radius: 16px; font-size: 16px; }
+.wiz-foot .next-btn, .wiz-foot .submit-btn {
+  flex: 1; background: var(--coral-deep); text-shadow: none;
+  box-shadow: 0 8px 18px rgba(240, 106, 88, .28);
+}
+.wiz-foot .next-btn:active, .wiz-foot .submit-btn:active { box-shadow: 0 3px 8px rgba(240, 106, 88, .28); }
+.wiz-foot .prev-btn { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .step.slide-fwd, .step.slide-back { animation: none; }
+  .wiz-progress span::after { transition: none; }
+}
 
 /* 캐릭터 선택 화면: 카드 격자 (메이플 캐릭터 선택창 느낌) */
 .modal.select-screen .modal-card { width: min(720px, 100%); }
