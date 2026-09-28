@@ -423,14 +423,27 @@ html, body {
 }
 .loading-title { margin-top: 10px; font-size: 32px; font-weight: 800; letter-spacing: -.03em; }
 .loading-sub { font-size: 15px; color: var(--ink-soft); }
-/* 진행 막대 칸은 로비 버튼 두 개와 같은 폭·높이 → 로딩이 걷히면 그 자리에 버튼만 나타남 */
+/* 로딩·로비 공통 설명: 3단계 (게임처럼 즐기는 방명록이라는 안내) */
+.lobby-intro {
+  list-style: none; margin: 18px 0 0; padding: 12px 14px; width: min(300px, 84vw);
+  display: flex; flex-direction: column; gap: 7px;
+  border-radius: 14px; background: rgba(255, 255, 255, .7); border: 1px solid var(--line);
+  font-size: 13.5px; line-height: 1.4; color: var(--ink); text-align: left; word-break: keep-all;
+}
+.lobby-intro li { display: flex; align-items: flex-start; gap: 8px; }
+.lobby-intro b {
+  flex: none; width: 20px; height: 20px; margin-top: -1px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--coral); color: #fff; font-size: 11.5px;
+}
+.lobby-intro em { font-style: normal; font-weight: bold; color: var(--coral-deep); }
+/* 진행 막대 칸은 로비 버튼 두 개 + 안내 말풍선과 같은 폭·높이 → 로딩이 걷히면 그 자리에 버튼만 나타남 */
 .loading-progress {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: min(300px, 84vw);
-  height: 112px;
-  margin-top: 36px;
+  height: 171px; /* 로비 버튼 두 개 + 안내 말풍선 높이 */
+  margin-top: 24px;
 }
 .loading-bar { height: 4px; border-radius: 2px; background: #f6e3de; overflow: hidden; }
 .loading-bar span {
@@ -751,7 +764,7 @@ html, body {
 /* 로비: 처음 접속 화면 (내 캐릭터로 접속 / 캐릭터 만들기) */
 .modal.lobby { background: radial-gradient(circle at 50% 40%, #fff, #ffe6df 75%); color: var(--ink); animation: none; }
 .lobby-card { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-.lobby-actions { display: flex; flex-direction: column; gap: 10px; width: min(300px, 84vw); margin-top: 36px; }
+.lobby-actions { display: flex; flex-direction: column; gap: 10px; width: min(300px, 84vw); margin-top: 24px; }
 .lobby-actions .btn { padding: 16px 22px; border-radius: 16px; font-size: 16px; }
 /* 강조 버튼: 코랄 + 은은하게 번지는 링 / 안내 말풍선은 강조 버튼 바로 아래 */
 .lobby-actions .btn-ghost.hl { background: var(--coral); border-color: var(--coral); color: #fff; animation: lobby-pulse 1.8s ease-out infinite; }
