@@ -1174,7 +1174,7 @@ const UI = (() => {
     const target = lobbyEl.querySelector(has ? '.lobby-play' : '.lobby-new');
     lobbyEl.querySelectorAll('.lobby-actions .btn').forEach((b) => b.classList.toggle('hl', b === target));
     const guide = lobbyEl.querySelector('.lobby-guide');
-    guide.textContent = has ? '생성한 캐릭터가 있어요! 내 캐릭터로 접속해보세요!' : '캐릭터 생성 기록이 없어요! 캐릭터를 생성해보세요!';
+    guide.textContent = has ? '생성한 캐릭터가 있어요! 캐릭터 접속을 눌러보세요!' : '캐릭터 생성 기록이 없어요! 캐릭터를 생성해보세요!';
     target.after(guide);
     lobbyModal.open();
   };
