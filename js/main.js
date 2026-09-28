@@ -57,7 +57,7 @@
   };
 
   // 방명록 목록용: 맵 위 하객 (방금 등록한 하객 포함)
-  UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl() }));
+  UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl(), update: (info) => g.updateInfo(info) }));
 
   // ---------- 내 캐릭터 · 모드 ----------
   // 내 캐릭터 = 처음 화면에서 만들거나 고른 캐릭터. 메뉴 "모드 전환"으로

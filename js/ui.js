@@ -463,22 +463,26 @@ const UI = (() => {
   const editError = editForm.querySelector('.form-error');
   const editSubmit = editForm.querySelector('.edit-submit');
   const deleteBtn = editForm.querySelector('.delete-btn');
-  let editing = null; // { target, password, verified }
+  let editing = null; // { target, letter, password, verified }
 
   const setEditError = (msg) => {
     editError.textContent = msg || '';
     editError.hidden = !msg;
   };
   function showEditStep(step) {
+    const { letter } = editing;
     editForm.querySelectorAll('[data-edit-step]').forEach((el) => (el.hidden = el.dataset.editStep !== step));
-    deleteBtn.hidden = step !== 'form';
+    editForm.querySelector('.edit-char').hidden = letter;
+    editForm.querySelector('.edit-letter').hidden = !letter;
+    deleteBtn.hidden = step !== 'form' || letter;
     editSubmit.textContent = step === 'form' ? '저장' : '확인';
-    document.getElementById('edit-title').textContent = step === 'form' ? '캐릭터 수정' : '비밀번호 확인';
+    document.getElementById('edit-title').textContent = step !== 'form' ? '비밀번호 확인' : letter ? '방명록 수정' : '캐릭터 수정';
   }
 
-  function openEdit(target) {
+  /** 비밀번호 확인 → 수정 폼. letter면 방명록 글만(방명록 목록의 내 방명록), 아니면 캐릭터 정보만 */
+  function openEdit(target, { letter = false } = {}) {
     if (!target) return;
-    editing = { target, password: '', verified: false };
+    editing = { target, letter, password: '', verified: false };
     editForm.reset();
     setEditError('');
     showEditStep('password');
@@ -527,6 +531,7 @@ const UI = (() => {
         showEditStep('form');
       });
     }
+    // 한 번에 한쪽만 고치고, 나머지 칸은 폼에 불러온 지금 값 그대로 보냄 (API는 전부 받음)
     const name = ef.name.value.trim();
     const shortMsg = ef.shortMsg.value.trim();
     const longMsg = ef.longMsg.value.trim();
@@ -534,13 +539,18 @@ const UI = (() => {
     const relation = ef.relation.value;
     const personality = ef.personality.value;
     const title = ef.title.value.trim();
-    if (!name || !shortMsg || !longMsg) return setEditError('이름, 한줄 멘트, 방명록을 모두 입력해 주세요.');
-    if (!side || !relation || !personality) return setEditError('관계(두 가지)와 캐릭터 성향을 골라 주세요.');
+    if (editing.letter) {
+      if (!longMsg) return setEditError('방명록을 입력해 주세요.');
+      if (!side || !relation || !personality) return setEditError('예전에 쓴 글이라 관계·성향이 비어 있어요. 메뉴 "캐릭터 수정"에서 먼저 정해 주세요.');
+    } else {
+      if (!name || !shortMsg) return setEditError('이름과 한줄 멘트를 입력해 주세요.');
+      if (!side || !relation || !personality) return setEditError('관계(두 가지)와 캐릭터 성향을 골라 주세요.');
+    }
     return busy(editSubmit, '저장 중...', async () => {
       const { guest } = await request('update', { name, shortMsg, longMsg, side, relation, personality, title });
       editing.target.onUpdated?.(guest);
       editModal.close();
-      showToast('캐릭터를 수정했어요');
+      showToast(editing.letter ? '방명록을 수정했어요' : '캐릭터를 수정했어요');
     });
   });
 
@@ -842,6 +852,7 @@ const UI = (() => {
     listModal.open();
   }
 
+  // 내 방명록(이 기기의 내 캐릭터)은 맨 위 따로 + 수정 버튼, 그 아래 다른 하객 방명록
   function renderList() {
     const all = sortedGuests();
     const query = listSearch.value.trim();
@@ -850,39 +861,56 @@ const UI = (() => {
     const empty = document.querySelector('#list-modal .empty-note');
     empty.hidden = guests.length > 0;
     empty.innerHTML = query ? '찾는 이름이 없어요.' : '아직 등록된 방명록이 없어요.<br />첫 번째 하객이 되어 주세요!';
+    const mineId = myGuest.get();
+    const mine = guests.filter((g) => g.info.id === mineId);
+    const others = guests.filter((g) => g.info.id !== mineId);
+    const section = (label) => Object.assign(document.createElement('li'), { className: 'list-section', textContent: label });
     listEl.replaceChildren(
-      ...guests.map((g) => {
-        const li = document.createElement('li');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        const avatar = document.createElement('img');
-        avatar.className = 'guest-avatar';
-        avatar.alt = '';
-        avatar.loading = 'lazy';
-        avatar.src = g.avatarUrl();
-        const text = document.createElement('span');
-        text.className = 'guest-text';
-        const name = document.createElement('b');
-        name.textContent = g.info.name;
-        // 칭호 · 이름 / 관계 · 능력치 / 한줄 멘트
-        if (g.info.title) {
-          const title = document.createElement('span');
-          title.className = 'guest-title';
-          title.textContent = g.info.title;
-          text.append(title);
-        }
-        const meta = document.createElement('small');
-        meta.className = 'guest-meta';
-        meta.textContent = relationTags(g.info).join(' · ');
-        const msg = document.createElement('small');
-        msg.textContent = g.info.shortMsg || g.info.longMsg || '';
-        text.append(name, ...(meta.textContent ? [meta] : []), msg);
-        btn.append(avatar, text);
-        btn.addEventListener('click', () => openLetter(g.info, avatar.src));
-        li.append(btn);
-        return li;
-      })
+      ...(mine.length ? [section('내 방명록'), ...mine.map((g) => listItem(g, true))] : []),
+      ...(mine.length && others.length ? [section('다른 하객 방명록')] : []),
+      ...others.map((g) => listItem(g, false))
     );
+  }
+
+  function listItem(g, isMine) {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const avatar = document.createElement('img');
+    avatar.className = 'guest-avatar';
+    avatar.alt = '';
+    avatar.loading = 'lazy';
+    avatar.src = g.avatarUrl();
+    const text = document.createElement('span');
+    text.className = 'guest-text';
+    const name = document.createElement('b');
+    name.textContent = g.info.name;
+    // 칭호 · 이름 / 관계 / 한줄 멘트
+    if (g.info.title) {
+      const title = document.createElement('span');
+      title.className = 'guest-title';
+      title.textContent = g.info.title;
+      text.append(title);
+    }
+    const meta = document.createElement('small');
+    meta.className = 'guest-meta';
+    meta.textContent = relationTags(g.info).join(' · ');
+    const msg = document.createElement('small');
+    msg.textContent = g.info.shortMsg || g.info.longMsg || '';
+    text.append(name, ...(meta.textContent ? [meta] : []), msg);
+    btn.append(avatar, text);
+    btn.addEventListener('click', () => openLetter(g.info, avatar.src));
+    li.append(btn);
+    if (isMine) {
+      li.classList.add('mine');
+      const edit = Object.assign(document.createElement('button'), { type: 'button', className: 'guest-edit', textContent: '수정' });
+      edit.addEventListener('click', () => {
+        if (!g.info.number) return showToast('이 방명록은 수정할 수 없어요');
+        openEdit({ info: g.info, onUpdated: (guest) => (g.update(guest), renderList()) }, { letter: true });
+      });
+      li.append(edit);
+    }
+    return li;
   }
   listSearch.addEventListener('input', renderList);
 

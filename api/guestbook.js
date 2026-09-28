@@ -1,6 +1,6 @@
 // 방명록 쓰기 API (Vercel Serverless Function)
 // POST /api/guestbook  { name, shortMsg, longMsg, password, side, relation, personality, title?, stats, images?: { front, walk, jump, ladder, rope, prone } }  (이미지는 PNG base64)
-//   side(신랑측·신부측·두 사람 모두)·relation(친척·직장·친구·기타)·personality(성향) = 아래 목록의 키 (한글 이름은 js/config.js), title = 칭호(12자, 선택)
+//   side(신랑측·신부측·양측)·relation(친척·직장·친구·기타)·personality(성향) = 아래 목록의 키 (한글 이름은 js/config.js), title = 칭호(12자, 선택)
 //   stats = { str, dex, int, luk } 각 4~13, 합 25 (브라우저에서 주사위로 굴림)
 //   1) UUID 발급
 //   2) 이미지를 img/guests/<uuid>/front.png, walk.png, jump.png, ladder.png, rope.png 로 저장소에 한 커밋으로 올림

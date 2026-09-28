@@ -35,8 +35,12 @@ class MapView {
     const { width, height } = this.cam;
     this.fitZoom = Math.min(width / CONFIG.width, height / CONFIG.height); // 맵 전체가 보이는 줌
     this.coverZoom = Math.max(width / CONFIG.width, height / CONFIG.height); // 화면을 꽉 채우는 줌
-    this.minZoom = this.fitZoom;
     this.maxZoom = Math.max(this.coverZoom, CONFIG.view.maxZoom * DPR);
+  }
+
+  /** 최소 줌: 조종 중(플레이 모드)엔 맵 밖 배경이 안 보이게 화면을 꽉 채우는 줌, 아니면 맵 전체가 보이는 줌 */
+  get minZoom() {
+    return this.scene.control?.controlled ? this.coverZoom : this.fitZoom;
   }
 
   /** 세로 화면(폰)은 맵 높이를 화면에 꽉 채우고, 가로 화면은 맵 전체를 보여준다 */

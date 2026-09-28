@@ -52,7 +52,7 @@ function toGuest(discussion) {
     name,
     shortMsg: str(data.shortMsg, 20),
     longMsg: str(data.longMsg, 1000),
-    // 예전 글은 relation에 신랑측/신부측/두 사람 모두(groom|bride|both)가 들어 있음 → side로 옮김
+    // 예전 글은 relation에 신랑측/신부측/양측(groom|bride|both)가 들어 있음 → side로 옮김
     side: key(data.side) ?? (['groom', 'bride', 'both'].includes(data.relation) ? data.relation : null),
     relation: ['groom', 'bride', 'both'].includes(data.relation) ? null : key(data.relation),
     personality: key(data.personality),

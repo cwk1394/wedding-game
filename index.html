@@ -280,7 +280,9 @@
             <input name="password" type="password" maxlength="30" autocomplete="current-password" />
           </label>
         </div>
+        <!-- 캐릭터 수정(메뉴·캐릭터창): 캐릭터 칸만 / 방명록 수정(방명록 목록의 내 방명록): 방명록 칸만 -->
         <div class="edit-step" data-edit-step="form" hidden>
+          <div class="edit-char form-body">
           <label class="field">
             <span>이름 <small>(15자 이하)</small></span>
             <input name="name" maxlength="15" required />
@@ -304,9 +306,10 @@
             <span>한줄 멘트 <small>(20자 이하)</small></span>
             <input name="shortMsg" maxlength="20" required />
           </label>
-          <label class="field">
+          </div>
+          <label class="field edit-letter">
             <span>방명록</span>
-            <textarea name="longMsg" maxlength="500" rows="5" required></textarea>
+            <textarea name="longMsg" maxlength="500" rows="8" required></textarea>
           </label>
         </div>
         <p class="form-error" role="alert" hidden></p>

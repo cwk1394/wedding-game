@@ -500,6 +500,16 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* 내 방명록 / 다른 하객 방명록 구분 + 내 방명록 수정 버튼 */
+.guest-list .list-section { margin-top: 6px; font-size: 13px; font-weight: bold; color: var(--ink-soft); }
+.guest-list .list-section:first-child { margin-top: 0; }
+.guest-list li.mine { position: relative; }
+.guest-list li.mine > button:first-child { padding-right: 70px; border-color: var(--coral-light); background: var(--soft); }
+.guest-list .guest-edit {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  width: auto; padding: 6px 12px; border: 1.5px solid var(--coral-light); border-radius: 999px;
+  background: #fff; color: var(--coral-deep); font-size: 13px; font-weight: bold;
+}
 .empty-note { margin: 12px 0; text-align: center; color: var(--ink-soft); line-height: 1.6; }
 
 /* ---------- 웨딩 갤러리 ---------- */

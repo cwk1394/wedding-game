@@ -112,7 +112,7 @@ const CONFIG = {
 
   // 하객 캐릭터 생성 때 고르는 신랑·신부와의 관계: 어느 쪽(side) + 어떤 관계(relation), 둘 다 필수
   // (키는 api/guestbook.js SIDES / RELATIONS와 같아야 함)
-  sides: { groom: '신랑측', bride: '신부측', both: '두 사람 모두' },
+  sides: { groom: '신랑측', bride: '신부측', both: '양측' },
   relations: { family: '친척', work: '직장', friend: '친구', other: '기타' },
 
   // 캐릭터 성향 (키는 api/guestbook.js PERSONALITIES와 같아야 함) → 하객이 스스로 돌아다니는 방식 (GuestCharacter)
