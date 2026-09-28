@@ -881,8 +881,8 @@ const UI = (() => {
       writeModal.close();
       showToast(
         matchMedia('(pointer: coarse)').matches
-          ? '방명록이 등록되었어요! 🎉\n스틱과 점프 버튼으로 움직여 보세요'
-          : '방명록이 등록되었어요! 🎉\n방향키와 Space(점프)로 움직여 보세요',
+          ? '캐릭터가 등록되었어요! 🎉\n스틱과 점프 버튼으로 움직여 보세요'
+          : '캐릭터가 등록되었어요! 🎉\n방향키와 Space(점프)로 움직여 보세요',
         3500
       );
     } catch (err) {
