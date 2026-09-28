@@ -9,6 +9,7 @@
 //   prone : 정면 캐릭터 + prompt/create-character-prone.txt           → 엎드리기 2프레임 (왼쪽)
 //   npc-front: (사진) + desc + prompt/npc-front.txt (사진 없으면 npc-front-noref.txt) → NPC 정면 (개발자 모드 NPC 추가)
 //   npc-idle / npc-walk: NPC 정면 + desc + prompt/npc-{idle,walk}.txt → 제자리 / 왼쪽 이동 4프레임
+//   front에 desc(개발자 모드 신랑·신부 이미지 새로 만들기)를 붙이면 password(DEV_PASSWORD)가 필요하고 설명을 프롬프트에 더한다
 //   NPC는 password(DEV_PASSWORD)와 desc(무엇인지: 강아지, 택시, 탁자 위 앨범 …)가 필요하고 투명 배경으로 만든다 (흰 털·흰 물건이 배경 제거 때 뚫리지 않게)
 //   → { image: <data URL (webp)> }
 // 한 번에 다 만들면 오래 걸리므로(각 최대 ~2분) 브라우저가 front를 먼저 만들고 나머지를 따로 호출한다.
@@ -53,10 +54,10 @@ export function POST(request) {
     if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다.');
     const spec = TYPES[body.type];
     if (!spec) throw new HttpError(400, `type은 ${Object.keys(TYPES).join(', ')} 중 하나여야 합니다.`);
+    // 여러 줄로 써도 한 줄로 합쳐 프롬프트에 넣는다
+    const desc = typeof body.desc === 'string' ? body.desc.replace(/\s+/g, ' ').trim().slice(0, 300) : '';
+    if (spec.npc || (body.type === 'front' && desc)) checkDevPassword(body.password); // NPC·설명 붙인 생성은 개발자 모드 전용
     if (spec.npc) {
-      checkDevPassword(body.password); // NPC 추가는 개발자 모드 전용
-      // 여러 줄로 써도 한 줄로 합쳐 프롬프트에 넣는다
-      const desc = typeof body.desc === 'string' ? body.desc.replace(/\s+/g, ' ').trim().slice(0, 300) : '';
       if (!desc) throw new HttpError(400, 'NPC 설명(무엇인지)을 입력해 주세요.');
       if (!body.image && !spec.noref) throw new HttpError(400, '정면 이미지가 필요합니다.');
       const file = body.image ? spec.prompt : spec.noref;
@@ -67,12 +68,13 @@ export function POST(request) {
     if (body.type === 'front' && !body.image) {
       // 사진 없이: 무작위 특징을 넣은 프롬프트로 새 캐릭터
       const template = await readFile(join(process.cwd(), 'prompt', 'create-character-noref.txt'), 'utf8');
-      const prompt = template.replace('{{TRAITS}}', randomTraits());
+      const prompt = template.replace('{{TRAITS}}', desc ? `* ${desc}` : randomTraits());
       const image = await generate({ prompt, size: spec.size, input: null });
       return { status: 200, body: { image } };
     }
     const input = decodeImage(body.image);
-    const prompt = await readFile(join(process.cwd(), 'prompt', spec.prompt), 'utf8');
+    let prompt = await readFile(join(process.cwd(), 'prompt', spec.prompt), 'utf8');
+    if (body.type === 'front' && desc) prompt += `\n\n[추가 설명 — 반드시 반영]\n${desc}`;
     const image = await generate({ prompt, size: spec.size, input });
     return { status: 200, body: { image } };
   });

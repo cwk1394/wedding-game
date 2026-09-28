@@ -586,44 +586,62 @@ html, body {
 .ctl-pad { position: fixed; inset: auto 0 0 0; height: 0; z-index: 15; }
 .ctl-stick {
   position: fixed;
-  left: 22px;
-  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
-  width: 120px;
-  height: 120px;
+  left: 24px;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 124px;
+  height: 124px;
   border-radius: 50%;
-  background: rgba(34, 24, 30, .35);
-  border: 2px solid rgba(255, 255, 255, .7);
+  /* 반투명 유리: 가장자리만 살짝 밝은 링 + 안쪽 은은한 그라데이션 */
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .06) 0 42%, rgba(255, 255, 255, .2) 72%, rgba(255, 255, 255, .3));
+  border: 1.5px solid rgba(255, 255, 255, .55);
+  box-shadow: 0 8px 24px rgba(60, 20, 20, .22), inset 0 0 0 6px rgba(255, 255, 255, .08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   touch-action: none;
   display: grid;
   place-items: center;
+  transition: box-shadow .2s, border-color .2s;
 }
+.ctl-stick.on { border-color: rgba(255, 179, 165, .95); box-shadow: 0 8px 24px rgba(60, 20, 20, .22), 0 0 0 5px rgba(255, 143, 126, .22); }
+.ctl-arrows { position: absolute; inset: 0; width: 100%; height: 100%; fill: rgba(255, 255, 255, .75); pointer-events: none; }
 .ctl-knob {
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .92);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
+  background: radial-gradient(circle at 35% 30%, #fff, #ffe3dc 55%, var(--coral-light));
+  border: 1.5px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 6px 14px rgba(216, 88, 74, .35), inset 0 -3px 6px rgba(216, 88, 74, .18);
   pointer-events: none;
+  transition: transform .12s ease-out; /* 손을 떼면 부드럽게 가운데로 */
 }
-/* 점프 버튼: 스틱과 같은 반투명 스타일 */
+.ctl-stick.on .ctl-knob { transition: none; }
+/* 점프 버튼: 코랄 그라데이션 원 + 위 화살표 */
 .ctl-jump {
   position: fixed;
-  right: 22px;
-  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
-  width: 84px;
-  height: 84px;
+  right: 26px;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  width: 80px;
+  height: 80px;
+  padding: 0;
   border-radius: 50%;
-  background: rgba(34, 24, 30, .35);
-  border: 2px solid rgba(255, 255, 255, .7);
-  color: rgba(255, 255, 255, .95);
-  font: bold 17px/1 inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: linear-gradient(160deg, var(--coral-light), var(--coral-deep));
+  border: 1.5px solid rgba(255, 255, 255, .75);
+  box-shadow: 0 8px 20px rgba(216, 88, 74, .4), inset 0 2px 0 rgba(255, 255, 255, .35);
+  color: #fff;
   font-family: inherit;
-  letter-spacing: .02em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
   touch-action: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .08s, box-shadow .08s;
 }
-.ctl-jump:active { background: rgba(255, 255, 255, .45); }
+.ctl-jump svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.ctl-jump span { font-size: 10px; font-weight: 800; letter-spacing: .14em; opacity: .92; }
+.ctl-jump:active { transform: scale(.92); box-shadow: 0 3px 10px rgba(216, 88, 74, .4), inset 0 2px 0 rgba(255, 255, 255, .25); }
 
 /* 방명록 팝업: 조종하기 버튼은 오른쪽 아래 */
 .modal-footer-end { justify-content: flex-end; }
@@ -735,6 +753,24 @@ html, body {
 .lobby-card { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .lobby-actions { display: flex; flex-direction: column; gap: 10px; width: min(300px, 84vw); margin-top: 36px; }
 .lobby-actions .btn { padding: 16px 22px; border-radius: 16px; font-size: 16px; }
+/* 강조 버튼: 코랄 + 은은하게 번지는 링 / 안내 말풍선은 강조 버튼 바로 아래 */
+.lobby-actions .btn-ghost.hl { background: var(--coral); border-color: var(--coral); color: #fff; animation: lobby-pulse 1.8s ease-out infinite; }
+@keyframes lobby-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 143, 126, .55); }
+  100% { box-shadow: 0 0 0 14px rgba(255, 143, 126, 0); }
+}
+.lobby-guide {
+  position: relative; margin: 4px 0 2px; padding: 9px 12px; border-radius: 12px;
+  background: #fff; border: 1px solid var(--line); color: var(--ink-soft);
+  font-size: 13px; line-height: 1.45; word-break: keep-all;
+  box-shadow: 0 4px 14px rgba(216, 88, 74, .12);
+}
+.lobby-guide::before {
+  content: ''; position: absolute; top: -6px; left: 50%; width: 10px; height: 10px;
+  background: #fff; border: solid var(--line); border-width: 1px 0 0 1px; transform: translateX(-50%) rotate(45deg);
+}
+.lobby-guide:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .lobby-actions .btn-ghost.hl { animation: none; } }
 
 /* 캐릭터 만들기 1단계 위: 로비로 돌아가기 */
 .have-char-btn {

@@ -471,23 +471,42 @@ class DevMode {
     }, { dirLocked: pending, onDelete: () => this.deleteNpc(c), regen });
   }
 
-  /** 신랑·신부 설정 창: 이름·한줄 멘트·소개 글 → CONFIG.npcs.groom/bride (js/data.js COUPLE 값을 덮어씀, 저장·되돌리기 대상) */
+  /**
+   * 신랑·신부 설정 창: 이름·한줄 멘트·소개 글 → CONFIG.npcs.groom/bride (js/data.js COUPLE 값을 덮어씀, 저장·되돌리기 대상)
+   * "이미지 새로 만들기"(사진·설명)로 만든 이미지는 저장 때 img/npc/<id>/에 덮어쓴다 (설명은 CONFIG.npcs[id].desc)
+   */
   openCoupleSettings(c) {
     const { id } = c.info;
+    const cur = CONFIG.npcs[id] ?? {};
     UI.openNpcSettings(
       { ...c.info, dir: id, avatarUrl: c.getAvatarUrl(), mode: 'default' },
-      ({ name, shortMsg, longMsg }) => {
+      ({ name, shortMsg, longMsg, images, desc }) => {
         if (!name) return '이름을 입력해 주세요.';
+        if (images && !images.front) return '캐릭터를 먼저 생성해 주세요.';
         const texts = coupleTexts(id);
-        if (name === texts.name && shortMsg === texts.shortMsg && longMsg === texts.longMsg) return; // 바뀐 것 없음
+        if (!images && name === texts.name && shortMsg === texts.shortMsg && longMsg === texts.longMsg) return; // 바뀐 것 없음
         this.checkpoint();
-        CONFIG.npcs = { ...CONFIG.npcs, [id]: { name, shortMsg, longMsg } };
+        CONFIG.npcs = { ...CONFIG.npcs, [id]: { name, shortMsg, longMsg, desc: images ? desc || undefined : cur.desc } };
         c.updateInfo(coupleTexts(id));
         this.changed();
+        if (images) {
+          this.replaceCoupleImages(c, images);
+          return UI.showToast('이미지를 바꿨어요. 저장 버튼을 누르면 사이트에 반영돼요 (이미지 변경은 되돌리기 없음)', 3500);
+        }
         UI.showToast('저장 버튼을 누르면 사이트에 반영돼요');
       },
-      { textsOnly: true }
+      { textsOnly: true, regen: { desc: cur.desc ?? '', couple: true } }
     );
+  }
+
+  /** 신랑·신부 이미지 교체: 새 텍스처(다른 키)로 바로 바꾸고 저장 때 img/npc/<id>/에 덮어쓴다. 못 만든 동작은 지금 이미지 그대로 */
+  replaceCoupleImages(c, images) {
+    const { id } = c.info;
+    this.pendingNpcImages[id] = { ...images, replace: true };
+    const urls = Object.fromEntries(Object.entries(images).map(([m, src]) => [m === 'front' ? 'spriteUrl' : `${m}Url`, src]));
+    Object.assign(c.info, urls, { texId: `${id}-${Date.now()}` }); // texId: 텍스처를 새로 불러오게
+    loadSpriteTextures(this.scene, c.info).then((sprite) => c.active && c.applySprite(sprite));
+    this.history = [];
   }
 
   /**
@@ -682,7 +701,8 @@ class DevMode {
       for (const [id, { replace, ...imgs }] of Object.entries(this.pendingNpcImages)) {
         if (replace ? CONFIG.npcs[id]?.deleted || this.deletedNpcDirs.has(id) : !CONFIG.npcs[id]?.def) continue;
         npcImages[id] = { replace };
-        for (const [m, src] of Object.entries(imgs)) npcImages[id][m] = await shrinkWebp(src);
+        const maxWidth = ['groom', 'bride'].includes(id) ? 1536 : 768; // 신랑·신부는 하객처럼 머리 폭을 재서 원본 크기 그대로
+        for (const [m, src] of Object.entries(imgs)) npcImages[id][m] = await shrinkWebp(src, maxWidth);
       }
       // 삭제한 추가 NPC 폴더 (되돌리기로 살아난 것·저장 전 추가였던 것은 빼고)
       const npcDeletes = [...this.deletedNpcDirs].filter((id) => !CONFIG.npcs[id] && !(this.pendingNpcImages[id] && !this.pendingNpcImages[id].replace));

@@ -23,6 +23,7 @@ const LIMITS = { floors: 200, points: 300, climbs: 200, coord: 10000, npcs: 50, 
 const NPC_DIR = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const NPC_ID_FILES = ['js/npcs.js', 'scripts/gen-npc.mjs'];
 const NPC_MOTIONS = ['idle', 'walk']; // 추가한 NPC가 가질 수 있는 동작
+const COUPLE_MOTIONS = ['walk', 'jump', 'ladder', 'rope', 'prone']; // 신랑·신부(img/npc/<groom|bride>/) 이미지 교체 때 동작
 const MAX_NPC_IMAGE_BYTES = 1.5 * 1024 * 1024; // NPC id(= 디렉토리 이름)가 따옴표 문자열로 들어 있는 파일
 const NPC_MODES = ['fixed', 'random', 'stage'];
 
@@ -120,6 +121,11 @@ function validateMap(map) {
       if (n[key] == null) continue;
       if (typeof n[key] !== 'string' || [...n[key]].length > LIMITS[key]) throw bad(`${id}: ${key}는 ${LIMITS[key]}자 이하`);
       out[key] = n[key];
+    }
+    if (n.desc != null && ['groom', 'bride'].includes(id)) {
+      // 신랑·신부 "이미지 새로 만들기" 설명 (다음에 다시 만들 때 채워 넣음)
+      if (typeof n.desc !== 'string' || [...n.desc].length > 300) throw bad(`${id}: 설명은 300자 이하`);
+      if (n.desc.trim()) out.desc = n.desc.trim();
     }
     if (n.mode != null) {
       if (!NPC_MODES.includes(n.mode)) throw bad(`${id}: 배치 방식`);
@@ -298,7 +304,7 @@ async function npcDeleteFiles(github, map, npcDeletes) {
 /**
  * NPC 이미지 npcImages { <id>: { front, idle?, walk?, replace? } } → img/npc/<id>/<동작>.webp 커밋 항목.
  *   새 NPC(replace 없음): map.npcs[id].def가 있어야 하고, 이미 있는 폴더 이름이면 거부. front + def.motions 필수
- *   이미지 교체(replace: true): 이미 있는 NPC 폴더에 덮어쓴다. front 필수, idle/walk는 있으면
+ *   이미지 교체(replace: true): 이미 있는 NPC 폴더에 덮어쓴다. front 필수, idle/walk는 있으면 (신랑·신부는 walk/jump/ladder/rope/prone)
  * → { files, list: ['add NPC id' | 'update NPC images id'] }
  */
 async function npcImageFiles(github, map, npcImages) {
@@ -313,7 +319,7 @@ async function npcImageFiles(github, map, npcImages) {
       if (await github.getContents(`img/npc/${id}`)) throw new HttpError(400, `"${id}" 이름은 이미 있어요.`);
     }
     const required = ['front', ...(def?.motions ?? [])];
-    for (const m of ['front', ...NPC_MOTIONS]) {
+    for (const m of ['front', ...(['groom', 'bride'].includes(id) ? COUPLE_MOTIONS : NPC_MOTIONS)]) {
       if (imgs[m] == null && !required.includes(m)) continue;
       const match = typeof imgs[m] === 'string' && imgs[m].match(/^data:image\/webp;base64,([A-Za-z0-9+/=]+)$/);
       if (!match) throw new HttpError(400, `NPC "${id}" ${m} 이미지가 없거나 webp가 아니에요.`);

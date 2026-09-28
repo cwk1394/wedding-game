@@ -99,8 +99,16 @@ class Controller {
     pad.className = 'ctl-pad';
     pad.hidden = true;
     pad.innerHTML = `
-      <div class="ctl-stick"><div class="ctl-knob"></div></div>
-      <button type="button" class="ctl-jump" aria-label="점프"></button>`;
+      <div class="ctl-stick">
+        <svg class="ctl-arrows" viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M50 9l-6 7h12zM50 91l-6-7h12zM9 50l7-6v12zM91 50l-7-6v12z"/>
+        </svg>
+        <div class="ctl-knob"></div>
+      </div>
+      <button type="button" class="ctl-jump" aria-label="점프">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/><path d="M6 19l6-6 6 6" opacity=".45"/></svg>
+        <span>JUMP</span>
+      </button>`;
     document.body.append(pad);
     this.pad = pad;
 
@@ -117,6 +125,7 @@ class Controller {
       const max = stick.clientWidth / 2;
       const k = len > max ? max / len : 1;
       knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+      stick.classList.toggle('on', len > 0);
       const nx = dx / max;
       const ny = dy / max;
       Object.assign(this.stick, { left: nx < -0.35, right: nx > 0.35, up: ny < -0.5, down: ny > 0.5 });

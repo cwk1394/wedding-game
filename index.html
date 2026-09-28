@@ -159,8 +159,10 @@
       <div id="lobby-title" class="loading-title">경태 &amp; 민지</div>
       <div class="loading-sub">결혼식 방명록</div>
       <div class="lobby-actions">
-        <button type="button" class="btn lobby-play">내 캐릭터로 접속</button>
+        <!-- 이 브라우저에 내 캐릭터가 있으면 "접속", 없으면 "만들기"를 강조하고 그 아래 안내 (UI.openLobby) -->
         <button type="button" class="btn btn-ghost lobby-new">캐릭터 만들기</button>
+        <button type="button" class="btn btn-ghost lobby-play">내 캐릭터로 접속</button>
+        <p class="lobby-guide" aria-live="polite"></p>
       </div>
     </div>
   </div>
@@ -383,7 +385,7 @@
             </div>
           </div>
           <label class="field">
-            <span>NPC 설명 <small>(무엇인지 — 예: 강아지, 토끼, 자동차, 탁자 위에 올려진 앨범, 게시판)</small></span>
+            <span class="npc-desc-label">NPC 설명 <small>(무엇인지 — 예: 강아지, 토끼, 자동차, 탁자 위에 올려진 앨범, 게시판)</small></span>
             <textarea name="desc" maxlength="300" rows="3" placeholder="예: 탁자 위에 펼쳐서 세워 둔 하얀 웨딩 앨범, 표지에 금색 하트"></textarea>
           </label>
           <div class="npc-create-row">

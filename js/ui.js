@@ -155,6 +155,9 @@ const UI = (() => {
   let npcImages = null; // NPC 추가: 생성한 이미지 { front, idle?, walk? } (webp data URL)
   let npcPhotoUrl = null;
   let npcDelete = null; // 설정 창의 삭제 콜백
+  let npcCouple = false; // 신랑·신부 이미지 새로 만들기: 하객과 같은 정면 → 걷기·점프·사다리·로프·엎드리기, 설명은 선택
+  const NPC_DESC_LABEL = npcForm.querySelector('.npc-desc-label').innerHTML;
+  const NPC_DESC_PLACEHOLDER = npcForm.elements.desc.placeholder;
   const regenToggle = npcForm.querySelector('.npc-regen-toggle');
   regenToggle.addEventListener('click', () => {
     npcCreate.hidden = !npcCreate.hidden;
@@ -369,7 +372,7 @@ const UI = (() => {
   npcGenerate.addEventListener('click', async () => {
     const f = npcForm.elements;
     const desc = f.desc.value.trim();
-    if (!desc) return setNpcError('NPC 설명(무엇인지)을 입력해 주세요.');
+    if (!desc && !npcCouple) return setNpcError('NPC 설명(무엇인지)을 입력해 주세요.');
     const password = devPassword(); // NPC 캐릭터 생성은 개발자 비밀번호 필요 (dev.js)
     if (!password) return setNpcError('개발자 비밀번호를 입력해야 캐릭터를 만들 수 있어요.');
     setNpcError('');
@@ -385,13 +388,25 @@ const UI = (() => {
     npcStatus.hidden = false;
     try {
       const photo = f.photo.files[0];
-      step('NPC 도트 찍는 중... (1/2)');
-      const front = await generateCharacter('npc-front', photo ? await resizePhoto(photo) : null, { desc, password });
+      step(`${npcCouple ? '캐릭터' : 'NPC'} 도트 찍는 중... (1/2)`);
+      const front = await generateCharacter(npcCouple ? 'front' : 'npc-front', photo ? await resizePhoto(photo) : null, { desc, password });
       rememberDevPassword(password);
       npcImages = { front };
       setImgSrc(npcPreview, front);
       npcCreate.querySelector('.preview-empty').hidden = true;
-      if (f.moving.value === 'walk') {
+      if (npcCouple) {
+        step('움직임 만드는 중... (2/2)');
+        const labels = { walk: '걷기', jump: '점프', ladder: '사다리', rope: '로프', prone: '엎드리기' };
+        const failed = [];
+        await Promise.all(
+          CONFIG.sprite.motions.map((m) =>
+            generateCharacter(m, front)
+              .then((img) => (npcImages[m] = img))
+              .catch(() => failed.push(labels[m]))
+          )
+        );
+        if (failed.length) setNpcError(`${failed.join('·')} 움직임은 만들지 못했어요. 그대로 적용하면 그 동작은 지금 이미지가 남아요.`);
+      } else if (f.moving.value === 'walk') {
         step('움직임 만드는 중... (2/2)');
         const failed = [];
         await Promise.all(
@@ -420,7 +435,8 @@ const UI = (() => {
    * opts.onDelete = 있으면 왼쪽 아래 "NPC 삭제" 버튼, opts.textsOnly = 이름·멘트·소개 글만 (신랑·신부)
    */
   /**
-   * regen: NPC 설정에서 "이미지 새로 만들기" 칸 { desc, moving, height, heightLocked } — 사진·설명으로 다시 만들면 onApply에 images가 온다
+   * regen: NPC 설정에서 "이미지 새로 만들기" 칸 { desc, moving, height, heightLocked, couple } — 사진·설명으로 다시 만들면 onApply에 images가 온다
+   *   couple = 신랑·신부 (하객과 같은 동작 이미지, 설명은 선택, 움직임·키 칸 없음)
    */
   function openNpcSettings({ name, dir, shortMsg, longMsg, mode, album, avatarUrl }, onApply, { create = false, dirLocked = false, onDelete = null, textsOnly = false, regen = null } = {}) {
     npcForm.elements.dir.closest('label').hidden = textsOnly;
@@ -447,6 +463,12 @@ const UI = (() => {
     npcImages = null;
     f.photo.value = '';
     f.photo.dispatchEvent(new Event('change'));
+    npcCouple = Boolean(regen?.couple);
+    npcForm.querySelector('.npc-create-row').hidden = npcCouple;
+    npcForm.querySelector('.height-note').hidden = npcCouple;
+    npcForm.querySelector('.npc-desc-label').innerHTML = npcCouple ? '설명 <small>(선택 — 사진에 더할 특징)</small>' : NPC_DESC_LABEL;
+    f.desc.placeholder = npcCouple ? '예: 검은 턱시도, 나비넥타이, 짧은 앞머리' : NPC_DESC_PLACEHOLDER;
+    npcCreate.querySelector('.preview-empty').textContent = npcCouple ? '캐릭터' : 'NPC';
     f.desc.value = regen?.desc ?? '';
     f.moving.value = regen?.moving ?? 'walk';
     f.height.value = regen?.height ?? 40;
@@ -847,6 +869,7 @@ const UI = (() => {
       const images = await (preparing ?? Promise.resolve(null));
       const guest = await submitGuestbook({ name, shortMsg, longMsg, password, side, relation, personality, title, stats, images });
       myGuest.set(guest.id);
+      createdCount.set(createdCount.get() + 1);
       // 저장소 반영(배포)까지 1~2분 걸리므로, 방금 처리한 이미지로 바로 맵에 띄운다
       UI.onGuestCreated?.({
         ...guest,
@@ -872,6 +895,7 @@ const UI = (() => {
 
   function openWrite() {
     if (!CONFIG.apiUrl) return showToast('방명록 작성은 곧 오픈됩니다!');
+    if (createdCount.get() >= MAX_CREATED) return showToast(`한 브라우저에서는 캐릭터를 ${MAX_CREATED}개까지 만들 수 있어요`, 3000);
     writeModal.open();
     return true;
   }
@@ -894,6 +918,24 @@ const UI = (() => {
     set: (id) => {
       try {
         localStorage.setItem('myGuestId', id);
+      } catch {}
+    },
+  };
+
+  /** 이 브라우저에서 만든 캐릭터 수 (최대 MAX_CREATED개, 삭제해도 줄지 않음) */
+  // ponytail: localStorage라 다른 브라우저·시크릿 창이면 다시 3개 — 서버 쪽 제한이 필요하면 IP 기준으로
+  const MAX_CREATED = 3;
+  const createdCount = {
+    get: () => {
+      try {
+        return Number(localStorage.getItem('createdGuests')) || 0;
+      } catch {
+        return 0;
+      }
+    },
+    set: (n) => {
+      try {
+        localStorage.setItem('createdGuests', n);
       } catch {}
     },
   };
@@ -1068,7 +1110,16 @@ const UI = (() => {
   // ---------- 로비 (처음 접속, 메뉴 "로비로 돌아가기") ----------
   const lobbyEl = document.getElementById('lobby-modal');
   const lobbyModal = setupModal(lobbyEl);
-  const openLobby = () => lobbyModal.open();
+  // 이 브라우저에 내 캐릭터(만들거나 고른 기록)가 있으면 "내 캐릭터로 접속", 없으면 "캐릭터 만들기"를 강조 + 바로 아래 안내
+  const openLobby = () => {
+    const has = Boolean(myGuest.get());
+    const target = lobbyEl.querySelector(has ? '.lobby-play' : '.lobby-new');
+    lobbyEl.querySelectorAll('.lobby-actions .btn').forEach((b) => b.classList.toggle('hl', b === target));
+    const guide = lobbyEl.querySelector('.lobby-guide');
+    guide.textContent = has ? '생성한 캐릭터가 있어요! 내 캐릭터로 접속해보세요!' : '캐릭터 생성 기록이 없어요! 캐릭터를 생성해보세요!';
+    target.after(guide);
+    lobbyModal.open();
+  };
   lobbyEl.querySelector('.lobby-play').addEventListener('click', () => {
     lobbyModal.close();
     openSelect();

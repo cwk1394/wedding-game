@@ -410,7 +410,7 @@ function joinFrames(frames) {
  * 동작 이미지 하나가 실패해도 나머지는 쓴다.
  */
 async function loadSpriteTextures(scene, info) {
-  const key = `sprite_${info.id}`;
+  const key = `sprite_${info.texId ?? info.id}`; // texId: 개발자 모드에서 이미지를 바꾼 신랑·신부
   const motions = {};
   // NPC는 idle/sleep 같은 자기만의 동작, 자기 키(height), 동작별 프레임 수·높이 비율을 가질 수 있다
   const motionList = [...CONFIG.sprite.motions, ...(info.extraMotions ?? [])];
