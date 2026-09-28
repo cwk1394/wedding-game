@@ -18,12 +18,18 @@
   // 첫 로딩 화면: 배경 1칸 + 캐릭터 1명당 1칸 기준 진행률
   const loading = document.getElementById('loading');
   const bar = loading.querySelector('.loading-bar span');
+  const pct = loading.querySelector('.loading-pct');
+  const setProgress = (ratio) => {
+    const p = Math.round(Math.min(1, ratio) * 100);
+    bar.style.width = `${p}%`;
+    pct.textContent = `${p}%`;
+  };
   const total = 1 + COUPLE.length + new Set(guests.map((g) => g.id)).size + NPCS.length;
   let shown = false;
   const showMain = () => {
     if (shown) return;
     shown = true;
-    bar.style.width = '100%';
+    setProgress(1);
     loading.classList.add('done');
     setTimeout(() => loading.remove(), 500);
     // 처음 접속: 로비(내 캐릭터로 접속 / 캐릭터 만들기). 개발자 모드는 바로 편집
@@ -35,7 +41,7 @@
   game.scene.add('MapScene', MapScene, true, {
     guests,
     live: fetched !== null,
-    onProgress: (units) => (bar.style.width = `${Math.min(100, (units / total) * 100)}%`),
+    onProgress: (units) => setProgress(units / total),
     onReady: showMain,
   });
   const scene = () => game.scene.getScene('MapScene');
