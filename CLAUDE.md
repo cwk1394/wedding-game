@@ -47,8 +47,7 @@ api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion �
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
 api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함. NPC 추가용 npc-front|npc-idle|npc-walk (+desc, 투명 배경)
-api/rps.js              Vercel 함수: 가위바위보 머신. POST start|play|stop, GET 랭킹·내 기록. 판정은 서버, 기록은 event/rps.json 커밋
-event/rps.json          가위바위보 기록 { records: [{id, name, streak, at, end}], burned } (API가 커밋, 배포 안 함)
+api/rps.js              Vercel 함수: 가위바위보 머신. POST start|play|stop, GET 랭킹·내 기록. 판정은 서버, 기록은 GitHub Gist(`RPS_GIST_ID`)의 rps.json
 api/map.js              Vercel 함수: POST {password, map: {floors, climbs, spawn, couple, npcs}} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
@@ -187,12 +186,12 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 ## 이벤트 NPC: 가위바위보 머신 (`rps-machine`)
 - js/npcs.js `event: 'rps'` → 누르면(개발자 모드 제외) `Rps.open()`. 시작점 옆 배 갑판(`f2`, x 285) 고정, 이미지는 gen-npc.mjs `rps-machine`(움직임 없음).
 - 도전: 내 캐릭터(`UI.getMine`, main.js `mine`)의 방명록 비밀번호 → `POST /api/rps {action:'start', number, id, password}`(guestbook.js `findGuest`로 확인, 관리자 비밀번호도 통과) → 서명 토큰(HMAC, `secret()`). 방금 만든 캐릭터는 number가 생기는 1~2분 뒤부터.
-- `play {token, choice}`: 서버가 무작위로 내고 판정. 이기면 연승+1 새 토큰, 비기면 그대로 새 토큰(저장 안 함). 지거나 `stop`(그만하기·창 닫기)이면 `event/rps.json`에 기록(시작·끝 시각) + 토큰 nonce를 `burned`에 넣어 한 커밋 → 진 토큰으로 다시 내기 불가(409). 커밋은 `commitFiles(async (parentSha) => files)`로 재시도마다 최신 파일에 다시 씀.
+- `play {token, choice}`: 서버가 무작위로 내고 판정. 이기면 연승+1 새 토큰, 비기면 그대로 새 토큰(저장 안 함). 지거나 `stop`(그만하기·창 닫기)이면 GitHub Gist `rps.json` `{ records: [{id, name, streak, at, end}], burned }`에 기록(시작·끝 시각) + 토큰 nonce를 `burned`에 넣음 → 진 토큰으로 다시 내기 불가(409). gist는 조건부 쓰기가 없어서 쓰고 다시 읽어 내 nonce가 남았는지 확인, 덮였으면 다시 합쳐 씀(최대 3번).
   - 진행 중 토큰은 localStorage `rpsToken`에도 → 새로고침·ESC로 나가도 다음에 열 때 그 연승으로 기록.
   - 알려진 한계: 같은 토큰으로 동시에 여러 번 요청하면 결과를 골라낼 수 있음(라운드마다 커밋해야 막힘).
 - 랭킹(`GET /api/rps?id=`): 캐릭터별 최고 연승 TOP 10(0연승 제외, 같으면 먼저 끝낸 사람), 1~3위 "☕ 쿠폰" 표시 + 그 캐릭터 최근 도전 10개. 쿠폰 지급은 수동.
 - 효과(css `.rps-*`): 고르면 머신 불빛 깜빡임 + 머신 손이 빠르게 바뀜(최소 1.1초), WIN = 금빛 글자 + 번쩍임 + 색종이·하트·별(연승이 길수록 많이), DRAW = 손 부딪힘, LOSE = 무대 흔들림.
-- `event/**`는 deploy.yml paths-ignore, vercel.json ignoreCommand에 포함(기록 커밋마다 재배포 안 함).
+- 설정: gist를 하나 만들고(비밀 gist 가능, 파일 이름 `rps.json`) Vercel 환경변수 `RPS_GIST_ID` = gist id. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).
@@ -236,7 +235,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 사이트: https://kobe-kang.github.io/guestbook/
 - API: https://guestbook-nine-drab.vercel.app/api/guestbook (Vercel, GET = 상태 확인)
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
-- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장·관리자 비밀번호), `GUEST_PASSWORD_SECRET`(방명록 비밀번호 해시용 비밀키) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `RPS_GIST_ID`·`GIST_TOKEN`(가위바위보 기록), `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장·관리자 비밀번호), `GUEST_PASSWORD_SECRET`(방명록 비밀번호 해시용 비밀키) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
 - API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.

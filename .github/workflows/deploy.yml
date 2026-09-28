@@ -4,8 +4,8 @@ name: Deploy guestbook
 on:
   push:
     branches: [main]
-    # 하객 이미지 커밋은 곧이어 오는 discussion 이벤트에서 함께 배포되므로 건너뜀. 가위바위보 기록(event/)은 API가 바로 읽으므로 배포 불필요
-    paths-ignore: ['img/guests/**', 'event/**']
+    # 하객 이미지 커밋은 곧이어 오는 discussion 이벤트에서 함께 배포되므로 건너뜀
+    paths-ignore: ['img/guests/**']
   discussion:
     types: [created, edited, deleted, category_changed]
   workflow_dispatch:

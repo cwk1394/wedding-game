@@ -6,16 +6,18 @@
 // GET  /api/rps[?id=<하객 id>] → { ranking: 캐릭터별 최고 연승 TOP 10, mine: 그 캐릭터의 최근 도전 }
 //
 // 판정은 서버가 한다(브라우저가 결과를 정하지 않음). 진행 중인 연승은 서명한 토큰(HMAC, 방명록 비밀번호와 같은 비밀키)에 들어 있어 저장 없이 이어가고,
-// 도전이 끝날 때(짐·그만하기)만 event/rps.json에 기록 + 그 토큰을 "끝남"으로 표시 → 진 토큰으로 다시 내기 불가.
-// ponytail: 한 토큰으로 동시에 여러 번 요청하면 끝남 표시 전에 결과를 골라낼 수 있음 — 막으려면 라운드마다 저장(커밋)해야 해서 안 함
-// 기록 파일은 저장소에 커밋(Pages·Vercel 재배포 생략: deploy.yml paths-ignore, vercel.json ignoreCommand)
+// 도전이 끝날 때(짐·그만하기)만 GitHub Gist의 rps.json에 기록 + 그 토큰을 "끝남"으로 표시 → 진 토큰으로 다시 내기 불가.
+// ponytail: 한 토큰으로 동시에 여러 번 요청하면 끝남 표시 전에 결과를 골라낼 수 있음 — 막으려면 라운드마다 저장해야 해서 안 함
+//
+// 환경변수(Vercel): RPS_GIST_ID(기록용 gist id, 필수), GIST_TOKEN(gist 쓰기 권한 토큰, 없으면 GITHUB_TOKEN)
 
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { GITHUB_ENV, GitHub } from './_lib/github.js';
 import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 import { findGuest, secret } from './guestbook.js';
 
-const FILE = 'event/rps.json';
+const GIST_ID = process.env.RPS_GIST_ID;
+const GIST_FILE = 'rps.json';
 const HANDS = ['rock', 'scissors', 'paper']; // 앞이 뒤를 이김 (바위 > 가위 > 보 > 바위)
 const TOKEN_TTL = 6 * 60 * 60 * 1000; // 도전 하나를 이어갈 수 있는 시간
 const RANKING_SIZE = 10;
@@ -26,7 +28,7 @@ export async function GET(request) {
   const cors = corsHeaders(request);
   try {
     const id = new URL(request.url).searchParams.get('id');
-    const { records } = await readFile(new GitHub(GITHUB_ENV));
+    const { records } = await readFile(gist());
     const mine = id ? records.filter((r) => r.id === id).slice(-10).reverse() : [];
     return json({ ranking: ranking(records), mine, total: records.length }, 200, cors);
   } catch (err) {
@@ -37,7 +39,7 @@ export async function GET(request) {
 
 export function POST(request) {
   return handlePost(request, async (body) => {
-    if (!GITHUB_ENV.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN 환경변수가 설정되지 않았습니다.');
+    if (!GIST_ID) throw new HttpError(503, '가위바위보 기록 저장소가 설정되지 않았어요. (RPS_GIST_ID)');
     if (body.action === 'start') {
       const { data, id } = await findGuest(body);
       const token = sign({ id, name: data.name, s: 0, t: Date.now() });
@@ -47,7 +49,7 @@ export function POST(request) {
     if (body.action === 'stop') return { status: 200, body: await finish(run) };
     if (body.action === 'play') {
       if (!HANDS.includes(body.choice)) throw new HttpError(400, '가위·바위·보 중에 골라 주세요.');
-      const github = new GitHub(GITHUB_ENV);
+      const github = gist();
       if ((await readFile(github)).burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요. 다시 도전해 주세요.');
       const cpu = HANDS[randomInt(3)];
       const result = cpu === body.choice ? 'draw' : HANDS[(HANDS.indexOf(body.choice) + 1) % 3] === cpu ? 'win' : 'lose';
@@ -80,28 +82,40 @@ function verify(token) {
   return run;
 }
 
-// ---------- 기록 ----------
+// ---------- 기록 (GitHub Gist) ----------
 
-/** event/rps.json { records: [{ id, name, streak, at(시작), end }], burned: { <토큰 nonce>: 만료 시각 } } */
-async function readFile(github, ref) {
-  const file = await github.getContents(FILE, ref);
-  const data = file ? JSON.parse(Buffer.from(file.content, 'base64').toString()) : {};
+const gist = () => new GitHub({ ...GITHUB_ENV, GITHUB_TOKEN: process.env.GIST_TOKEN || GITHUB_ENV.GITHUB_TOKEN });
+
+/** gist rps.json { records: [{ id, name, streak, at(시작), end }], burned: { <토큰 nonce>: 만료 시각 } } */
+async function readFile(github) {
+  const g = await github.request('GET', `/gists/${GIST_ID}`);
+  const text = g.files?.[GIST_FILE]?.content;
+  const data = text ? JSON.parse(text) : {};
   return { records: data.records ?? [], burned: data.burned ?? {} };
 }
 
-/** 도전 끝: 기록 추가 + 토큰 끝남 표시 (한 커밋). 이미 끝난 토큰이면 409 */
-async function finish(run, github = new GitHub(GITHUB_ENV)) {
-  let records;
-  await github.commitFiles(async (sha) => {
-    const data = await readFile(github, sha);
-    if (data.burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요.');
+/**
+ * 도전 끝: 기록 추가 + 토큰 끝남 표시. 이미 끝난 토큰이면 409.
+ * gist는 "읽은 뒤 안 바뀌었을 때만 쓰기"가 없어서, 쓰고 다시 읽어 내 기록이 남았는지 확인 → 동시에 끝난 기록에 덮였으면 다시 합쳐 씀
+ */
+async function finish(run, github = gist()) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const data = await readFile(github);
+    if (data.burned[run.n]) {
+      if (attempt === 0) throw new HttpError(409, '이미 끝난 도전이에요.');
+      return result(run, data.records); // 앞에서 쓴 내 기록이 남아 있음
+    }
+    if (attempt === 3) break; // 세 번 써도 덮이면 포기 (마지막은 확인만)
     const now = Date.now();
     data.burned = Object.fromEntries(Object.entries(data.burned).filter(([, e]) => e > now)); // 만료된 토큰은 어차피 못 씀
     data.burned[run.n] = run.e;
     data.records.push({ id: run.id, name: run.name, streak: run.s, at: new Date(run.t).toISOString(), end: new Date(now).toISOString() });
-    records = data.records;
-    return [{ path: FILE, content: Buffer.from(JSON.stringify(data, null, 1)).toString('base64') }];
-  }, `RPS: ${run.name} ${run.s}연승`);
+    await github.request('PATCH', `/gists/${GIST_ID}`, { files: { [GIST_FILE]: { content: JSON.stringify(data, null, 1) } } });
+  }
+  throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+}
+
+function result(run, records) {
   const top = ranking(records);
   const rank = top.findIndex((r) => r.id === run.id) + 1;
   return { ended: true, streak: run.s, rank: rank || null, ranking: top };

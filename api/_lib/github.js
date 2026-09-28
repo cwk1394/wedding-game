@@ -44,24 +44,19 @@ export class GitHub {
   /**
    * 여러 파일을 커밋 하나로 브랜치에 올린다. 동시 등록으로 브랜치가 앞서가면 재시도.
    * files: { path, content(base64) } | { path, sha } (이미 있는 blob, 파일 옮기기) | { path, sha: null } (삭제)
-   *   또는 async (parentSha) => files — 읽고 고쳐 쓰는 파일(가위바위보 기록)은 재시도 때마다 최신 커밋 기준으로 다시 만든다
    */
   async commitFiles(files, message) {
     const branch = this.env.GITHUB_BRANCH;
-    let treeItems = null;
+    const blobs = await Promise.all(
+      files.map((f) =>
+        'content' in f ? this.request('POST', `${this.repoPath}/git/blobs`, { content: f.content, encoding: 'base64' }) : { sha: f.sha }
+      )
+    );
+    const treeItems = files.map((f, i) => ({ path: f.path, mode: '100644', type: 'blob', sha: blobs[i].sha }));
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const ref = await this.request('GET', `${this.repoPath}/git/ref/heads/${branch}`);
       const parent = await this.request('GET', `${this.repoPath}/git/commits/${ref.object.sha}`);
-      if (!treeItems || typeof files === 'function') {
-        const list = typeof files === 'function' ? await files(parent.sha) : files;
-        const blobs = await Promise.all(
-          list.map((f) =>
-            'content' in f ? this.request('POST', `${this.repoPath}/git/blobs`, { content: f.content, encoding: 'base64' }) : { sha: f.sha }
-          )
-        );
-        treeItems = list.map((f, i) => ({ path: f.path, mode: '100644', type: 'blob', sha: blobs[i].sha }));
-      }
       const tree = await this.request('POST', `${this.repoPath}/git/trees`, {
         base_tree: parent.tree.sha,
         tree: treeItems,
@@ -81,9 +76,9 @@ export class GitHub {
   }
 
   /** 저장소 파일/폴더 조회 (contents API). 없으면 null */
-  async getContents(path, ref = this.env.GITHUB_BRANCH) {
+  async getContents(path) {
     try {
-      return await this.request('GET', `${this.repoPath}/contents/${path}?ref=${ref}`);
+      return await this.request('GET', `${this.repoPath}/contents/${path}?ref=${this.env.GITHUB_BRANCH}`);
     } catch (err) {
       if (err.status === 404) return null;
       throw err;
