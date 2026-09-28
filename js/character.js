@@ -186,10 +186,46 @@ class Character extends Phaser.GameObjects.Container {
   scheduleBubble(delay) {
     this.scene.time.delayedCall(delay, () => {
       if (!this.active) return;
-      this.say(this.bubbleText());
+      // 수다쟁이: 말풍선 전에 "…" 입력 중 표시를 잠깐 보여 준다
+      if (this.persona?.typing && this.state !== 'climb') {
+        this.typingDots(700);
+        this.scene.time.delayedCall(700, () => this.active && this.say(this.bubbleText()));
+      } else this.say(this.bubbleText());
       const gap = Phaser.Math.Between(CONFIG.bubble.minGap, CONFIG.bubble.maxGap) * (this.persona?.bubbleGap ?? 1); // 수다쟁이는 자주
       this.scheduleBubble(CONFIG.bubble.duration + gap);
     });
+  }
+
+  /** 머리 위 흰 말풍선 안에서 점 3개가 차례로 통통 (duration ms 뒤 사라짐) */
+  typingDots(duration) {
+    this.hideBubble();
+    const bg = this.scene.add.graphics().fillStyle(0xffffff, 0.95).fillRoundedRect(-17, -9, 34, 18, 9);
+    const dots = [-8, 0, 8].map((x) => this.scene.add.circle(x, 0, 2.6, 0xb08a82));
+    const box = this.scene.add.container(0, this.headY() - 16, [bg, ...dots]);
+    this.add(box);
+    dots.forEach((d, i) => this.scene.tweens.add({ targets: d, y: -3, duration: 160, delay: i * 110, yoyo: true, repeat: -1, repeatDelay: 200 }));
+    this.scene.time.delayedCall(duration, () => {
+      this.scene.tweens.killTweensOf(dots);
+      box.destroy();
+    });
+  }
+
+  /** 글자·이모지를 띄워 위로 떠오르며 사라지게 (성향 효과 공용). 좌표는 발 기준 */
+  floatText(text, { x = 0, y = this.headY() - 4, size = 16, color = '#ffffff', stroke = null, rise = 26, dx = 0, duration = 1100, delay = 0 } = {}) {
+    const style = { fontFamily: CONFIG.fontFamily, fontSize: `${size}px`, fontStyle: 'bold', color, resolution: TEXT_RESOLUTION };
+    if (stroke) Object.assign(style, { stroke, strokeThickness: 3 });
+    const t = this.scene.add.text(x, y, text, style).setOrigin(0.5, 1).setAlpha(0);
+    this.add(t);
+    this.scene.tweens.add({
+      targets: t,
+      x: x + dx,
+      y: y - rise,
+      alpha: { from: 1, to: 0, ease: 'Cubic.easeIn' }, // 처음엔 또렷하다가 끝에 사라짐
+      duration,
+      delay,
+      onComplete: () => t.destroy(),
+    });
+    return t;
   }
 
   /** 말풍선에 할 말 (하객은 성향에 따라 가끔 다른 말) */
@@ -400,7 +436,7 @@ class GuestCharacter extends Character {
 
   bubbleText() {
     const p = this.persona;
-    if (this.idlePose === 'sleep') return 'Zzz…';
+    if (this.idlePose === 'sleep') return null; // 자는 동안은 말풍선 대신 z 글자 (startSleepFx)
     return p?.lines && Math.random() < p.lineChance ? Phaser.Utils.Array.GetRandom(p.lines) : this.info.shortMsg;
   }
 
@@ -411,8 +447,16 @@ class GuestCharacter extends Character {
     if (this.state === 'walk' && Math.random() < 0.5) this.dir = -this.dir;
     // 성향별 서 있을 때 특별 동작
     this.idlePose = this.state === 'idle' ? p?.idle ?? null : null;
-    if (this.idlePose === 'sleep') this.say('Zzz…', this.stateTimer);
+    if (this.idlePose === 'sleep') this.startSleepFx();
     if (this.idlePose === 'photo') this.photoFlash();
+    if (this.idlePose === 'eat') this.eatSnack();
+    if (this.idlePose === 'heart') {
+      this.floatText(Phaser.Utils.Array.GetRandom(['♥', '✿']), { size: 15, color: '#ff8fb1', stroke: '#ffffff', rise: 22, duration: 1800, delay: 300 });
+    }
+    // 탐험가: 걷기 시작할 때 가끔 머리 위에 "!"
+    if (this.state === 'walk' && p?.dust && Math.random() < 0.2) {
+      this.floatText('!', { size: 20, color: '#ffb300', stroke: '#ffffff', rise: 10, duration: 800 });
+    }
     if (this.idlePose === 'dance') {
       // 댄서: 통통 점프(hop) 또는 셔플 스텝(shuffle: 한 방향으로 직진하면서 걷기 모션만 좌우로 번갈아)
       this.danceStyle = Math.random() < 0.5 ? 'hop' : 'shuffle';
@@ -435,11 +479,119 @@ class GuestCharacter extends Character {
     this.sprite.setFlipX(this.facesLeft ? this.danceFace > 0 : this.danceFace < 0);
   }
 
-  /** 사진광: 머리 옆에서 카메라 플래시가 번쩍 + 찰칵 */
+  /** 먹보: 머리 위에 음식이 톡 나타났다가 입으로 쏙 → 냠! */
+  eatSnack() {
+    const food = Phaser.Utils.Array.GetRandom(['🍰', '🍗', '🍙', '🍩', '🍓', '🍕', '🍦', '🍪']);
+    const y = this.headY() - 4;
+    const t = this.scene.add.text(0, y, food, { fontSize: '22px', resolution: TEXT_RESOLUTION }).setOrigin(0.5, 1).setScale(0);
+    this.add(t);
+    this.scene.tweens.chain({
+      targets: t,
+      tweens: [
+        { scale: 1, y: y - 6, duration: 300, ease: 'Back.easeOut' },
+        { scale: 0, y: -this.sprite.displayHeight * 0.55, duration: 320, delay: 800, ease: 'Quad.easeIn' },
+      ],
+      onComplete: () => {
+        t.destroy();
+        if (this.active && this.idlePose === 'eat') this.say('냠!', 1000);
+      },
+    });
+  }
+
+  /** 잠꾸러기: 자는 동안 얼굴 쪽에서 z 글자가 크기를 달리하며 떠오르고, 가끔 콧방울이 부풀었다 톡 */
+  startSleepFx() {
+    this.sleepFx?.remove();
+    let n = 0;
+    this.sleepFx = this.scene.time.addEvent({
+      delay: 550,
+      loop: true,
+      callback: () => {
+        if (!this.active || this.idlePose !== 'sleep') {
+          this.sleepFx?.remove();
+          this.sleepFx = null;
+          return;
+        }
+        const face = this.dir * this.sprite.displayWidth * 0.3; // 엎드린 모습의 얼굴 쪽
+        const top = -this.sprite.displayHeight;
+        n++;
+        if (n % 5 === 0) return this.snotBubble(face, top * 0.45);
+        this.floatText('z', { x: face, y: top - 2, size: 13 + (n % 3) * 5, color: '#6f7fff', stroke: '#ffffff', rise: 26, dx: this.dir * 44, duration: 1800 }); // 칭호에 가리지 않게 옆으로 비스듬히
+      },
+    });
+  }
+
+  snotBubble(x, y) {
+    const b = this.scene.add.circle(x + this.dir * 6, y, 7, 0xbfe6ff, 0.75).setStrokeStyle(1.5, 0xffffff, 0.9).setScale(0.2);
+    this.add(b);
+    this.scene.tweens.chain({
+      targets: b,
+      tweens: [
+        { scale: 1.3, duration: 1100, ease: 'Sine.easeInOut' },
+        { scale: 1.8, alpha: 0, duration: 120 }, // 톡
+      ],
+      onComplete: () => b.destroy(),
+    });
+  }
+
+  /** 탐험가: 점프 착지 때 발밑에 흙먼지 */
+  landDust() {
+    for (let i = 0; i < 6; i++) {
+      const side = i % 2 ? 1 : -1;
+      const d = this.scene.add.circle(side * 4, -2, Phaser.Math.FloatBetween(3, 5), 0xb0915f).setStrokeStyle(1, 0xffffff, 0.6);
+      this.add(d);
+      this.scene.tweens.add({
+        targets: d,
+        x: side * Phaser.Math.Between(14, 26),
+        y: -Phaser.Math.Between(4, 10),
+        scale: 0.3,
+        alpha: { value: 0, ease: 'Quad.easeIn' }, // 퍼지는 동안은 보이다가 끝에 사라짐
+        duration: Phaser.Math.Between(500, 650),
+        ease: 'Quad.easeOut',
+        onComplete: () => d.destroy(),
+      });
+    }
+  }
+
+  /** 댄서: 춤추는 동안 발밑에서 음표가 튀어 오름 */
+  tickNotes(delta) {
+    this.noteTimer = (this.noteTimer ?? 0) - delta;
+    if (this.noteTimer > 0) return;
+    this.noteTimer = Phaser.Math.Between(350, 600);
+    // ︎: 지원하는 기기에선 이모지 대신 글자 모양 → 지정한 색으로 (Windows는 무시하고 이모지로 그림)
+    this.floatText(Phaser.Utils.Array.GetRandom(['♪', '♫', '♬']) + '︎', {
+      x: Phaser.Math.Between(-14, 14),
+      y: -this.sprite.displayHeight * 0.25,
+      size: Phaser.Math.Between(13, 18),
+      color: Phaser.Utils.Array.GetRandom(['#ff6fa8', '#a47bff', '#4fb8ff', '#ffb300']),
+      stroke: '#ffffff',
+      rise: 34,
+      dx: Phaser.Math.Between(-16, 16),
+      duration: 1000,
+    });
+  }
+
+  /** 사진광: 머리 옆에서 카메라 플래시가 번쩍 + 주변에 반짝이 + 찰칵 */
   photoFlash() {
     const flash = this.scene.add.circle(this.dir * 10, this.headY() * 0.6, 7, 0xffffff, 0.95);
     this.add(flash);
     this.scene.tweens.add({ targets: flash, scale: 3.2, alpha: 0, duration: 380, onComplete: () => flash.destroy() });
+    // 몸 둘레 여기저기에 네 갈래 별이 차례로 반짝였다 사라짐
+    const h = this.sprite.displayHeight;
+    for (let i = 0; i < 6; i++) {
+      const color = Phaser.Utils.Array.GetRandom([0xffffff, 0xfff3a8, 0xffd1e0]);
+      const star = this.scene.add.star(Phaser.Math.Between(-32, 32), -Phaser.Math.Between(6, h + 10), 4, 2.4, 10, color).setScale(0);
+      this.add(star);
+      this.scene.tweens.add({
+        targets: star,
+        scale: { from: 0, to: Phaser.Math.FloatBetween(0.9, 1.5) },
+        angle: 90,
+        duration: 300,
+        delay: 80 + i * 90,
+        yoyo: true,
+        hold: 250,
+        onComplete: () => star.destroy(),
+      });
+    }
     this.say('찰칵!', 1500);
   }
 
@@ -866,6 +1018,7 @@ class GuestCharacter extends Character {
         this.state = 'walk';
         this.stateTimer = Phaser.Math.Between(1200, 3000);
         this.leapReadyAt = this.scene.time.now + 2000;
+        if (this.persona?.dust) this.landDust();
         this.updatePose();
       }
       return;
@@ -890,6 +1043,7 @@ class GuestCharacter extends Character {
       const p = this.jump.t / this.jump.duration;
       if (p >= 1) {
         this.jump = null;
+        if (this.persona?.dust) this.landDust();
         this.updatePose();
       } else {
         jumpOffset = m.jumpHeight * 4 * p * (1 - p); // 포물선
@@ -932,6 +1086,7 @@ class GuestCharacter extends Character {
       this.setDir(-this.dir); // 댄서: 제자리에서 방향을 바꾸며 통통
       this.startJump();
     }
+    if (this.idlePose === 'dance') this.tickNotes(delta);
 
     // 기울어진 구간(계단, 출렁다리)은 x에 맞춰 발 높이를 따라간다. 아래쪽 캐릭터가 앞에 그려지도록 depth도 갱신
     const groundY = floorY(this.floor, this.x);

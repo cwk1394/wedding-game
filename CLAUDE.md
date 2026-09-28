@@ -112,7 +112,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 목록 키는 `CONFIG.sides`/`CONFIG.relations`/`CONFIG.personalities`(한글 이름·움직임)와 `api/guestbook.js` `SIDES`/`RELATIONS`/`PERSONALITIES`가 같아야 함. 선택 칸은 `ui.js`가 CONFIG로 채움.
 - 능력치 STR/DEX/INT/LUK: 각 4에서 시작해 남은 9점을 한 점씩 무작위로(`rollStats`) → 합 25, 4~13, 6 근처가 잘 나오고 끝값은 드묾. API가 범위·합 검사. 팝업에 표시만(움직임엔 영향 없음).
 - 칭호: 캐릭터 머리 위 메달(`setTitle`, `CONFIG.titleStyle`). 말풍선·조종 표시는 `headY()`(칭호 위)에.
-- 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + Zzz, 이미지 없으면 정면), photo(카메라 플래시 + 찰칵), dance(반반 랜덤: 제자리에서 방향 바꾸며 통통 / 셔플 스텝 — 한 방향으로 천천히 가며 걷기 모션만 0.24초마다 좌우로 뒤집기 `tickShuffle`).
+- 성향(`GuestCharacter.setPersonality`, `CONFIG.personalities`): 걷는 속도·걷기 비율·걷기/서기 시간·점프/사다리/발판 건너뛰기 확률·말풍선 간격 배율과 가끔 하는 말(`lines`). 서 있을 때 특별 동작 `idle`: sleep(엎드리기 이미지로 자기 + 얼굴 쪽에서 z 글자가 옆으로 떠오르고 가끔 콧방울 `startSleepFx`, 이미지 없으면 정면), eat(먹보: 머리 위 음식 이모지 → 입으로 쏙 → 냠! `eatSnack`), heart(얌전이: 작은 하트/꽃이 둥실), photo(카메라 플래시 + 몸 둘레 반짝이 별 6개 + 찰칵, `photoFlash`), dance(반반 랜덤: 제자리에서 방향 바꾸며 통통 / 셔플 스텝 — 한 방향으로 천천히 가며 걷기 모션만 0.24초마다 좌우로 뒤집기 `tickShuffle`), 춤추는 동안 발밑에서 음표 `tickNotes`). 그 밖에 `typing`(수다쟁이: 말풍선 전 "…" 입력 중 `typingDots`), `dust`(탐험가: 점프 착지 흙먼지 `landDust` + 걷기 시작할 때 가끔 "!"). 글자 효과는 공용 `floatText`.
 
 ## 캐릭터 만들기 위저드 (`#write-form.wizard`)
 - 전체 화면 4단계: 1 이름·관계(side/relation 칩) → 2 성향 칩·칭호·능력치·사진 → AI 캐릭터 → 3 한줄 멘트·방명록(글자 수) → 4 입력 내용 확인 카드 + 비밀번호 → 등록. 위: "로비" 버튼, "n / 4", 4칸 진행 막대.
