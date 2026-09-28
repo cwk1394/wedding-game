@@ -191,7 +191,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 알려진 한계: 같은 토큰으로 동시에 여러 번 요청하면 결과를 골라낼 수 있음(라운드마다 커밋해야 막힘).
 - 랭킹(`GET /api/rps?id=`): 캐릭터별 최고 연승 TOP 10(0연승 제외, 같으면 먼저 끝낸 사람), 1~3위 "☕ 쿠폰" 표시 + 그 캐릭터 최근 도전 10개. 쿠폰 지급은 수동.
 - 효과(css `.rps-*`): 고르면 머신 불빛 깜빡임 + 머신 손이 빠르게 바뀜(최소 1.1초), WIN = 금빛 글자 + 번쩍임 + 색종이·하트·별(연승이 길수록 많이), DRAW = 손 부딪힘, LOSE = 무대 흔들림.
-- 설정: gist를 하나 만들고(비밀 gist 가능, 파일 이름 `rps.json`) Vercel 환경변수 `RPS_GIST_ID` = gist id. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
+- 설정: 기록 gist = https://gist.github.com/kobe-KANG/54d5f2cf56f9e6eb09864d4c3e4ae684 (비밀 gist, api/rps.js 기본값 — 바꾸려면 Vercel `RPS_GIST_ID`). 첫 기록 때 그 gist에 `rps.json` 파일이 생김. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).
@@ -235,7 +235,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 사이트: https://kobe-kang.github.io/guestbook/
 - API: https://guestbook-nine-drab.vercel.app/api/guestbook (Vercel, GET = 상태 확인)
 - 필요한 저장소 설정: Discussions 활성화, `방명록` 카테고리(Announcement 형식 권장), Pages Source = GitHub Actions.
-- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `RPS_GIST_ID`·`GIST_TOKEN`(가위바위보 기록), `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장·관리자 비밀번호), `GUEST_PASSWORD_SECRET`(방명록 비밀번호 해시용 비밀키) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
+- API 배포: Vercel에서 이 저장소 Import(프레임워크 Other) → 환경변수 `GITHUB_TOKEN`, `GIST_TOKEN`(가위바위보 기록 gist 쓰기), `ALLOWED_ORIGINS`, `OPENAI_API_KEY`, `DEV_PASSWORD`(개발자 모드 저장·관리자 비밀번호), `GUEST_PASSWORD_SECRET`(방명록 비밀번호 해시용 비밀키) → 나온 주소를 `js/config.js`의 `apiUrl`에 설정.
   - 하객 등록마다 이미지 커밋이 생기므로 `vercel.json` `ignoreCommand`로 `img/guests/`만 바뀐 커밋은 재배포 생략, Actions push 트리거엔 `paths-ignore: img/guests/**`.
   - GITHUB_TOKEN은 이 저장소 전용 fine-grained PAT 권장 (권한: Contents 읽기/쓰기, Discussions 읽기/쓰기).
 - API가 main에 직접 커밋하므로, 로컬에서 push 전에 `git pull --rebase` 필요.

@@ -9,14 +9,14 @@
 // 도전이 끝날 때(짐·그만하기)만 GitHub Gist의 rps.json에 기록 + 그 토큰을 "끝남"으로 표시 → 진 토큰으로 다시 내기 불가.
 // ponytail: 한 토큰으로 동시에 여러 번 요청하면 끝남 표시 전에 결과를 골라낼 수 있음 — 막으려면 라운드마다 저장해야 해서 안 함
 //
-// 환경변수(Vercel): RPS_GIST_ID(기록용 gist id, 필수), GIST_TOKEN(gist 쓰기 권한 토큰, 없으면 GITHUB_TOKEN)
+// 환경변수(Vercel): GIST_TOKEN(gist 쓰기 권한 토큰, 없으면 GITHUB_TOKEN). 선택: RPS_GIST_ID(기본은 아래 gist)
 
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { GITHUB_ENV, GitHub } from './_lib/github.js';
 import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 import { findGuest, secret } from './guestbook.js';
 
-const GIST_ID = process.env.RPS_GIST_ID;
+const GIST_ID = process.env.RPS_GIST_ID || '54d5f2cf56f9e6eb09864d4c3e4ae684'; // gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 rps.json을 만듦)
 const GIST_FILE = 'rps.json';
 const HANDS = ['rock', 'scissors', 'paper']; // 앞이 뒤를 이김 (바위 > 가위 > 보 > 바위)
 const TOKEN_TTL = 6 * 60 * 60 * 1000; // 도전 하나를 이어갈 수 있는 시간
