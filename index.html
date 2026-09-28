@@ -180,6 +180,65 @@
     </div>
   </div>
 
+  <!-- 이벤트 NPC "가위바위보 머신" (js/rps.js): 내 캐릭터로 연승 도전 + 랭킹 -->
+  <div id="rps-modal" class="modal" hidden>
+    <div class="modal-card rps-card" role="dialog" aria-modal="true" aria-labelledby="rps-title">
+      <div class="modal-header">
+        <span id="rps-title" class="modal-title">가위바위보 머신</span>
+        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="rps-stage">
+          <div class="rps-side rps-me">
+            <img class="rps-avatar" alt="" />
+            <b class="rps-me-name"></b>
+            <span class="rps-hand rps-my-hand" aria-live="polite"></span>
+          </div>
+          <div class="rps-vs">
+            <span class="rps-streak" hidden>🔥 <b>0</b>연승</span>
+            <span class="rps-vs-text">VS</span>
+          </div>
+          <div class="rps-side rps-cpu">
+            <img class="rps-machine" src="img/npc/rps-machine/front.webp" alt="가위바위보 머신" />
+            <span class="rps-hand rps-cpu-hand" aria-live="polite"></span>
+          </div>
+          <div class="rps-result" aria-live="assertive"></div>
+          <div class="rps-fx" aria-hidden="true"></div>
+        </div>
+
+        <!-- 도전 전: 비밀번호 확인 -->
+        <form class="rps-start" novalidate>
+          <p class="rps-rule">지면 끝! <b>연속으로 이긴 횟수</b>가 기록돼요.<br />랭킹 <b>TOP 3</b>에게는 <b>☕ 커피 쿠폰</b>을 드려요.</p>
+          <p class="rps-need" hidden>로비에서 내 캐릭터를 만들거나 골라야 도전할 수 있어요.</p>
+          <label class="field rps-pw">
+            <span>내 캐릭터 비밀번호 <small>(등록할 때 정한 것)</small></span>
+            <input name="password" type="password" autocomplete="current-password" maxlength="30" />
+          </label>
+          <p class="form-error rps-error" hidden></p>
+          <button type="submit" class="btn btn-primary rps-go">도전하기</button>
+        </form>
+
+        <!-- 도전 중: 가위·바위·보 -->
+        <div class="rps-play" hidden>
+          <div class="rps-hands">
+            <button type="button" data-hand="scissors"><span>✌️</span>가위</button>
+            <button type="button" data-hand="rock"><span>✊</span>바위</button>
+            <button type="button" data-hand="paper"><span>🖐️</span>보</button>
+          </div>
+          <button type="button" class="btn btn-ghost rps-stop">그만하고 기록 저장</button>
+        </div>
+
+        <section class="rps-board">
+          <h3>🏆 연승 랭킹</h3>
+          <ol class="rps-ranking"></ol>
+          <p class="rps-empty" hidden>아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!</p>
+          <h3 class="rps-mine-title" hidden>내 도전 기록</h3>
+          <ul class="rps-mine"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <!-- 방명록 작성 폼 (로비의 "캐릭터 만들기"): 항상 전체 화면 -->
   <div id="write-modal" class="modal fullscreen" hidden>
     <form id="write-form" class="modal-card wizard" role="dialog" aria-modal="true" aria-label="캐릭터 만들기" novalidate>
@@ -520,6 +579,7 @@
   <script src="js/character.js"></script>
   <script src="js/api.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/rps.js"></script>
   <script src="js/view.js"></script>
   <script src="js/control.js"></script>
   <script src="js/scene.js"></script>

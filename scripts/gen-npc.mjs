@@ -113,6 +113,16 @@ a pink satin ribbon bow on the side door, a tiny garland of pink roses and white
 Soft warm lighting from the upper left, subtle cute shading, full vehicle visible, no ground, no shadow. ${STYLE}`,
     motions: {},
   },
+  'rps-machine': {
+    // 이벤트 NPC: 옛날 오락실 "가위바위보 동전 게임기"를 웨딩 파스텔로. 가만히 서 있음
+    front: `A cute MapleStory-style event NPC object: a retro Korean arcade "rock-paper-scissors" coin game machine, redesigned for a wedding party.
+A standing arcade cabinet, chibi and chunky, three-quarter front view facing LEFT, full object visible.
+Pastel pink and cream cabinet with gold trim, a glowing marquee on top ringed with little round light bulbs and a small heart,
+a round display window in the middle showing a big cartoon hand sign, three big shiny round push buttons in a row (pink, mint, butter yellow)
+each with a simple hand icon (fist, V-sign, open palm), a small coin slot and a prize tray at the bottom with a tiny coffee cup icon,
+a pink satin ribbon bow and a few roses on the side. Sparkles around the lights. No readable text or letters anywhere.`,
+    motions: {},
+  },
 };
 for (const [id, cat] of Object.entries(NPCS)) {
   if (!cat.look) continue;

@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)img/guests' ':(exclude)img/gallery' ':(exclude)js/map-data.js'",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)img/guests' ':(exclude)img/gallery' ':(exclude)js/map-data.js' ':(exclude)event'",
   "functions": {
     "api/character.js": {
       "maxDuration": 300,

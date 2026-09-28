@@ -25,6 +25,7 @@ js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스�
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
 js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 4단계 캐릭터 만들기 위저드(1 내 정보 → 2 캐릭터 → 3 한마디·방명록 → 4 비밀번호·등록), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/rps.js               Rps: 이벤트 NPC "가위바위보 머신" 화면(비밀번호 확인 → 가위·바위·보, 효과, 랭킹). ui.js 다음에 로드(`UI.setupModal`)
 js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
 js/control.js           Controller: 캐릭터 직접 조종(방향키/Space, 터치 스틱·점프 버튼, 카메라 따라가기). 일반 방문자·개발자 모드 공용
@@ -46,6 +47,8 @@ api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion �
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
 api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함. NPC 추가용 npc-front|npc-idle|npc-walk (+desc, 투명 배경)
+api/rps.js              Vercel 함수: 가위바위보 머신. POST start|play|stop, GET 랭킹·내 기록. 판정은 서버, 기록은 event/rps.json 커밋
+event/rps.json          가위바위보 기록 { records: [{id, name, streak, at, end}], burned } (API가 커밋, 배포 안 함)
 api/map.js              Vercel 함수: POST {password, map: {floors, climbs, spawn, couple, npcs}} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
@@ -180,6 +183,16 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 효과는 `NpcEffect`(Phaser 파티클: 꽃잎 재사용, 비눗방울·음표 텍스처는 코드로 생성).
 - NPC 디렉토리는 `<종류>-<이름>` (dog-esso, dog-mongsil, rabbit-pudding, cat-*). 한줄 멘트(shortMsg)가 있으면 하객처럼 가끔 말풍선이 뜸. 소개 글(longMsg)은 미정 → `NPC_POPUP_TBD`. 정해지면 npcs.js의 popup 수정. 처음 발판은 map-data 발판 이름이라 지도를 크게 바꾸면 확인.
 - 이미지 다시 만들기: `OPENAI_API_KEY=... node scripts/gen-npc.mjs <id>` 또는 `<id>:<motion>` (sharp 필요: `npm i --no-save sharp`).
+
+## 이벤트 NPC: 가위바위보 머신 (`rps-machine`)
+- js/npcs.js `event: 'rps'` → 누르면(개발자 모드 제외) `Rps.open()`. 시작점 옆 배 갑판(`f2`, x 285) 고정, 이미지는 gen-npc.mjs `rps-machine`(움직임 없음).
+- 도전: 내 캐릭터(`UI.getMine`, main.js `mine`)의 방명록 비밀번호 → `POST /api/rps {action:'start', number, id, password}`(guestbook.js `findGuest`로 확인, 관리자 비밀번호도 통과) → 서명 토큰(HMAC, `secret()`). 방금 만든 캐릭터는 number가 생기는 1~2분 뒤부터.
+- `play {token, choice}`: 서버가 무작위로 내고 판정. 이기면 연승+1 새 토큰, 비기면 그대로 새 토큰(저장 안 함). 지거나 `stop`(그만하기·창 닫기)이면 `event/rps.json`에 기록(시작·끝 시각) + 토큰 nonce를 `burned`에 넣어 한 커밋 → 진 토큰으로 다시 내기 불가(409). 커밋은 `commitFiles(async (parentSha) => files)`로 재시도마다 최신 파일에 다시 씀.
+  - 진행 중 토큰은 localStorage `rpsToken`에도 → 새로고침·ESC로 나가도 다음에 열 때 그 연승으로 기록.
+  - 알려진 한계: 같은 토큰으로 동시에 여러 번 요청하면 결과를 골라낼 수 있음(라운드마다 커밋해야 막힘).
+- 랭킹(`GET /api/rps?id=`): 캐릭터별 최고 연승 TOP 10(0연승 제외, 같으면 먼저 끝낸 사람), 1~3위 "☕ 쿠폰" 표시 + 그 캐릭터 최근 도전 10개. 쿠폰 지급은 수동.
+- 효과(css `.rps-*`): 고르면 머신 불빛 깜빡임 + 머신 손이 빠르게 바뀜(최소 1.1초), WIN = 금빛 글자 + 번쩍임 + 색종이·하트·별(연승이 길수록 많이), DRAW = 손 부딪힘, LOSE = 무대 흔들림.
+- `event/**`는 deploy.yml paths-ignore, vercel.json ignoreCommand에 포함(기록 커밋마다 재배포 안 함).
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).

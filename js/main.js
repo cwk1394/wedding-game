@@ -65,6 +65,9 @@
   // 방명록 목록용: 맵 위 하객 (방금 등록한 하객 포함)
   UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl(), update: (info) => g.updateInfo(info) }));
 
+  // 가위바위보 머신 등에서 쓰는 지금 내 캐릭터
+  UI.getMine = () => (mine?.active ? { info: mine.info, avatarUrl: mine.getAvatarUrl() } : null);
+
   // 로비 예시 캐릭터: 점프·엎드리기 이미지까지 있는 하객 중 무작위 (없으면 신랑) → 맵에서 이미 만든 프레임 캔버스
   UI.getDemoFrames = () => {
     const s = scene();

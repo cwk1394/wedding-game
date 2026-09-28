@@ -1464,6 +1464,7 @@ const UI = (() => {
     openEdit, // { info, onUpdated(guest), onDeleted() } → 비밀번호 확인 → 수정 폼
     openNpcSettings,
     openLobby,
+    setupModal, // 다른 화면(js/rps.js)도 같은 팝업 동작 (닫기 버튼·ESC, 맵 입력 끄기)
     setMode,
     showToast,
     forgetMyGuest: () => myGuest.set(''),
@@ -1474,5 +1475,6 @@ const UI = (() => {
     onLobby: null, // 메뉴 "로비로 돌아가기"
     onModalChange: null,
     getGuests: null,
+    getMine: null, // 지금 내 캐릭터 { info, avatarUrl } | null (main.js)
   };
 })();

@@ -151,7 +151,7 @@ const discussionBody = (data) => '```json\n' + JSON.stringify(data, null, 2) + '
 
 // ---------- 비밀번호 ----------
 
-function secret() {
+export function secret() {
   const key = process.env.GUEST_PASSWORD_SECRET || process.env.DEV_PASSWORD;
   if (!key) throw new HttpError(503, '비밀번호 기능이 설정되지 않았어요. (GUEST_PASSWORD_SECRET)');
   return key;
@@ -196,7 +196,11 @@ function parseBody(body) {
   }
 }
 
-async function manageGuest(body, env) {
+/**
+ * 번호·id·비밀번호로 하객 방명록을 찾아 비밀번호 확인 → { github, discussion, data, id, number } (틀리면 HttpError).
+ * 가위바위보 머신(api/rps.js)도 같은 확인을 쓴다
+ */
+export async function findGuest(body, env = ENV) {
   const number = Number(body.number);
   if (!Number.isInteger(number) || number <= 0) throw new HttpError(400, '방명록 번호가 없어요. 새로고침 후 다시 시도해 주세요.');
   const password = typeof body.password === 'string' ? body.password : '';
@@ -211,9 +215,13 @@ async function manageGuest(body, env) {
     throw new HttpError(404, '방명록을 찾을 수 없어요. 이미 삭제되었을 수 있어요.');
   }
   if (!passwordMatches(data.pw, password)) {
-    throw new HttpError(403, data.pw ? '비밀번호가 맞지 않아요.' : '비밀번호가 없는 방명록이라 수정할 수 없어요.');
+    throw new HttpError(403, data.pw ? '비밀번호가 맞지 않아요.' : '비밀번호가 없는 방명록이라 쓸 수 없어요.');
   }
+  return { github, discussion, data, id, number };
+}
 
+async function manageGuest(body, env) {
+  const { github, discussion, data, number } = await findGuest(body, env);
   if (body.action === 'verify') return { ok: true };
 
   if (body.action === 'delete') {
