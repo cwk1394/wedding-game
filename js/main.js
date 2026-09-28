@@ -65,6 +65,19 @@
   // 방명록 목록용: 맵 위 하객 (방금 등록한 하객 포함)
   UI.getGuests = () => (scene()?.guests ?? []).map((g) => ({ info: g.info, avatarUrl: () => g.getAvatarUrl(), update: (info) => g.updateInfo(info) }));
 
+  // 로비 예시 캐릭터: 점프·엎드리기 이미지까지 있는 하객 중 무작위 (없으면 신랑) → 맵에서 이미 만든 프레임 캔버스
+  UI.getDemoFrames = () => {
+    const s = scene();
+    if (!s?.textures) return null;
+    const has = (k) => s.textures.exists(k);
+    const img = (k) => s.textures.get(k).getSourceImage();
+    const pool = s.guests.filter((g) => has(`${g.texKey}_jump0`) && has(`${g.texKey}_prone0`));
+    const c = pool[Math.floor(Math.random() * pool.length)] ?? s.couple[0];
+    if (!c || !has(`${c.texKey}_0`)) return null;
+    const frames = (m) => [0, 1, 2, 3].map((i) => `${c.texKey}_${m}${i}`).filter(has).map(img);
+    return { front: img(`${c.texKey}_0`), walk: frames('walk'), jump: frames('jump'), prone: frames('prone'), facesLeft: c.facesLeft };
+  };
+
   // ---------- 내 캐릭터 · 모드 ----------
   // 내 캐릭터 = 처음 화면에서 만들거나 고른 캐릭터. 메뉴 "모드 전환"으로
   //   플레이 모드(내 캐릭터를 직접 조종, 화면이 따라감) ↔ 관람 모드(캐릭터는 알아서 돌아다니고 맵을 자유롭게 구경)

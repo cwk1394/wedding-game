@@ -1177,7 +1177,71 @@ const UI = (() => {
     guide.textContent = has ? '생성한 캐릭터가 있어요! 캐릭터 접속을 눌러보세요!' : '캐릭터 생성 기록이 없어요! 캐릭터를 생성해보세요!';
     target.after(guide);
     lobbyModal.open();
+    playDemo();
   };
+
+  // 로비 예시 캐릭터: 걷기 → 점프 → 반대로 걷기 → 점프 → 엎드렸다 일어나기를 반복 (로비가 닫히면 멈춤)
+  const demoCanvas = lobbyEl.querySelector('canvas.lobby-demo');
+  let demoRunning = false;
+  function playDemo() {
+    if (demoRunning) return;
+    const f = UI.getDemoFrames?.();
+    if (!f) return;
+    demoRunning = true;
+    const ctx = demoCanvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const H = 72; // 표시 키 (CSS px)
+    const walk = f.walk.length ? f.walk : [f.front];
+    const jump = f.jump.length ? f.jump : walk;
+    const prone = f.prone.length ? f.prone : [f.front];
+    // [동작, 시간(초), 끝 x 비율] — x는 칸 폭 기준 0~1
+    const steps = [
+      ['stand', 0.8, 0.5], ['walk', 1.4, 0.85], ['jump', 0.7, 0.85], ['walk', 2.6, 0.15],
+      ['jump', 0.7, 0.15], ['walk', 1.4, 0.5], ['prone', 1.4, 0.5], ['stand', 0.6, 0.5],
+    ];
+    let i = 0, t = 0, x0 = 0.5, dir = -1, last = performance.now();
+    const frame = (now) => {
+      if (lobbyEl.hidden) return (demoRunning = false);
+      const W = demoCanvas.clientWidth, CH = demoCanvas.clientHeight;
+      if (demoCanvas.width !== Math.round(W * dpr)) Object.assign(demoCanvas, { width: Math.round(W * dpr), height: Math.round(CH * dpr) });
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      t += dt;
+      let [type, dur, x1] = steps[i];
+      if (t >= dur) {
+        t -= dur;
+        x0 = x1;
+        i = (i + 1) % steps.length;
+        [type, dur, x1] = steps[i];
+      }
+      const p = t / dur;
+      if (x1 !== x0) dir = x1 > x0 ? 1 : -1;
+      const margin = 24;
+      const x = margin + (x0 + (x1 - x0) * p) * (W - margin * 2);
+      const lift = type === 'jump' ? Math.sin(Math.PI * p) * 24 : 0;
+      const list = { stand: [f.front], walk, jump, prone }[type];
+      const img = type === 'jump' ? jump[Math.min(Math.floor(p * jump.length), jump.length - 1)] : list[Math.floor(t * (type === 'prone' ? 2 : 8)) % list.length];
+      // 정면 키를 H로 맞춘 비율 그대로 (엎드리면 낮고 길게)
+      const k = H / f.front.height;
+      const w = img.width * k, h = img.height * k;
+      const floor = CH - 8;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, CH);
+      ctx.fillStyle = 'rgba(216, 88, 74, .14)'; // 발밑 그림자 (뛰면 작아짐)
+      ctx.beginPath();
+      ctx.ellipse(x, floor, Math.max(w * 0.35, 10) * (1 - lift / 60), 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.imageSmoothingEnabled = true;
+      ctx.save();
+      ctx.translate(x, floor - lift);
+      // 동작 이미지는 왼쪽을 바라봄 → 오른쪽으로 갈 땐 뒤집기 (정면 이미지는 그대로)
+      if (type !== 'stand' && f.facesLeft && dir > 0) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w / 2, -h, w, h);
+      ctx.restore();
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
   lobbyEl.querySelector('.lobby-play').addEventListener('click', () => {
     lobbyModal.close();
     openSelect();

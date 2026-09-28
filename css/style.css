@@ -423,9 +423,11 @@ html, body {
 }
 .loading-title { margin-top: 10px; font-size: 32px; font-weight: 800; letter-spacing: -.03em; }
 .loading-sub { font-size: 15px; color: var(--ink-soft); }
+/* 로비 예시 캐릭터 칸 (로딩 화면엔 같은 높이 빈 칸) */
+.lobby-demo { display: block; width: min(300px, 84vw); height: 104px; margin-top: 4px; }
 /* 로딩·로비 공통 설명: 3단계 (게임처럼 즐기는 방명록이라는 안내) */
 .lobby-intro {
-  list-style: none; margin: 18px 0 0; padding: 12px 14px; width: min(300px, 84vw);
+  list-style: none; margin: 4px 0 0; padding: 12px 14px; width: min(300px, 84vw);
   display: flex; flex-direction: column; gap: 7px;
   border-radius: 14px; background: rgba(255, 255, 255, .7); border: 1px solid var(--line);
   font-size: 13.5px; line-height: 1.4; color: var(--ink); text-align: left; word-break: keep-all;
