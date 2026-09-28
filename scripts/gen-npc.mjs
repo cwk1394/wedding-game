@@ -102,7 +102,7 @@ full body, chibi and round. Ignore the photo background.`,
       sit: strip(4, 'Sitting on the ground holding a pink squeaky dumbbell-shaped chew toy in its mouth, happily chewing it: the toy squishes a little between frames, tail wagging.'),
     },
   },
-  'taxi': {
+  'wedding-car': {
     // 오른쪽 아래 광장(파스텔 분홍·크림색 돌바닥, 위에서 살짝 내려다보는 시점)에 서 있는 웨딩 택시
     front: `A cute MapleStory-style wedding taxi NPC, parked on a pastel pink-and-cream stone plaza in a dreamy flower wedding garden.
 Camera angle: a clear THREE-QUARTER FRONT view with real 3D depth (NOT a flat side view): the car is turned about 35-45 degrees toward the viewer,
@@ -196,9 +196,9 @@ await pool(
   Object.entries(NPCS)
     .filter(([id]) => want(id, 'front'))
     .map(([id, npc]) => async () => {
-      const size = id === 'taxi' ? '1536x1024' : '1024x1024';
+      const size = id === 'wedding-car' ? '1536x1024' : '1024x1024';
       try {
-        const prompt = `${npc.front}\n${id === 'taxi' ? '' : STYLE}`;
+        const prompt = `${npc.front}\n${id === 'wedding-car' ? '' : STYLE}`;
         const origin = `img/npc/${id}/origin.jpg`;
         const buf =
           npc.origin && existsSync(origin)

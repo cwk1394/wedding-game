@@ -66,7 +66,7 @@ const NPCS = [
     popup: { shortMsg: '왈! 삑삑~', longMsg: NPC_POPUP_TBD },
   },
   {
-    id: 'taxi',
+    id: 'wedding-car',
     name: '택시',
     floor: 'f7', // 오른쪽 아래 광장
     x: 1000,
