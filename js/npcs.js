@@ -95,7 +95,7 @@ const NPCS = [
     floor: 'f4',
     x: 420,
     fixed: true,
-    height: 62,
+    height: 100,
     motions: [],
     event: 'chase',
     popup: { shortMsg: '도둑 잡기 도전! 🚨', longMsg: '' },
