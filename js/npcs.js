@@ -83,7 +83,7 @@ const NPCS = [
     floor: 'f2',
     x: 285,
     fixed: true,
-    height: 70,
+    height: 110,
     motions: [],
     event: 'rps',
     popup: { shortMsg: '연승 도전! ☕', longMsg: '' },

@@ -1,7 +1,7 @@
 // NPC 스프라이트 생성 (OpenAI 이미지 API). 로컬에서 한 번씩 돌리는 도구 — 키는 환경변수로만 받는다.
 //   OPENAI_API_KEY=... node scripts/gen-npc.mjs                 전부 생성
 //   OPENAI_API_KEY=... node scripts/gen-npc.mjs rabbit-pudding cat-mimi:sleep   일부만 다시 생성
-// 1) NPC마다 기준 이미지(front)를 글로 생성 — img/npc/<id>/origin.jpg(실제 사진)가 있으면 그 사진을 바탕으로 생성
+// 1) NPC마다 기준 이미지(front)를 글로 생성 — img/npc/<id>/origin.jpg(실제 사진)가 있으면 그 사진을, ref가 있으면 그 이미지를 바탕으로 생성
 // 2) 그 기준 이미지를 참고로 동작 스트립(idle/walk/sleep/scratch) 생성
 // 결과: img/npc/<id>/<motion>.webp (sharp로 가로 768px로 줄여 저장, 원본은 .cache/npc-raw/)
 // 옵션: OPENAI_IMAGE_MODEL(쉼표 구분, 기본 gpt-image-2,gpt-image-1.5,gpt-image-1), OPENAI_IMAGE_QUALITY(기본 medium)
@@ -114,13 +114,15 @@ Soft warm lighting from the upper left, subtle cute shading, full vehicle visibl
     motions: {},
   },
   'rps-machine': {
-    // 이벤트 NPC: 옛날 오락실 "가위바위보 동전 게임기"를 웨딩 파스텔로. 가만히 서 있음
-    front: `A cute MapleStory-style event NPC object: a retro Korean arcade "rock-paper-scissors" coin game machine, redesigned for a wedding party.
-A standing arcade cabinet, chibi and chunky, three-quarter front view facing LEFT, full object visible.
-Pastel pink and cream cabinet with gold trim, a glowing marquee on top ringed with little round light bulbs and a small heart,
-a round display window in the middle showing a big cartoon hand sign, three big shiny round push buttons in a row (pink, mint, butter yellow)
-each with a simple hand icon (fist, V-sign, open palm), a small coin slot and a prize tray at the bottom with a tiny coffee cup icon,
-a pink satin ribbon bow and a few roses on the side. Sparkles around the lights. No readable text or letters anywhere.`,
+    // 이벤트 NPC: 웨딩 파스텔 가위바위보 게임기(얼굴·장갑 손). 가만히 서 있음
+    // 수평 발판 위에 서 있으므로 위에서 내려다보는 3/4 각도가 아니라 정면 수평 시점으로. ref = 디자인 참고(지금 이미지를 .cache/npc-ref/에 복사해 둠)
+    ref: '.cache/npc-ref/rps-machine.webp',
+    front: `Redraw the EXACT same character from the reference image — a cute MapleStory-style wedding "rock-paper-scissors" arcade machine NPC —
+keeping its design, colors, face, heart-shaped sign with the three hand-sign buttons, white glove hands (fist and V-sign), bows, roses and ribbons.
+CHANGE ONLY THE CAMERA ANGLE: a straight FRONT view at eye level (orthographic, like a classic 2D side-scrolling game sprite).
+NO top-down view, NO three-quarter view, NO isometric angle, NO perspective: we must NOT see the top surface of the cabinet or its side panels in depth.
+The machine stands perfectly UPRIGHT and VERTICAL on flat level ground; its bottom edge / feet are on one straight horizontal line.
+Symmetric front-facing cabinet, full object visible, tall upright proportions.`,
     motions: {},
   },
   'chase-police': {
@@ -219,8 +221,9 @@ await pool(
       try {
         const prompt = `${npc.front}\n${id === 'wedding-car' ? '' : STYLE}`;
         const origin = `img/npc/${id}/origin.jpg`;
-        const buf =
-          npc.origin && existsSync(origin)
+        const buf = npc.ref
+          ? await edit(prompt, size, await readFile(npc.ref)) // 디자인 참고 이미지 (webp, 투명 배경 유지)
+          : npc.origin && existsSync(origin)
             ? // 실제 사진 기반: EXIF 회전 반영 + 1024px로 줄여 참고 이미지로
               await edit(prompt, size, await sharp(origin).rotate().resize(1024, 1024, { fit: 'inside' }).webp().toBuffer())
             : await generate(prompt, size);
