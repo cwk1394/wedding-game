@@ -92,8 +92,8 @@ async function gistRequest(github, method, body) {
     return await github.request(method, `/gists/${GIST_ID}`, body);
   } catch (err) {
     if ([401, 403, 404].includes(err.status)) {
-      console.error(err);
-      throw new HttpError(503, `가위바위보 기록 저장소(gist)에 접근하지 못했어요. Vercel ${process.env.GIST_TOKEN ? 'GIST_TOKEN' : 'GITHUB_TOKEN(GIST_TOKEN 없음)'}을 확인해 주세요. (gist ${GIST_ID}, GitHub ${err.status})`);
+      console.error(`gist ${GIST_ID}, token ${process.env.GIST_TOKEN ? 'GIST_TOKEN' : 'GITHUB_TOKEN'}`, err); // gist id는 비밀이라 응답엔 안 넣고 Vercel 로그에만
+      throw new HttpError(503, `가위바위보 기록 저장소(gist)에 접근하지 못했어요. Vercel GIST_TOKEN을 확인해 주세요. (GitHub ${err.status})`);
     }
     throw err;
   }
