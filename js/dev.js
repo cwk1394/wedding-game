@@ -331,6 +331,14 @@ class DevMode {
       c.dropAt(name, c.x);
       return this.changed();
     }
+    if (npc && name && c.mode === 'default') {
+      // 기본 NPC는 놓은 자리가 처음 자리로 저장된다 (거기서부터 돌아다님)
+      this.checkpoint();
+      CONFIG.npcs = { ...CONFIG.npcs, [npc.id]: { ...CONFIG.npcs[npc.id], floor: name, x: Math.round(c.x) } };
+      c.dropAt(name, c.x);
+      UI.showToast(`${c.info.name}의 처음 자리를 바꿨어요. 저장 버튼을 누르면 사이트에 반영돼요`, 3000);
+      return this.changed();
+    }
     if (isCouple && !c.controlled) {
       c.held = false;
       c.onMapChanged(); // 제자리(CONFIG.couple)에 선다
@@ -381,7 +389,7 @@ class DevMode {
     }
     // 고정 NPC 자리도 같은 방식으로 (못 옮기면 고정 해제 → 기본)
     for (const [id, n] of Object.entries(CONFIG.npcs)) {
-      if (n.mode !== 'fixed' || n.y != null) continue; // 발판 없이 놓인 자리(y)는 그대로
+      if (!(n.mode === 'fixed' || (!n.mode && n.floor)) || n.y != null) continue; // 발판 없이 놓인 자리(y)는 그대로. 기본 NPC의 처음 자리도
       const p = relocatePoint({ floor: n.floor, x: n.x });
       if (p) CONFIG.npcs[id] = { ...n, ...p };
       else {
@@ -451,6 +459,7 @@ class DevMode {
         Object.assign(next, isStaticNpc(c.npc) ? { mode, x: Math.round(c.x), y: Math.round(c.y) } : { mode, floor: c.floorName, x: Math.round(c.x) });
       }
       else if (mode !== 'default') next.mode = mode;
+      else if (cur.floor && cur.y == null) Object.assign(next, { floor: cur.floor, x: cur.x }); // 기본: 끌어서 정한 처음 자리 유지 (고정이었으면 그 자리에서 시작)
       if (images && cur.def) {
         // 추가한 NPC: 설명·키·동작도 새 이미지에 맞춘다
         const motions = ['idle', 'walk'].filter((m) => images[m]);

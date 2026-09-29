@@ -12,6 +12,7 @@ class Character extends Phaser.GameObjects.Container {
     this.info = info;
     this.texKey = createCharacterTexture(scene, info);
     this.bubble = null;
+    this.timers = new Set(); // later()로 예약한 일 — 지워질 때 같이 취소
 
     this.sprite = scene.add.sprite(0, 0, `${this.texKey}_0`).setOrigin(0.5, 1);
     this.tag = scene.add
@@ -183,13 +184,29 @@ class Character extends Phaser.GameObjects.Container {
     return this.scene.textures.getBase64(`${this.texKey}_0`);
   }
 
+  /** delay ms 뒤 fn. 그 사이 캐릭터가 지워지면(NPC 삭제·이미지 교체 등) 취소 — 지운 뒤 콜백이 this.scene(undefined)을 건드려 게임 루프가 멈추던 문제 */
+  later(delay, fn) {
+    const ev = this.scene.time.delayedCall(delay, () => {
+      this.timers.delete(ev);
+      fn();
+    });
+    this.timers.add(ev);
+    return ev;
+  }
+
+  destroy(fromScene) {
+    this.timers?.forEach((ev) => ev.remove());
+    this.timers?.clear();
+    this.sleepFx?.remove();
+    super.destroy(fromScene);
+  }
+
   scheduleBubble(delay) {
-    this.scene.time.delayedCall(delay, () => {
-      if (!this.active) return;
+    this.later(delay, () => {
       // 수다쟁이: 말풍선 전에 "…" 입력 중 표시를 잠깐 보여 준다
       if (this.persona?.typing && this.state !== 'climb') {
         this.typingDots(700);
-        this.scene.time.delayedCall(700, () => this.active && this.say(this.bubbleText()));
+        this.later(700, () => this.say(this.bubbleText()));
       } else this.say(this.bubbleText());
       const gap = Phaser.Math.Between(CONFIG.bubble.minGap, CONFIG.bubble.maxGap) * (this.persona?.bubbleGap ?? 1); // 수다쟁이는 자주
       this.scheduleBubble(CONFIG.bubble.duration + gap);
@@ -204,7 +221,7 @@ class Character extends Phaser.GameObjects.Container {
     const box = this.scene.add.container(0, this.headY() - 16, [bg, ...dots]);
     this.add(box);
     dots.forEach((d, i) => this.scene.tweens.add({ targets: d, y: -3, duration: 160, delay: i * 110, yoyo: true, repeat: -1, repeatDelay: 200 }));
-    this.scene.time.delayedCall(duration, () => {
+    this.later(duration, () => {
       this.scene.tweens.killTweensOf(dots);
       box.destroy();
     });
@@ -290,7 +307,7 @@ class Character extends Phaser.GameObjects.Container {
     this.bubble = bubble;
 
     this.scene.tweens.add({ targets: bubble, alpha: 1, duration: 150 });
-    this.scene.time.delayedCall(duration, () => {
+    this.later(duration, () => {
       if (this.bubble !== bubble) return;
       this.scene.tweens.add({
         targets: bubble,
@@ -1227,7 +1244,7 @@ function isStaticNpc(npc) {
 /**
  * NPC 배치 방식 (개발자 모드 NPC 설정, CONFIG.npcs[id].mode)
  * fixed = 자리(floor, x)에 서 있음 · random = 접속할 때마다 아무 발판 · stage = 무대 안에서만 돌아다님
- * default = js/npcs.js의 처음 발판에서 돌아다님 (npc.fixed면 fixed)
+ * default = 처음 발판에서 돌아다님 — CONFIG.npcs[id].floor·x(개발자 모드에서 끌어 놓은 자리), 없으면 js/npcs.js (npc.fixed면 fixed)
  */
 function npcMode(npc) {
   return CONFIG.npcs[npc.id]?.mode ?? (npc.fixed ? 'fixed' : 'default');
@@ -1241,6 +1258,7 @@ function npcHome(npc) {
   if (mode === 'fixed' && s.y != null && s.x != null) return { floor: CONFIG.floors[s.floor] ? s.floor : mainStageName(), x: s.x, y: s.y };
   if (mode === 'fixed' && CONFIG.floors[s.floor] && s.x != null) return { floor: s.floor, x: s.x };
   if (mode === 'stage') return { floor: mainStageName(), x: null };
+  if (mode === 'default' && CONFIG.floors[s.floor]) return { floor: s.floor, x: s.x ?? null }; // 개발자 모드에서 끌어서 정한 처음 자리
   if (mode !== 'random' && CONFIG.floors[npc.floor]) return { floor: npc.floor, x: npc.x ?? null };
   // 랜덤 (또는 처음 발판이 없어짐) — 사다리/로프로 거의 덮인 짧은 발판은 피한다
   return { floor: randomNpcFloor(), x: null };
@@ -1400,6 +1418,13 @@ class NpcCharacter extends GuestCharacter {
     if (this.mode !== 'fixed') super.tick(delta);
     this.effect?.update();
   }
+
+  /** 효과 파티클은 캐릭터 밖(씬)에 있어서 따로 지운다 (안 그러면 삭제·이미지 교체 뒤에도 그 자리에서 계속 뿌림) */
+  destroy(fromScene) {
+    this.effect?.destroy();
+    this.effect = null;
+    super.destroy(fromScene);
+  }
 }
 
 /** NPC 효과: petals = 늘 꽃가루를 뿌림, bubbles = 서 있으면 비눗방울 / 걸으면 나팔 음표 */
@@ -1473,6 +1498,10 @@ class NpcEffect {
       ctx.fillText('♪', 4, 26);
       tex.refresh();
     }
+  }
+
+  destroy() {
+    Object.values(this.emitters).forEach((e) => e.destroy());
   }
 
   /** 매 프레임: 입/손 위치로 따라가고, 상태에 맞는 효과만 켠다 */

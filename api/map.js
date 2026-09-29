@@ -106,7 +106,7 @@ function validateMap(map) {
     if (!Object.keys(couple).length) couple = null;
   }
 
-  // NPC 설정 { <id>: { shortMsg, longMsg, mode, floor, x } } — mode 없으면 js/npcs.js 기본, fixed면 floor·x 자리
+  // NPC 설정 { <id>: { shortMsg, longMsg, mode, floor, x } } — fixed면 floor·x 자리, mode 없으면 floor·x가 처음 자리(없으면 js/npcs.js)
   const npcEntries = Object.entries(map.npcs ?? {});
   if (npcEntries.length > LIMITS.npcs) throw bad(`NPC 설정은 ${LIMITS.npcs}개 이하`);
   const npcs = {};
@@ -137,6 +137,10 @@ function validateMap(map) {
       Object.assign(out, { x: Math.round(n.x), y: Math.round(n.y) });
     } else if (out.mode === 'fixed') {
       if (!floors[n.floor] || !isCoord(n.x)) throw bad(`${id}: 고정 자리`);
+      Object.assign(out, { floor: n.floor, x: Math.round(n.x) });
+    } else if (out.mode == null && n.floor != null) {
+      // 기본 배치: 처음 자리 (개발자 모드에서 끌어 놓은 곳) — 거기서부터 돌아다님
+      if (!floors[n.floor] || !isCoord(n.x)) throw bad(`${id}: 처음 자리`);
       Object.assign(out, { floor: n.floor, x: Math.round(n.x) });
     }
     if (n.album != null) {

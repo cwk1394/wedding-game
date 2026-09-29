@@ -155,7 +155,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 하객·NPC는 그 자리로 옮기기만 하고 저장 안 됨(`dropAt`). 조종 중이면 조종 그대로.
   - 신랑·신부는 자리가 `CONFIG.couple` `{groom:{floor,x}, bride:{floor,x}}`에 들어가 되돌리기·저장 대상(`couplePoint(id)`, 없거나 발판이 사라지면 무대 가운데 ±30, `mainStageName()`). 고정 N이면 무대 위에만 놓을 수 있고 무대 조각들 안에서만 돌아다님(사다리 안 탐), 고정 Y면 어느 발판이든 그 자리에 서 있음.
 - NPC 설정 창: 개발자 모드에서 NPC를 누르면 방명록 팝업 대신 설정 창(`UI.openNpcSettings` → `dev.openNpcSettings`). 이름(15자)·디렉토리·한줄 멘트(20자)·소개 글(500자)·배치 방식을 바꾸면 `CONFIG.npcs[id]`(= `MAP_DATA.npcs`, js/npcs.js 값을 덮어씀)에 들어가 되돌리기·저장 대상.
-  - 배치(`npcMode`/`npcHome`): 고정(`fixed`, 지금 선 자리 `{floor, x}` 저장 — 끌어서 옮기면 그 자리 저장, 발판이 지워지면 x를 덮는 발판으로 옮기고 없으면 기본으로) / 랜덤(`random`, 접속할 때마다 아무 발판) / 무대에서만(`stage`, 무대 발판 안에서만 — `canStandOn`) / 기본(mode 없음, npcs.js 처음 발판. 택시처럼 `npc.fixed`면 고정).
+  - 배치(`npcMode`/`npcHome`): 고정(`fixed`, 지금 선 자리 `{floor, x}` 저장 — 끌어서 옮기면 그 자리 저장, 발판이 지워지면 x를 덮는 발판으로 옮기고 없으면 기본으로) / 랜덤(`random`, 접속할 때마다 아무 발판) / 무대에서만(`stage`, 무대 발판 안에서만 — `canStandOn`) / 기본(mode 없음, 처음 발판에서 돌아다님 — 끌어 놓으면 그 자리 `{floor, x}`가 처음 자리로 저장, 없으면 npcs.js 처음 발판. 택시처럼 `npc.fixed`면 고정).
   - 디렉토리(= NPC id) 바꾸기: `CONFIG.npcs[id].dir`로 들고 있다가 저장 때 `api/map.js`(`npcRenameFiles`)가 같은 커밋에서 `img/npc/<id>/` 파일을 `img/npc/<dir>/`로 옮기고(같은 blob), `js/npcs.js`·`scripts/gen-npc.mjs`의 `'id'` 문자열을 바꾸고, npcs 키도 바꿈. 저장 후 클라이언트도 새 id로 바꾸고 되돌리기 기록은 비움(`applyNpcRenames`). `origin.jpg`는 저장소에 없으니 로컬에서 직접 옮겨야 함.
   - 가만히 있는 NPC(움직임 이미지 없음: 택시, 가만히로 추가한 NPC, `isStaticNpc`)는 끌어 놓으면 발판과 상관없이 놓은 좌표에 고정(공중도 가능) → `{mode: 'fixed', x, y}`(floor 없음, `freeY`). 지도를 편집해도 그 자리 그대로.
   - NPC는 처음 자리가 랜덤일 때 사다리·로프에서 가로 60px(`NPC_CLIMB_CLEARANCE`) 이상 떨어진 x를 고름(`xClearOfClimbs`). 그런 자리가 없거나 걸을 폭이 40px(`NPC_MIN_SPAN`)보다 좁으면 다른 발판(`randomNpcFloor`).
