@@ -33,7 +33,7 @@ export async function GET(request) {
     return json({ ranking: ranking(records), mine, total: records.length }, 200, cors);
   } catch (err) {
     console.error(err);
-    return json({ error: '기록을 불러오지 못했어요.' }, 500, cors);
+    return json({ error: err instanceof HttpError ? err.message : '기록을 불러오지 못했어요.' }, err.status || 500, cors);
   }
 }
 
@@ -86,9 +86,22 @@ function verify(token) {
 
 const gist = () => new GitHub({ ...GITHUB_ENV, GITHUB_TOKEN: process.env.GIST_TOKEN || GITHUB_ENV.GITHUB_TOKEN });
 
+/** gist 요청. 토큰에 gist 권한이 없으면(401·403·404) 원인이 보이는 문구로 */
+async function gistRequest(github, method, body) {
+  try {
+    return await github.request(method, `/gists/${GIST_ID}`, body);
+  } catch (err) {
+    if ([401, 403, 404].includes(err.status)) {
+      console.error(err);
+      throw new HttpError(503, `가위바위보 기록 저장소(gist)에 접근하지 못했어요. Vercel GIST_TOKEN을 확인해 주세요. (GitHub ${err.status})`);
+    }
+    throw err;
+  }
+}
+
 /** gist rps.json { records: [{ id, name, streak, at(시작), end }], burned: { <토큰 nonce>: 만료 시각 } } */
 async function readFile(github) {
-  const g = await github.request('GET', `/gists/${GIST_ID}`);
+  const g = await gistRequest(github, 'GET');
   const text = g.files?.[GIST_FILE]?.content;
   const data = text ? JSON.parse(text) : {};
   return { records: data.records ?? [], burned: data.burned ?? {} };
@@ -110,7 +123,7 @@ async function finish(run, github = gist()) {
     data.burned = Object.fromEntries(Object.entries(data.burned).filter(([, e]) => e > now)); // 만료된 토큰은 어차피 못 씀
     data.burned[run.n] = run.e;
     data.records.push({ id: run.id, name: run.name, streak: run.s, at: new Date(run.t).toISOString(), end: new Date(now).toISOString() });
-    await github.request('PATCH', `/gists/${GIST_ID}`, { files: { [GIST_FILE]: { content: JSON.stringify(data, null, 1) } } });
+    await gistRequest(github, 'PATCH', { files: { [GIST_FILE]: { content: JSON.stringify(data, null, 1) } } });
   }
   throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
 }
