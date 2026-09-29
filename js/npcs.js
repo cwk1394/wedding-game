@@ -3,7 +3,7 @@
 // - NPC는 점프·사다리·로프를 쓰지 않고 자기 발판(이어진 발판 포함) 위만 돌아다닌다. 조종 불가
 // - popup: shortMsg = 말풍선·팝업 한줄 멘트(20자 이하), longMsg = 팝업 소개 글(미정 — 정해지면 여기서 수정)
 // - effect: petals(꽃가루 뿌리기) | bubbles(서 있으면 비눗방울, 걸으면 파티 블로어 음표)
-// - event: 누르면 캐릭터창 대신 이벤트 화면 (rps = 가위바위보 머신)
+// - event: 누르면 캐릭터창 대신 이벤트 화면 (rps = 가위바위보 머신, chase = 도둑 잡기)
 // - states: 걷기(walk)·특수 동작(sleep, scratch 등) 비율과 지속 시간(<동작>Time, ms). 나머지 확률은 서기(idle)
 
 const NPC_POPUP_TBD = '소개 글을 준비하고 있어요.';
@@ -87,6 +87,18 @@ const NPCS = [
     motions: [],
     event: 'rps',
     popup: { shortMsg: '연승 도전! ☕', longMsg: '' },
+  },
+  {
+    // 이벤트 NPC: 누르면 도둑 잡기 (js/chase.js, api/chase.js). 가위바위보 머신 옆 선착장에 고정
+    id: 'chase-police',
+    name: '도둑 잡기 경찰관',
+    floor: 'f4',
+    x: 420,
+    fixed: true,
+    height: 62,
+    motions: [],
+    event: 'chase',
+    popup: { shortMsg: '도둑 잡기 도전! 🚨', longMsg: '' },
   },
 ];
 

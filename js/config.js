@@ -107,6 +107,16 @@ const CONFIG = {
 
   // 배경음악: audio/bgm.mp3 를 넣으면 자동 재생 (브라우저가 막으면 첫 터치/클릭 때 시작). 오른쪽 위 버튼으로 켜고 끔
   bgm: { src: 'audio/bgm.mp3', volume: 0.35 },
+  // 이벤트 "도둑 잡기" (js/chase.js): 신랑·신부 + 하객 guests명이 내 캐릭터를 쫓음. 속도 = 조종 걷기 속도 배율
+  chase: {
+    guests: 3,
+    coupleSpeed: 2,
+    guestSpeed: 1.5,
+    minStartDist: 350, // 추격자는 내 캐릭터에서 이만큼 떨어진 곳에서 시작 (px)
+    catchX: 20, // 추격자와 발 위치 차이가 이 안이면 잡힘 (px)
+    catchY: 36,
+    lines: ['거기 서!', '도둑이야!', '잡았다 요놈!', '어딜 도망가!'],
+  },
 
   walkSpeed: { min: 35, max: 70 }, // px/s
 

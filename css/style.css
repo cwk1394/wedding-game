@@ -1095,3 +1095,29 @@ fieldset.chip-field legend { margin-bottom: 8px; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   .rps-hand.shake, .rps-hand.spin, .rps-stage.rolling .rps-machine { animation: none; }
 }
+
+/* ---------- 이벤트 게임 공통 칸 (js/board.js) ---------- */
+.event-board { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- 이벤트 NPC: 도둑 잡기 (js/chase.js) ---------- */
+.chase-intro { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: linear-gradient(180deg, #eef1ff, #fff6fa); }
+.chase-intro img { width: 84px; height: 84px; object-fit: contain; flex: none; image-rendering: pixelated; }
+.chase-intro p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+.chase-intro b { color: var(--coral-deep); }
+.chase-result { margin: 0; padding: 12px; border-radius: 12px; background: #fff8e1; border: 1px solid #ffd76a; text-align: center; font-weight: bold; font-size: 16px; color: var(--ink); }
+.chase-result[hidden], .chase-start[hidden] { display: none; }
+.chase-start { display: flex; flex-direction: column; gap: 12px; }
+.chase-hud {
+  position: fixed; top: calc(env(safe-area-inset-top) + 12px); left: 50%; transform: translateX(-50%); z-index: 40;
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 16px; border-radius: 999px;
+  background: rgba(40, 30, 50, .78); color: #fff; font-weight: bold; font-size: 17px; font-variant-numeric: tabular-nums;
+}
+.chase-hud[hidden] { display: none; }
+.chase-quit { border: 0; border-radius: 999px; padding: 6px 12px; background: #fff; color: var(--coral-deep); font: inherit; font-size: 13px; cursor: pointer; }
+.chase-count {
+  position: fixed; left: 50%; top: 38%; z-index: 40; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -50%); font-size: 68px; font-weight: 900; color: var(--coral-deep); white-space: nowrap;
+  text-shadow: 3px 0 #fff, -3px 0 #fff, 0 3px #fff, 0 -3px #fff, 2px 2px #fff, -2px -2px #fff, 2px -2px #fff, -2px 2px #fff, 0 6px 12px rgba(0, 0, 0, .25);
+}
+.chase-count.show { animation: chase-count .9s ease-out forwards; }
+@keyframes chase-count { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 45% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }

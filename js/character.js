@@ -786,6 +786,19 @@ class GuestCharacter extends Character {
     this.onMapChanged();
   }
 
+  /** 도둑 잡기 추격자로: 조종 물리에 input(delta)이 주는 입력으로 움직인다 (speed = 걷기 속도 배율). stopChase로 원래대로 */
+  startChase(input, speed) {
+    this.setControlled(true);
+    this.marker?.destroy();
+    this.marker = null;
+    this.chaser = { input, speed };
+  }
+
+  stopChase() {
+    this.chaser = null;
+    this.setControlled(false);
+  }
+
   placeMarker() {
     if (this.marker) this.marker.setY(this.headY() - 4);
   }
@@ -861,8 +874,10 @@ class GuestCharacter extends Character {
     this.placeMarker();
   }
 
-  tickControlled(delta, input) {
+  /** speed: 걷기 속도 배율 (도둑 잡기 추격자) */
+  tickControlled(delta, input, speed = 1) {
     const c = CONFIG.motion.control;
+    const walk = c.walkSpeed * speed;
     const dt = Math.min(delta, 50) / 1000;
     const p = this.phys;
     const h = (input.right ? 1 : 0) - (input.left ? 1 : 0);
@@ -874,7 +889,7 @@ class GuestCharacter extends Character {
       const cl = p.climb;
       if (jump && h) {
         // 사다리에서 옆으로 점프해서 내리기
-        Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity * 0.6, climb: null });
+        Object.assign(p, { mode: 'air', vx: h * walk, vy: -c.jumpVelocity * 0.6, climb: null });
         p.noGrabUntil = this.scene.time.now + 400; // 방금 놓은 사다리를 바로 다시 잡지 않게
         this.dir = h;
       } else {
@@ -904,13 +919,13 @@ class GuestCharacter extends Character {
       } else if (v > 0) {
         p.prone = true; // ↓ + 잡을 사다리/로프 없음 → 엎드리기
       } else if (jump) {
-        Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: -c.jumpVelocity });
+        Object.assign(p, { mode: 'air', vx: h * walk, vy: -c.jumpVelocity });
       } else {
-        this.x += h * c.walkSpeed * dt;
+        this.x += h * walk * dt;
         const { x1, x2 } = floorSpan(this.floor);
         const next = this.x < x1 ? this.nextFloor[-1] : this.x > x2 ? this.nextFloor[1] : undefined;
         if (next) this.continueTo(next); // 이어진 발판으로 걸어서 넘어감
-        if (next === null) Object.assign(p, { mode: 'air', vx: h * c.walkSpeed, vy: 0 }); // 발판 끝에서 떨어짐
+        if (next === null) Object.assign(p, { mode: 'air', vx: h * walk, vy: 0 }); // 발판 끝에서 떨어짐
         else this.y = floorY(this.floor, this.x);
       }
       if (h) this.dir = h;
@@ -918,7 +933,7 @@ class GuestCharacter extends Character {
 
     if (p.mode === 'air') {
       if (h) {
-        p.vx = h * c.walkSpeed; // 공중에서도 방향 조절
+        p.vx = h * walk; // 공중에서도 방향 조절
         this.dir = h;
       }
       const prevY = this.y;
@@ -999,6 +1014,7 @@ class GuestCharacter extends Character {
 
   tick(delta) {
     if (this.held) return; // 개발자 모드에서 끌고 있는 중
+    if (this.chaser) return this.tickControlled(delta, this.chaser.input(delta), this.chaser.speed);
     if (this.controlled) return this.tickControlled(delta, this.scene.control.input);
     const m = CONFIG.motion;
 

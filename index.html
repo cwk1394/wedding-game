@@ -228,39 +228,38 @@
           <button type="button" class="btn btn-ghost rps-stop">그만하고 기록 저장</button>
         </div>
 
-        <!-- 랭킹에 들면: 쿠폰 연락용 연락처 (암호화 저장, 개발자 모드에서만 보임) -->
-        <form class="rps-contact" hidden novalidate>
-          <p class="rps-rule">🎉 <b>랭킹에 들었어요!</b><br />쿠폰을 보내 드릴 <b>전화번호나 연락처</b>를 남겨 주세요.</p>
-          <label class="field">
-            <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
-            <input name="contact" type="text" autocomplete="tel" maxlength="50" placeholder="010-0000-0000" />
-          </label>
-          <label class="field rps-contact-pw">
-            <span>내 캐릭터 비밀번호</span>
+        <!-- 랭킹·연락처·개발자 관리 (js/board.js가 채움) -->
+        <div class="event-board"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 이벤트 NPC "도둑 잡기 경찰관" (js/chase.js): 신랑·신부·하객이 내 캐릭터를 쫓음 → 버틴 시간 랭킹 -->
+  <div id="chase-modal" class="modal" hidden>
+    <div class="modal-card rps-card" role="dialog" aria-modal="true" aria-labelledby="chase-title">
+      <div class="modal-header">
+        <span id="chase-title" class="modal-title">도둑 잡기</span>
+        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="chase-intro">
+          <img src="img/npc/chase-police/front.webp" alt="도둑 잡기 경찰관" />
+          <p>내 캐릭터가 <b>도둑</b>이 돼요!<br /><b>신랑·신부</b>(2배 빠름)와 <b>하객들</b>(1.5배 빠름)이<br />쫓아와요. 점프·사다리·로프로 <b>최대한 오래</b> 도망치세요.</p>
+        </div>
+        <p class="chase-result" hidden></p>
+        <form class="chase-start" novalidate>
+          <p class="rps-rule">잡힐 때까지 <b>버틴 시간</b>이 기록돼요.<br />랭킹 <b>TOP 3</b>에게는 <b>☕ 커피 쿠폰</b>을 드려요.</p>
+          <p class="rps-need chase-need" hidden>로비에서 내 캐릭터를 만들거나 골라야 도전할 수 있어요.</p>
+          <label class="field chase-pw">
+            <span>내 캐릭터 비밀번호 <small>(등록할 때 정한 것)</small></span>
             <input name="password" type="password" autocomplete="current-password" maxlength="30" />
           </label>
-          <p class="form-error rps-contact-error" hidden></p>
-          <button type="submit" class="btn btn-primary">연락처 남기기</button>
+          <p class="form-error chase-error" hidden></p>
+          <button type="submit" class="btn btn-primary chase-go">도전하기</button>
         </form>
 
-        <!-- 개발자 모드(?dev): 랭킹 연락처 보기·초기화 -->
-        <section class="rps-admin" hidden>
-          <h3>🔧 관리 (개발자 모드)</h3>
-          <div class="rps-admin-btns">
-            <button type="button" class="btn btn-ghost rps-admin-view">연락처 보기</button>
-            <button type="button" class="btn btn-ghost rps-admin-reset">랭킹 초기화</button>
-            <button type="button" class="btn btn-ghost rps-admin-npc">NPC 설정</button>
-          </div>
-          <ol class="rps-admin-list"></ol>
-        </section>
-
-        <section class="rps-board">
-          <h3>🏆 연승 랭킹</h3>
-          <ol class="rps-ranking"></ol>
-          <p class="rps-empty" hidden>아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!</p>
-          <h3 class="rps-mine-title" hidden>내 도전 기록</h3>
-          <ul class="rps-mine"></ul>
-        </section>
+        <!-- 랭킹·연락처·개발자 관리 (js/board.js가 채움) -->
+        <div class="event-board"></div>
       </div>
     </div>
   </div>
@@ -605,7 +604,9 @@
   <script src="js/character.js"></script>
   <script src="js/api.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/board.js"></script>
   <script src="js/rps.js"></script>
+  <script src="js/chase.js"></script>
   <script src="js/view.js"></script>
   <script src="js/control.js"></script>
   <script src="js/scene.js"></script>

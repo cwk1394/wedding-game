@@ -123,6 +123,15 @@ each with a simple hand icon (fist, V-sign, open palm), a small coin slot and a 
 a pink satin ribbon bow and a few roses on the side. Sparkles around the lights. No readable text or letters anywhere.`,
     motions: {},
   },
+  'chase-police': {
+    // 이벤트 NPC "도둑 잡기": 웨딩 파티 경찰관. 가만히 서 있음
+    front: `A cute MapleStory-style event NPC: a friendly chibi police officer for a wedding-party "catch the thief" tag game.
+Standing upright, full body, three-quarter view facing LEFT, chibi proportions, big shiny eyes, playful confident grin, one hand raised blowing a whistle.
+Pastel wedding-themed police uniform: soft navy-blue jacket with gold buttons and a gold star badge, a navy police cap with a small pink heart emblem,
+a pink satin ribbon bow tie, white gloves, a small boutonniere rose on the chest, holding a big cartoon magnifying glass in the other hand,
+toy handcuffs hanging from the belt. Friendly and funny, not scary. No readable text or letters anywhere.`,
+    motions: {},
+  },
 };
 for (const [id, cat] of Object.entries(NPCS)) {
   if (!cat.look) continue;

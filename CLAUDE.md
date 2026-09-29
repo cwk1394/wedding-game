@@ -12,7 +12,7 @@ QR로 접속 → 하객이 캐릭터 + 방명록을 등록 → 맵 위를 네임
 
 ## 기술 스택 / 구조
 - 순수 HTML/JS + Phaser 3.80.1 (jsDelivr CDN). 빌드 도구·번들러 없음, 스크립트는 전역 변수로 연결.
-- `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → npcs → textures → character → api → ui → view → control → scene → dev → main`.
+- `index.html`에서 스크립트 로드 순서가 의존성 순서: `map-data → config → data → npcs → textures → character → api → ui → board → rps → chase → view → control → scene → dev → main`.
 
 ```
 index.html              왼쪽 위 메뉴(모드 전환·캐릭터 수정·방명록 목록·웨딩 갤러리·로비로 돌아가기), 로비·모달 DOM + 스크립트 로드
@@ -25,6 +25,8 @@ js/textures.js          임시 캐릭터 그리기, lookFromId(), 이미지 스�
 js/character.js         Character(스프라이트+네임태그+말풍선) / CoupleCharacter(고정) / GuestCharacter(층 안에서 랜덤 이동)
 js/api.js               resizePhoto(), generateCharacter()(AI 생성), prepareSpriteImages()(업로드용 후처리), submitGuestbook()
 js/ui.js                메뉴, 방명록 팝업/목록, 웨딩 갤러리, 4단계 캐릭터 만들기 위저드(1 내 정보 → 2 캐릭터 → 3 한마디·방명록 → 4 비밀번호·등록), 토스트. UI.onGuestCreated 콜백으로 새 하객을 맵에 즉시 추가
+js/board.js             eventBoard(): 이벤트 게임 창 아래쪽 공통 칸(랭킹·내 기록·연락처 남기기·개발자 관리). `.event-board`를 채움, 모양은 `.rps-*` 클래스
+js/chase.js             Chase: 이벤트 NPC "도둑 잡기 경찰관" 화면 + 게임(추격 AI·타이머 HUD). main.js가 `Chase.attach`로 scene·내 캐릭터 연결
 js/rps.js               Rps: 이벤트 NPC "가위바위보 머신" 화면(비밀번호 확인 → 가위·바위·보, 효과, 랭킹). ui.js 다음에 로드(`UI.setupModal`)
 js/view.js              MapView: 카메라 확대/축소(핀치·휠)와 드래그 이동, DPR 상수
 js/scene.js             MapScene: 임시 맵 그리기, 신랑신부/하객 스폰, addGuest(), 60초 주기 재조회
@@ -47,6 +49,8 @@ api/_lib/github.js      GitHub API 공통(GitHub 클래스: 커밋, Discussion �
 api/_lib/http.js        API 공통: CORS(ALLOWED_ORIGINS), JSON 응답, HttpError, handlePost(). `_` 접두사라 엔드포인트 아님
 api/guestbook.js        Vercel 함수: POST 방명록 등록, GET 상태 확인. named export(GET/POST/OPTIONS) + Web Request/Response
 api/character.js        Vercel 함수: POST {type: front|walk|jump|ladder|rope|prone, image} → OpenAI 이미지 편집 API → {image: webp data URL}. 저장 안 함. NPC 추가용 npc-front|npc-idle|npc-walk (+desc, 투명 배경)
+api/_lib/board.js       이벤트 게임 공통 Board: 서명 토큰, gist 기록·랭킹(파일·점수 필드별), 연락처 암호화, contact/admin/reset/GET
+api/chase.js            Vercel 함수: 도둑 잡기. POST start|end, 버틴 시간은 서버 시각. 기록은 gist의 chase.json
 api/rps.js              Vercel 함수: 가위바위보 머신. POST start|play|stop, GET 랭킹·내 기록. 판정은 서버, 기록은 GitHub Gist(`RPS_GIST_ID`)의 rps.json
 api/map.js              Vercel 함수: POST {password, map: {floors, climbs, spawn, couple, npcs}} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
@@ -195,6 +199,16 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 개발자 모드(`?dev`)에서 머신을 누르면 설정 창 대신 이 창 + 관리 칸(`.rps-admin`): 연락처 보기(`admin`), 랭킹 초기화(`reset`: records·contacts 비움, burned는 유지), NPC 설정. 둘 다 DEV_PASSWORD.
 - 효과(css `.rps-*`): 고르면 머신 불빛 깜빡임 + 머신 손이 빠르게 바뀜(최소 1.1초), WIN = 금빛 글자 + 번쩍임 + 색종이·하트·별(연승이 길수록 많이), DRAW = 손 부딪힘, LOSE = 무대 흔들림.
 - 설정: 기록 gist = https://gist.github.com/kobe-KANG/54d5f2cf56f9e6eb09864d4c3e4ae684 (비밀 gist, api/rps.js 기본값 — 바꾸려면 Vercel `RPS_GIST_ID`). 첫 기록 때 그 gist에 `rps.json` 파일이 생김. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
+
+## 이벤트 NPC: 도둑 잡기 (`chase-police`)
+- js/npcs.js `event: 'chase'` → 누르면 `Chase.open()`(개발자 모드면 관리 칸 + "NPC 설정"). 가위바위보 머신 옆 선착장(`f4`, x 420) 고정, 이미지는 gen-npc.mjs `chase-police`(경찰관, 움직임 없음).
+- 도전: 내 캐릭터 비밀번호 → `POST /api/chase {action:'start'}` → 토큰 + countdown(3초) → 창이 닫히고 플레이 모드 + 3·2·1 "도망쳐!" → 추격. 위쪽 가운데 타이머 HUD(`.chase-hud`) + 그만하기.
+- 추격자: 신랑·신부(`CONFIG.chase.coupleSpeed` 2배) + 나를 뺀 하객 무작위 `guests`명(`guestSpeed` 1.5배). 속도 = 조종 걷기 속도 배율(사다리 오르는 속도는 그대로). 내 캐릭터에서 `minStartDist` 이상 떨어진 발판에서 시작.
+  - `GuestCharacter.startChase(input, speed)`: 조종 물리(`tickControlled(delta, input, speed)`)에 AI 입력을 넣음 → 점프·사다리·로프·엎드려 내려가기를 플레이어와 똑같이 씀. `stopChase`로 원래대로(신랑·신부는 제자리).
+  - AI(`brain`): 발판 그래프(`buildGraph`: 이어 걷기·사다리/로프·발판 끝 떨어지기·엎드려 뚫기·위로 점프·틈 건너뛰기)에서 대상 발판까지 다익스트라(`firstStep`, 0.3초마다) → 첫 구간 동작. 같은 발판이면 곧장. 1초 막히면 잠깐 아무 방향.
+- 발 위치 차이가 `catchX`·`catchY` 안이면 잡힘 → `end {token}` → 서버가 `지금 - 시작 - countdown`(상한 10분)으로 기록 → 결과 창(시간·순위·랭킹). 조종을 놓거나(로비·관람 모드) 탭을 숨기면 그 자리에서 끝.
+- 알려진 한계: 잡혔다는 건 브라우저가 알려 줌 → 늦게 보내면 시간이 늘어남(상한만 있음).
+- 랭킹·연락처·관리는 가위바위보와 같은 공통(`api/_lib/board.js`, `js/board.js`) — 게임마다 gist 파일이 따로(rps.json / chase.json), 연락처도 게임별.
 
 ## 효과
 - 꽃잎(`scene.addPetals`, `CONFIG.petals`): 코드로 그린 분홍 꽃잎 2종을 Phaser 파티클로 맵 전체 위에서 천천히 떨어뜨림(좌우 흔들림, 회전). `advance`로 시작부터 화면 곳곳에 있음. depth 15000(캐릭터 위, 개발자 모드 선 아래).

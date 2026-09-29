@@ -33,8 +33,9 @@ class MapScene extends Phaser.Scene {
     else if (params.has('debug')) this.drawFloorGuides();
 
     this.onSelect = (character) => {
-      // 이벤트 NPC: 가위바위보 머신 (개발자 모드면 관리 칸 + "NPC 설정" 버튼)
-      if (character instanceof NpcCharacter && character.npc.event === 'rps') return Rps.open(this.dev && (() => this.dev.openNpcSettings(character)));
+      // 이벤트 NPC: 가위바위보 머신·도둑 잡기 (개발자 모드면 관리 칸 + "NPC 설정" 버튼)
+      const event = character instanceof NpcCharacter && { rps: Rps, chase: Chase }[character.npc.event];
+      if (event) return event.open(this.dev && (() => this.dev.openNpcSettings(character)));
       if (this.dev && character instanceof NpcCharacter) return this.dev.openNpcSettings(character); // 개발자 모드: NPC 설정 창
       // 앨범 NPC: 그 앨범 사진 (img/gallery/<album>/)
       const album = character instanceof NpcCharacter && CONFIG.npcs[character.npc.id]?.album;
@@ -200,6 +201,7 @@ class MapScene extends Phaser.Scene {
 
   update(_time, delta) {
     this.control.update();
+    this.onTick?.(delta); // 도둑 잡기 (js/chase.js)
     for (const guest of this.guests) guest.tick(delta);
     for (const c of this.couple) c.tick(delta); // 신랑/신부는 개발자 모드에서 조종할 때만 움직임
     for (const n of this.npcs) n.tick(delta);
