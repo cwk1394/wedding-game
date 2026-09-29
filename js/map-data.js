@@ -93,6 +93,6 @@ const MAP_DATA = {
     "album-studio": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"스튜디오 사진 앨범","mode":"fixed","x":533,"y":222,"album":"studio","def":{"desc":"둥둥 떠있는 빨강 하트 풍선에 매달려있는 사진앨범","height":100,"motions":[]}},
     "album-jeju": {"name":"제주 사진 앨범","shortMsg":"제주도 셀프 스냅도 찍었어요 !","longMsg":"제주도 스냅 사진 앨범","mode":"fixed","x":741,"y":848,"album":"jeju","def":{"desc":"둥둥 떠있는 초록색 하트 풍선에 매달려있는 사진앨범","height":80,"motions":[]}},
     "wedding-car": {"name":"웨딩카","shortMsg":"","longMsg":"분류: 탈것 (캐시)\n옵션: 이동속도 +150%, 행복 +200%\n설명: 경태와 민지가 평생 함께 달릴 인생 파티의 전용 탈것.","mode":"fixed","x":1002,"y":1351},
-    "rps-machine": {"shortMsg":"연승 도전! ☕","longMsg":"","mode":"fixed","x":914,"y":649},
+    "rps-machine": {"shortMsg":"연승 도전! ☕","longMsg":"","mode":"fixed","x":1014,"y":627},
   },
 };
