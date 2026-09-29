@@ -16,7 +16,7 @@ import { GITHUB_ENV, GitHub } from './_lib/github.js';
 import { HttpError, corsHeaders, handlePost, json, preflight } from './_lib/http.js';
 import { findGuest, secret } from './guestbook.js';
 
-const GIST_ID = process.env.RPS_GIST_ID || '54d5f2cf56f9e6eb09864d4c3e4ae684'; // gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 rps.json을 만듦)
+const GIST_ID = (process.env.RPS_GIST_ID || '54d5f2cf56f9e6eb09864d4c3e4ae684').match(/[0-9a-f]{20,}/i)?.[0]; // gist 주소(…/<id>.js)를 넣어도 id만 // gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 rps.json을 만듦)
 const GIST_FILE = 'rps.json';
 const HANDS = ['rock', 'scissors', 'paper']; // 앞이 뒤를 이김 (바위 > 가위 > 보 > 바위)
 const TOKEN_TTL = 6 * 60 * 60 * 1000; // 도전 하나를 이어갈 수 있는 시간
@@ -93,7 +93,7 @@ async function gistRequest(github, method, body) {
   } catch (err) {
     if ([401, 403, 404].includes(err.status)) {
       console.error(err);
-      throw new HttpError(503, `가위바위보 기록 저장소(gist)에 접근하지 못했어요. Vercel GIST_TOKEN을 확인해 주세요. (GitHub ${err.status})`);
+      throw new HttpError(503, `가위바위보 기록 저장소(gist)에 접근하지 못했어요. Vercel ${process.env.GIST_TOKEN ? 'GIST_TOKEN' : 'GITHUB_TOKEN(GIST_TOKEN 없음)'}을 확인해 주세요. (gist ${GIST_ID}, GitHub ${err.status})`);
     }
     throw err;
   }
