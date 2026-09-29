@@ -90,9 +90,9 @@ const MAP_DATA = {
     "cat-byeol": {"shortMsg":"미야옹~","longMsg":"신랑의 누나가 키우는 고양이다.\n가끔 신랑 집에 머물며 자연스럽게 신랑의 주인 노릇을 한다.\n겁이 많아 낯선 사람이 오면 숨어서 바들바들 떨지만, 30분쯤 지나면 호기심을 못 참고 슬그머니 나와 부비댄다.\n지금은 누나 집에서 아기와 동고동락 중이다."},
     "groom": {"name":"경태","shortMsg":"와줘서 고마워!","longMsg":"바쁘신 와중에 저희 결혼식에 와주셔서 진심으로 감사드립니다.\n행복하게 잘 살겠습니다!"},
     "bride": {"name":"민지","shortMsg":"행복하게 살게요","longMsg":"함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요 :)"},
-    "album-studio": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"스튜디오 사진 앨범","mode":"fixed","x":533,"y":222,"album":"studio","def":{"desc":"둥둥 떠있는 빨강 하트 풍선에 매달려있는 사진앨범","height":100,"motions":[]}},
-    "album-jeju": {"name":"제주 사진 앨범","shortMsg":"제주도 셀프 스냅도 찍었어요 !","longMsg":"제주도 스냅 사진 앨범","mode":"fixed","x":741,"y":848,"album":"jeju","def":{"desc":"둥둥 떠있는 초록색 하트 풍선에 매달려있는 사진앨범","height":80,"motions":[]}},
+    "album-studio": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"스튜디오 사진 앨범","mode":"fixed","x":552,"y":221,"album":"studio","def":{"desc":"둥둥 떠있는 빨강 하트 풍선에 매달려있는 사진앨범","height":100,"motions":[]}},
+    "album-jeju": {"name":"제주 사진 앨범","shortMsg":"제주도 셀프 스냅도 찍었어요 !","longMsg":"제주도 스냅 사진 앨범","mode":"fixed","x":197,"y":803,"album":"jeju","def":{"desc":"둥둥 떠있는 초록색 하트 풍선에 매달려있는 사진앨범","height":80,"motions":[]}},
     "wedding-car": {"name":"웨딩카","shortMsg":"","longMsg":"분류: 탈것 (캐시)\n옵션: 이동속도 +150%, 행복 +200%\n설명: 경태와 민지가 평생 함께 달릴 인생 파티의 전용 탈것.","mode":"fixed","x":1002,"y":1351},
-    "rps-machine": {"shortMsg":"연승 도전! ☕","longMsg":"","mode":"fixed","x":511,"y":693},
+    "rps-machine": {"shortMsg":"연승 도전! ☕","longMsg":"","mode":"fixed","x":557,"y":900},
   },
 };
