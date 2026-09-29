@@ -126,12 +126,15 @@ Symmetric front-facing cabinet, full object visible, tall upright proportions.`,
     motions: {},
   },
   'chase-police': {
-    // 이벤트 NPC "도둑 잡기": 웨딩 파티 경찰관. 가만히 서 있음
-    front: `A cute MapleStory-style event NPC: a friendly chibi police officer for a wedding-party "catch the thief" tag game.
-Standing upright, full body, three-quarter view facing LEFT, chibi proportions, big shiny eyes, playful confident grin, one hand raised blowing a whistle.
-Pastel wedding-themed police uniform: soft navy-blue jacket with gold buttons and a gold star badge, a navy police cap with a small pink heart emblem,
-a pink satin ribbon bow tie, white gloves, a small boutonniere rose on the chest, holding a big cartoon magnifying glass in the other hand,
-toy handcuffs hanging from the belt. Friendly and funny, not scary. No readable text or letters anywhere.`,
+    // 이벤트 NPC "도둑 잡기": 남자 경찰관. 단순하지만 눈에 띄게, 수평 발판에 맞춰 정면 시점. 가만히 서 있음
+    front: `A MapleStory-style event NPC: a male police officer for a wedding-party "catch the thief" tag game.
+SIMPLE but HIGH-IMPACT design: bold clean silhouette, few big shapes, strong color contrast, instantly readable at small size.
+Chibi proportions, standing upright and confident, feet planted apart, one arm stretched straight forward with an open palm in a big "STOP!" gesture,
+the other hand on his hip. Sharp determined eyes, thick eyebrows, a confident grin.
+Classic deep navy police uniform and peaked cap with one big shiny gold star badge on the cap and one on the chest, white gloves,
+a silver whistle on a red cord, black boots. One small wedding touch only: a pink rose boutonniere on the chest.
+Straight FRONT view at eye level (orthographic, like a classic 2D side-scrolling game sprite): NO top-down, NO three-quarter, NO isometric angle, NO perspective.
+He stands perfectly upright on flat level ground; both feet on one straight horizontal line. Full body visible. No readable text or letters anywhere.`,
     motions: {},
   },
 };

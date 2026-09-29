@@ -201,7 +201,7 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
 - 설정: 기록 gist = https://gist.github.com/kobe-KANG/54d5f2cf56f9e6eb09864d4c3e4ae684 (비밀 gist, api/rps.js 기본값 — 바꾸려면 Vercel `RPS_GIST_ID`). 첫 기록 때 그 gist에 `rps.json` 파일이 생김. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
 
 ## 이벤트 NPC: 도둑 잡기 (`chase-police`)
-- js/npcs.js `event: 'chase'` → 누르면 `Chase.open()`(개발자 모드면 관리 칸 + "NPC 설정"). 가위바위보 머신 옆 선착장(`f4`, x 420) 고정, 이미지는 gen-npc.mjs `chase-police`(경찰관, 움직임 없음).
+- js/npcs.js `event: 'chase'` → 누르면 `Chase.open()`(개발자 모드면 관리 칸 + "NPC 설정"). 가위바위보 머신 옆 선착장(`f4`, x 420) 고정, 이미지는 gen-npc.mjs `chase-police`(남자 경찰관 정면, "STOP" 손짓, 움직임 없음).
 - 도전: 내 캐릭터 비밀번호 → `POST /api/chase {action:'start'}` → 토큰 + countdown(3초) → 창이 닫히고 플레이 모드 + 3·2·1 "도망쳐!" → 추격. 위쪽 가운데 타이머 HUD(`.chase-hud`) + 그만하기.
 - 추격자: 신랑·신부(`CONFIG.chase.coupleSpeed` 2배) + 나를 뺀 하객 무작위 `guests`명(`guestSpeed` 1.5배). 속도 = 조종 걷기 속도 배율(사다리 오르는 속도는 그대로). 내 캐릭터에서 `minStartDist` 이상 떨어진 발판에서 시작.
   - `GuestCharacter.startChase(input, speed)`: 조종 물리(`tickControlled(delta, input, speed)`)에 AI 입력을 넣음 → 점프·사다리·로프·엎드려 내려가기를 플레이어와 똑같이 씀. `stopChase`로 원래대로(신랑·신부는 제자리).
