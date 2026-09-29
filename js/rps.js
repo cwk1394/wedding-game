@@ -1,5 +1,6 @@
 // 이벤트 NPC "가위바위보 머신": 내 캐릭터(비밀번호 확인)로 연승 도전 → 지거나 그만하면 기록 (판정·기록은 api/rps.js)
 // 진행 중인 도전 토큰은 localStorage(rpsToken)에도 둬서, 창을 닫거나 새로고침해도 다음에 열 때 그 연승으로 기록한다.
+// 랭킹에 든 캐릭터는 쿠폰 연락용 연락처를 남김(서버가 암호화 저장). 개발자 모드면 연락처 보기·랭킹 초기화 칸.
 
 const Rps = (() => {
   const el = document.getElementById('rps-modal');
@@ -14,12 +15,15 @@ const Rps = (() => {
   const cpuHand = $('.rps-cpu-hand');
   const streakEl = $('.rps-streak');
   const errorEl = $('.rps-error');
+  const contactForm = $('.rps-contact');
+  const admin = $('.rps-admin');
   const EMOJI = { rock: '✊', scissors: '✌️', paper: '🖐️' };
 
   let token = null;
   let password = ''; // 이 창에서 한 번 맞게 입력하면 "다시 도전"에 그대로
   let busy = false;
   let mine = null;
+  let onSettings = null; // 개발자 모드: NPC 설정 창 열기
 
   const store = {
     get: () => {
@@ -55,9 +59,15 @@ const Rps = (() => {
   function setPlaying(on) {
     startForm.hidden = on;
     play.hidden = !on;
+    if (on) contactForm.hidden = true;
   }
 
-  async function open() {
+  /** settings: 개발자 모드일 때 "NPC 설정" 버튼이 여는 함수 */
+  async function open(settings) {
+    onSettings = settings || null;
+    admin.hidden = !onSettings;
+    $('.rps-admin-list').replaceChildren();
+    contactForm.hidden = true;
     mine = UI.getMine?.();
     $('.rps-avatar').src = mine?.avatarUrl ?? 'img/npc/rps-machine/front.webp';
     $('.rps-avatar').style.visibility = mine ? '' : 'hidden';
@@ -109,7 +119,7 @@ const Rps = (() => {
     return `${d.getMonth() + 1}.${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   };
 
-  function renderBoard({ ranking = [], mine: history }) {
+  function renderBoard({ ranking = [], mine: history, hasContact }) {
     const medals = ['🥇', '🥈', '🥉'];
     $('.rps-ranking').replaceChildren(
       ...ranking.map((r, i) => {
@@ -126,6 +136,10 @@ const Rps = (() => {
     );
     $('.rps-empty').hidden = ranking.length > 0;
     $('.rps-empty').textContent = '아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!';
+    // 랭킹에 들었는데 연락처가 없으면 남기기 (도전 중엔 숨김)
+    const ranked = mine && ranking.some((r) => r.id === mine.info.id);
+    if (hasContact !== undefined) contactForm.hidden = !ranked || hasContact || Boolean(token);
+    contactForm.querySelector('.rps-contact-pw').hidden = Boolean(password);
     if (history) {
       $('.rps-mine-title').hidden = !history.length;
       $('.rps-mine').replaceChildren(
@@ -211,6 +225,71 @@ const Rps = (() => {
     })
   );
 
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = contactForm.querySelector('.rps-contact-error');
+    const pw = password || contactForm.elements.password.value;
+    const contact = contactForm.elements.contact.value.trim();
+    err.hidden = true;
+    if (!contact || !pw) return Object.assign(err, { hidden: false, textContent: contact ? '비밀번호를 입력해 주세요.' : '연락처를 입력해 주세요.' });
+    const btn = contactForm.querySelector('button');
+    btn.disabled = true;
+    try {
+      await api({ action: 'contact', number: mine.info.number, id: mine.info.id, password: pw, contact });
+      password = pw;
+      contactForm.hidden = true;
+      contactForm.elements.contact.value = '';
+      UI.showToast('연락처를 남겼어요. 쿠폰을 보내 드릴게요! ☕', 3000);
+    } catch (e2) {
+      Object.assign(err, { hidden: false, textContent: e2.message });
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ---------- 개발자 모드: 연락처 보기·랭킹 초기화 ----------
+
+  async function adminCall(body) {
+    const pw = devPassword();
+    if (!pw) return null;
+    try {
+      const r = await api({ ...body, password: pw });
+      rememberDevPassword(pw);
+      return r;
+    } catch (err) {
+      rememberDevPassword(pw, err);
+      UI.showToast(err.message, 3000);
+      return null;
+    }
+  }
+
+  $('.rps-admin-view').addEventListener('click', async () => {
+    const r = await adminCall({ action: 'admin' });
+    if (!r) return;
+    const list = $('.rps-admin-list');
+    list.replaceChildren(
+      ...r.ranking.map((x) => {
+        const li = document.createElement('li');
+        li.append(`${x.name} · ${x.streak}연승 — `, Object.assign(document.createElement('b'), { textContent: x.contact ?? '연락처 없음' }));
+        return li;
+      })
+    );
+    if (!r.ranking.length) list.textContent = '랭킹이 비어 있어요.';
+  });
+
+  $('.rps-admin-reset').addEventListener('click', async () => {
+    if (!confirm('랭킹·도전 기록·연락처를 모두 지울까요? 되돌릴 수 없어요.')) return;
+    if (!(await adminCall({ action: 'reset' }))) return;
+    $('.rps-admin-list').replaceChildren();
+    UI.showToast('랭킹을 초기화했어요', 2500);
+    loadBoard();
+  });
+
+  $('.rps-admin-npc').addEventListener('click', () => {
+    modal.close();
+    onSettings?.();
+  });
+
   $('.rps-stop').addEventListener('click', async () => {
     if (busy || !token) return;
     busy = true;
@@ -238,7 +317,7 @@ const Rps = (() => {
     }
     const rank = r.rank && r.rank <= 3 ? ` · ${r.rank}위! ☕ 쿠폰 순위` : r.rank ? ` · ${r.rank}위` : '';
     setTimeout(() => UI.showToast(`${r.streak}연승으로 기록했어요${rank}`, 3000), lost ? 900 : 0);
-    renderBoard({ ranking: r.ranking });
+    renderBoard({ ranking: r.ranking, hasContact: r.hasContact });
     loadBoard(); // 내 도전 기록까지
   }
 

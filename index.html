@@ -228,6 +228,32 @@
           <button type="button" class="btn btn-ghost rps-stop">그만하고 기록 저장</button>
         </div>
 
+        <!-- 랭킹에 들면: 쿠폰 연락용 연락처 (암호화 저장, 개발자 모드에서만 보임) -->
+        <form class="rps-contact" hidden novalidate>
+          <p class="rps-rule">🎉 <b>랭킹에 들었어요!</b><br />쿠폰을 보내 드릴 <b>전화번호나 연락처</b>를 남겨 주세요.</p>
+          <label class="field">
+            <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
+            <input name="contact" type="text" autocomplete="tel" maxlength="50" placeholder="010-0000-0000" />
+          </label>
+          <label class="field rps-contact-pw">
+            <span>내 캐릭터 비밀번호</span>
+            <input name="password" type="password" autocomplete="current-password" maxlength="30" />
+          </label>
+          <p class="form-error rps-contact-error" hidden></p>
+          <button type="submit" class="btn btn-primary">연락처 남기기</button>
+        </form>
+
+        <!-- 개발자 모드(?dev): 랭킹 연락처 보기·초기화 -->
+        <section class="rps-admin" hidden>
+          <h3>🔧 관리 (개발자 모드)</h3>
+          <div class="rps-admin-btns">
+            <button type="button" class="btn btn-ghost rps-admin-view">연락처 보기</button>
+            <button type="button" class="btn btn-ghost rps-admin-reset">랭킹 초기화</button>
+            <button type="button" class="btn btn-ghost rps-admin-npc">NPC 설정</button>
+          </div>
+          <ol class="rps-admin-list"></ol>
+        </section>
+
         <section class="rps-board">
           <h3>🏆 연승 랭킹</h3>
           <ol class="rps-ranking"></ol>

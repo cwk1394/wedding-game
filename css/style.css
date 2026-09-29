@@ -1006,6 +1006,7 @@ fieldset.chip-field legend { margin-bottom: 8px; padding: 0; }
 .rps-vs { display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; }
 .rps-vs-text {
   font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: -.02em;
+  padding: 0 .2em; /* 기울임 글자의 오른쪽 끝(S)이 background-clip 영역 밖으로 나가 잘리지 않게 */
   background: linear-gradient(180deg, var(--coral-light), var(--coral-deep)); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .rps-streak {
@@ -1083,6 +1084,13 @@ fieldset.chip-field legend { margin-bottom: 8px; padding: 0; }
 .rps-ranking .st { color: var(--coral-deep); }
 .rps-ranking .tm { grid-column: 2 / 4; font-size: 11.5px; color: var(--ink-soft); }
 .rps-empty { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.rps-contact { display: flex; flex-direction: column; gap: 12px; }
+.rps-contact[hidden], .rps-admin[hidden] { display: none; }
+.rps-admin h3 { margin: 4px 0 8px; font-size: 15px; }
+.rps-admin-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.rps-admin-btns .btn { flex: 1; padding-inline: 8px; white-space: nowrap; font-size: 13.5px; }
+.rps-admin-list { margin: 10px 0 0; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+.rps-admin-list b { color: var(--coral-deep); }
 .rps-mine li { font-size: 12.5px; color: var(--ink-soft); padding-left: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .rps-hand.shake, .rps-hand.spin, .rps-stage.rolling .rps-machine { animation: none; }

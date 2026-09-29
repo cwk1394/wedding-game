@@ -191,6 +191,8 @@ prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 
   - 진행 중 토큰은 localStorage `rpsToken`에도 → 새로고침·ESC로 나가도 다음에 열 때 그 연승으로 기록.
   - 알려진 한계: 같은 토큰으로 동시에 여러 번 요청하면 결과를 골라낼 수 있음(라운드마다 커밋해야 막힘).
 - 랭킹(`GET /api/rps?id=`): 캐릭터별 최고 연승 TOP 10(0연승 제외, 같으면 먼저 끝낸 사람), 1~3위 "☕ 쿠폰" 표시 + 그 캐릭터 최근 도전 10개. 쿠폰 지급은 수동.
+- 연락처: 랭킹(TOP 10)에 든 캐릭터는 창에 연락처 칸(`.rps-contact`) → `POST contact {number, id, password, contact(50자)}`(비밀번호 확인, 랭킹 밖이면 403). gist가 id만 알면 읽히므로 AES-256-GCM(키 = sha256(`rps-contact:` + `secret()`))으로 암호화해 `contacts[id]`에 저장. GET은 `hasContact`만.
+- 개발자 모드(`?dev`)에서 머신을 누르면 설정 창 대신 이 창 + 관리 칸(`.rps-admin`): 연락처 보기(`admin`), 랭킹 초기화(`reset`: records·contacts 비움, burned는 유지), NPC 설정. 둘 다 DEV_PASSWORD.
 - 효과(css `.rps-*`): 고르면 머신 불빛 깜빡임 + 머신 손이 빠르게 바뀜(최소 1.1초), WIN = 금빛 글자 + 번쩍임 + 색종이·하트·별(연승이 길수록 많이), DRAW = 손 부딪힘, LOSE = 무대 흔들림.
 - 설정: 기록 gist = https://gist.github.com/kobe-KANG/54d5f2cf56f9e6eb09864d4c3e4ae684 (비밀 gist, api/rps.js 기본값 — 바꾸려면 Vercel `RPS_GIST_ID`). 첫 기록 때 그 gist에 `rps.json` 파일이 생김. 쓰기 토큰은 `GIST_TOKEN`(Gists 읽기/쓰기 권한), 없으면 `GITHUB_TOKEN`. 기록 정리·쿠폰 대상 확인은 gist에서 직접.
 
