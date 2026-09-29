@@ -1,0 +1,6 @@
+# Vercel은 API 전용 — 함수에 필요한 것만 올림 (img/gallery 원본 등 수백 MB 제외)
+/*
+!/api
+!/prompt
+!/package.json
+!/vercel.json

@@ -51,6 +51,7 @@ api/rps.js              Vercel 함수: 가위바위보 머신. POST start|play|s
 api/map.js              Vercel 함수: POST {password, map: {floors, climbs, spawn, couple, npcs}} → 검증 후 js/map-data.js 커밋 (DEV_PASSWORD 필요)
 package.json            "type": "module" (api/ 함수 ESM용). 의존성 없음
 vercel.json             functions: api/character.js maxDuration 300초 + prompt/** 포함. ignoreCommand: img/guests/만 바뀐 커밋은 Vercel 재배포 생략. redirects: /api/ 외 경로는 GitHub Pages로 이동 (Vercel은 API 전용)
+.vercelignore           Vercel 업로드 대상을 api/·prompt/·package.json·vercel.json만으로 (갤러리 원본 등 수백 MB 때문에 배포 용량 초과했었음)
 prompt/                 캐릭터/걷기 스프라이트 생성용 프롬프트 (4단계 AI 파이프라인에서 사용). npc-*.txt = 개발자 모드 NPC 추가용({{DESC}} = NPC 설명)
 ```
 
