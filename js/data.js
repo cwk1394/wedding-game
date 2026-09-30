@@ -37,7 +37,7 @@ if (new URLSearchParams(location.search).has('dev')) {
 const DUMMY_GUESTS = [];
 
 // 이 사이트의 하객 목록
-const GUESTS_URL = 'data/guests.json';
+const GUESTS_URL = '/api/guests';
 
 async function fetchGuests() {
   try {
