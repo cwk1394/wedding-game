@@ -58,7 +58,7 @@ const CONFIG = {
 
   // 방명록 API (Vercel Serverless Functions) 주소
   // 로컬 테스트 시 ?api=http://127.0.0.1:8787 쿼리로 덮어쓸 수 있다.
-  apiUrl: new URLSearchParams(location.search).get('api') || 'https://guestbook-nine-drab.vercel.app',
+  apiUrl: location.origin,
 
   // AI 캐릭터 생성
   ai: {
