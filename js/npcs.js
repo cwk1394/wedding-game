@@ -19,16 +19,6 @@ const NPCS = [
     motions: ['idle', 'walk'],
     popup: { shortMsg: '꽃가루 뿌뿌~', longMsg: NPC_POPUP_TBD },
   },
-  {
-    id: 'zebra',
-    name: '얼룩말',
-    floor: 'upperRoute_1',
-    height: 66,
-    speed: [24, 38],
-    effect: 'bubbles',
-    motions: ['idle', 'walk'],
-    popup: { shortMsg: '뿌우~ 축하해!', longMsg: NPC_POPUP_TBD },
-  },
   ...[
     ['cat-mimi', '미미', 'lowerRoute', '냐옹~'],
     ['cat-ongi', '옹이', 'heartBridge', '냥냥! 축하냥'],
