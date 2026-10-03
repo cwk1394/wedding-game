@@ -13,7 +13,8 @@ import { HttpError, checkDevPassword, corsHeaders, json } from './http.js';
 import { findGuest, secret } from '../guestbook.js';
 
 // gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 만듦). gist 주소(…/<id>.js)를 넣어도 id만
-const GIST_ID = (process.env.RPS_GIST_ID || '54d5f2cf56f9e6eb09864d4c3e4ae684').match(/[0-9a-f]{20,}/i)?.[0];
+const GIST_ID = (process.env.RPS_GIST_ID || '').match(/[0-9a-f]{20,}/i)?.[0];
+
 const RANKING_SIZE = 10;
 const CONTACT_MAX = 50;
 
