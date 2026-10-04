@@ -117,6 +117,15 @@ export class Board {
     return [...best.values()].sort((a, b) => b[s] - a[s] || a.end.localeCompare(b.end)).slice(0, RANKING_SIZE);
   }
 
+    // 마감 전 서버 접수 기록으로 경품 TOP 3 계산
+  prizeRanking(records) {
+    const eligible = records.filter((r) => {
+      const end = Date.parse(r.end);
+      return Number.isFinite(end) && end < PRIZE_DEADLINE;
+    });
+    return this.ranking(eligible).slice(0, PRIZE_SIZE);
+  }
+
   // ---------- 공통 요청 ----------
 
   async get(request) {
