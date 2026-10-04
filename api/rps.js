@@ -21,6 +21,7 @@ export const OPTIONS = preflight;
 export const GET = (request) => board.get(request);
 
 export function POST(request) {
+  const receivedAt = Date.now();
   return handlePost(request, async (body) => {
     const common = await board.common(body);
     if (common) return common;
@@ -30,14 +31,14 @@ export function POST(request) {
       return { status: 200, body: { token, name: data.name, streak: 0 } };
     }
     const run = board.verify(body.token);
-    if (body.action === 'stop') return { status: 200, body: { streak: run.s, ...(await board.finish(run, run.s)) } };
+    if (body.action === 'stop') return { status: 200, body: { streak: run.s, ...(await board.finish(run, run.s, undefined, receivedAt)) } };
     if (body.action === 'play') {
       if (!HANDS.includes(body.choice)) throw new HttpError(400, '가위·바위·보 중에 골라 주세요.');
       const github = board.gist();
       if ((await board.read(github)).burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요. 다시 도전해 주세요.');
       const cpu = HANDS[randomInt(3)];
       const result = cpu === body.choice ? 'draw' : HANDS[(HANDS.indexOf(body.choice) + 1) % 3] === cpu ? 'win' : 'lose';
-      if (result === 'lose') return { status: 200, body: { result, cpu, streak: run.s, ...(await board.finish(run, run.s, github)) } };
+      if (result === 'lose') return { status: 200, body: { result, cpu, streak: run.s, ...(await board.finish(run, run.s, github, receivedAt)) } };
       const streak = run.s + (result === 'win' ? 1 : 0);
       return { status: 200, body: { result, cpu, streak, token: board.sign({ id: run.id, name: run.name, s: streak, t: run.t }) } };
     }
