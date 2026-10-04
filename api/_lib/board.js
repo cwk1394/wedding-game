@@ -100,10 +100,28 @@ export class Board {
     throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
   }
 
-  result(id, { records, contacts }) {
+    result(id, { records, contacts }) {
     const top = this.ranking(records);
     const rank = top.findIndex((r) => r.id === id) + 1;
-    return { ended: true, rank: rank || null, ranking: top, hasContact: Boolean(contacts[id]) };
+
+    const prizeTop = this.prizeRanking(records);
+    const prizeRank = prizeTop.findIndex((r) => r.id === id) + 1;
+    const hasContact = Boolean(contacts[id]);
+
+    return {
+      ended: true,
+      rank: rank || null,
+      ranking: top,
+      hasContact,
+      prize: {
+        deadline: new Date(PRIZE_DEADLINE).toISOString(),
+        closed: Date.now() >= PRIZE_DEADLINE,
+        ranking: prizeTop,
+        rank: prizeRank || null,
+        canContact: Boolean(id && prizeRank),
+        hasContact,
+      },
+    };
   }
 
   /** 캐릭터별 최고 점수 (같으면 먼저 달성한 사람), 0점은 제외 */
