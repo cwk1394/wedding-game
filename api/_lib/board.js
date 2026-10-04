@@ -176,7 +176,20 @@ export class Board {
   throw new HttpError(403, '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.');
 }
     const top = this.ranking(records).map((r) => ({ ...r, contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null }));
-    return { status: 200, body: { ranking: top, total: records.length } };
+    return {
+  status: 200,
+  body: {
+    ranking: top,
+    total: records.length,
+    prize: {
+      ...this.result(null, { records, contacts }).prize,
+      ranking: this.prizeRanking(records).map((r) => ({
+        ...r,
+        contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
+      })),
+    },
+  },
+};
   }
 
   /** 내 캐릭터 비밀번호 확인 → 랭킹에 들어 있으면 연락처 저장 (다시 보내면 덮어씀) */
