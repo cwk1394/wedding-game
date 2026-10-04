@@ -83,7 +83,7 @@ export class Board {
    * 도전 끝: 기록 추가 + 토큰 끝남 표시. 이미 끝난 토큰이면 409.
    * gist는 "읽은 뒤 안 바뀌었을 때만 쓰기"가 없어서, 쓰고 다시 읽어 내 기록이 남았는지 확인 → 동시에 끝난 기록에 덮였으면 다시 합쳐 씀
    */
-  async finish(run, score, github = this.gist()) {
+  async finish(run, score, github = this.gist(), receivedAt = Date.now()) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const data = await this.read(github);
       if (data.burned[run.n]) {
@@ -94,7 +94,7 @@ export class Board {
       const now = Date.now();
       data.burned = Object.fromEntries(Object.entries(data.burned).filter(([, e]) => e > now)); // 만료된 토큰은 어차피 못 씀
       data.burned[run.n] = run.e;
-      data.records.push({ id: run.id, name: run.name, [this.score]: score, at: new Date(run.t).toISOString(), end: new Date(now).toISOString() });
+      data.records.push({ id: run.id, name: run.name, [this.score]: score, at: new Date(run.t).toISOString(), end: new Date(receivedAt).toISOString() });
       await this.write(github, data);
     }
     throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
