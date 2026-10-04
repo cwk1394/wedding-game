@@ -17,6 +17,8 @@ const GIST_ID = (process.env.RPS_GIST_ID || '').match(/[0-9a-f]{20,}/i)?.[0];
 
 const RANKING_SIZE = 10;
 const CONTACT_MAX = 50;
+const PRIZE_DEADLINE = Date.parse('2026-12-13T00:00:00+09:00');
+const PRIZE_SIZE = 3;
 
 export class Board {
   /** file: gist 파일 이름, score: 기록의 점수 필드, tokenKey: 토큰 서명 구분(게임끼리 토큰을 못 섞게), ttl: 토큰 유효 시간 */
