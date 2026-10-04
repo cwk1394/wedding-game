@@ -18,6 +18,7 @@ export const OPTIONS = preflight;
 export const GET = (request) => board.get(request);
 
 export function POST(request) {
+    const receivedAt = Date.now();
   return handlePost(request, async (body) => {
     const common = await board.common(body);
     if (common) return common;
@@ -27,8 +28,8 @@ export function POST(request) {
     }
     if (body.action === 'end') {
       const run = board.verify(body.token);
-      const ms = Math.min(MAX_MS, Math.max(0, Date.now() - run.t - COUNTDOWN));
-      return { status: 200, body: { ms, ...(await board.finish(run, ms)) } };
+      const ms = Math.min(MAX_MS, Math.max(0, receivedAt - run.t - COUNTDOWN));
+      return { status: 200, body: { ms, ...(await board.finish(run, ms, undefined, receivedAt)) } };
     }
     throw new HttpError(400, '알 수 없는 요청이에요.');
   });
