@@ -138,9 +138,8 @@ export class Board {
     const github = this.gist();
     const { records, burned, contacts } = await this.read(github);
     if (body.action === 'reset') {
-      await this.write(github, { records: [], burned, contacts: {} }); // 끝난 토큰 표시는 남김 (초기화로 끝난 토큰이 되살아나지 않게)
-      return { status: 200, body: { ok: true } };
-    }
+  throw new HttpError(403, '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.');
+}
     const top = this.ranking(records).map((r) => ({ ...r, contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null }));
     return { status: 200, body: { ranking: top, total: records.length } };
   }
