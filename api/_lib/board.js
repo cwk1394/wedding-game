@@ -229,7 +229,7 @@ export class Board {
     if (body.action !== 'admin' && body.action !== 'reset') return null;
     checkDevPassword(body.password);
     const github = this.gist();
-    const { records, burned, contacts } = await this.read(github);
+    const { records, burned, contacts, prizeRecords } = await this.read(github);
     if (body.action === 'reset') {
   throw new HttpError(403, '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.');
 }
@@ -240,8 +240,8 @@ export class Board {
     ranking: top,
     total: records.length,
     prize: {
-      ...this.result(null, { records, contacts }).prize,
-      ranking: this.prizeRanking(records).map((r) => ({
+            ...this.result(null, { records, contacts, prizeRecords }).prize,
+      ranking: this.prizeRanking([...prizeRecords, ...records]).map((r) => ({
         ...r,
         contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
       })),
