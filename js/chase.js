@@ -57,8 +57,7 @@ const Chase = (() => {
     form.elements.password.value = password;
     resultEl.hidden = !result;
     if (result) {
-                  const rank = result.rank && result.rank <= 3 ? ` · ${result.rank}위! ☕ 쿠폰 순위` : result.rank ? ` · ${result.rank}위` : '';
-      resultEl.textContent = `⏱ ${fmtTime(result.ms)} 버텼어요${rank}`;
+                        resultEl.textContent = `⏱ ${fmtTime(result.ms)} 버텼어요!`;
             board.render({ ranking: result.ranking, hasContact: result.hasContact, prize: result.prize });
     }
     showError('');
