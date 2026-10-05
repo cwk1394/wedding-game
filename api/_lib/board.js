@@ -68,11 +68,38 @@ export class Board {
   }
 
   /** { records: [{ id, name, <score>, at, end }], burned: { <토큰 nonce>: 만료 시각 }, contacts: { <하객 id>: { c: 암호문, at } } } */
-  async read(github) {
+    async read(github) {
     const g = await this.request(github, 'GET');
-    const text = g.files?.[this.file]?.content;
-    const data = text ? JSON.parse(text) : {};
-    return { records: data.records ?? [], burned: data.burned ?? {}, contacts: data.contacts ?? {} };
+    const file = g.files?.[this.file];
+
+    // 내용이 잘린 응답으로 기존 기록을 덮어쓰지 않도록 중단
+    if (file?.truncated) {
+      throw new HttpError(503, '기록 파일 전체를 읽지 못했어요. 관리자 확인이 필요해요.');
+    }
+
+    const text = file?.content;
+    if (file && (typeof text !== 'string' || !text.trim())) {
+      throw new HttpError(503, '기록 파일 내용이 비어 있어요. 관리자 확인이 필요해요.');
+    }
+
+    const data = file ? JSON.parse(text) : {};
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      Array.isArray(data) ||
+      (data.records != null && !Array.isArray(data.records)) ||
+      (data.prizeRecords != null && !Array.isArray(data.prizeRecords))
+    ) {
+      throw new HttpError(503, '기록 파일 형식 확인이 필요해요.');
+    }
+
+    return {
+      ...data,
+      records: data.records ?? [],
+      burned: data.burned ?? {},
+      contacts: data.contacts ?? {},
+      prizeRecords: data.prizeRecords ?? [],
+    };
   }
 
   write(github, data) {
