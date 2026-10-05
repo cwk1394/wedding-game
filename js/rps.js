@@ -201,8 +201,7 @@ const Rps = (() => {
       stage.classList.add('shake');
       setTimeout(() => stage.classList.remove('shake'), 500);
     }
-    const rank = r.rank && r.rank <= 3 ? ` · ${r.rank}위! ☕ 쿠폰 순위` : r.rank ? ` · ${r.rank}위` : '';
-    setTimeout(() => UI.showToast(`${r.streak}연승으로 기록했어요${rank}`, 3000), lost ? 900 : 0);
+        setTimeout(() => UI.showToast(`${r.streak}연승으로 기록했어요!`, 3000), lost ? 900 : 0);
         board.render({ ranking: r.ranking, hasContact: r.hasContact, prize: r.prize });
     board.load(); // 내 도전 기록까지
   }
