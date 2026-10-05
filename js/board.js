@@ -9,7 +9,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   const root = el.querySelector('.event-board');
   root.innerHTML = `
     <form class="rps-contact" hidden novalidate>
-      <p class="rps-rule">🎉 <b>경품 연락처 등록</b><br />랭킹 <b>TOP 3</b>에게 🎁선물을 드려요.<br />미리 등록해도 수상 확정은 아니에요.<br /><b>(12월 12일 마감)</b></p>
+      <p class="rps-rule">🎉 <b>경품 연락처 등록</b><br />랭킹 <b>TOP 3</b>에게 <b>🎁선물</b>을 드려요.<br />미리 등록해도 수상 확정은 아니에요.<br /><b>(12월 12일 마감)</b></p>
       <label class="field">
         <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
         <input name="contact" type="text" autocomplete="tel" maxlength="50" placeholder="010-0000-0000" />
