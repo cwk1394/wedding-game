@@ -87,7 +87,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
         li.querySelector('.rk').textContent = medals[i] ?? i + 1;
         li.querySelector('.nm').textContent = r.name;
         li.querySelector('.st').textContent = score(r);
-        li.querySelector('.tm').textContent = i < 3 ? `☕ 쿠폰 · ${fmt(r.end)}` : fmt(r.end);
+        li.querySelector('.tm').textContent = i < 3 ? `🎁 선물 · ${fmt(r.end)}` : fmt(r.end);
         return li;
       })
     );
