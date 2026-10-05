@@ -9,7 +9,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   const root = el.querySelector('.event-board');
   root.innerHTML = `
     <form class="rps-contact" hidden novalidate>
-      <p class="rps-rule">🎉 <b>랭킹에 들었어요!</b><br />쿠폰을 보내 드릴 <b>전화번호나 연락처</b>를 남겨 주세요.</p>
+      <p class="rps-rule">🎉 <b>경품 연락처 등록</b><br /><b>12월 12일 마감 기준 게임별 TOP 3</b>에게 쿠폰을 드려요.<br />미리 등록해도 <b>수상 확정은 아니에요.</b></p>
       <label class="field">
         <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
         <input name="contact" type="text" autocomplete="tel" maxlength="50" placeholder="010-0000-0000" />
@@ -119,7 +119,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       password.set(pw);
       contactForm.hidden = true;
       contactForm.elements.contact.value = '';
-      UI.showToast('연락처를 남겼어요. 쿠폰을 보내 드릴게요! ☕', 3000);
+            UI.showToast('연락처를 저장했어요. 경품은 마감 기준 최종 TOP 3에게 지급돼요.', 4000);
     } catch (e2) {
       Object.assign(err, { hidden: false, textContent: e2.message });
     } finally {
