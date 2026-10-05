@@ -208,14 +208,14 @@ export class Board {
     const cors = corsHeaders(request);
     try {
       const id = new URL(request.url).searchParams.get('id');
-      const { records, contacts } = await this.read(this.gist());
+      const { records, contacts, prizeRecords } = await this.read(this.gist());
       const mine = id ? records.filter((r) => r.id === id).slice(-10).reverse() : [];
       return json({
   ranking: this.ranking(records),
   mine,
   total: records.length,
   hasContact: Boolean(id && contacts[id]),
-  prize: this.result(id, { records, contacts }).prize,
+  prize: this.result(id, { records, contacts, prizeRecords }).prize,
 }, 200, cors);
     } catch (err) {
       console.error(err);
