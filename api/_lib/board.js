@@ -102,8 +102,39 @@ export class Board {
     };
   }
 
-  write(github, data) {
-    return this.request(github, 'PATCH', { files: { [this.file]: { content: JSON.stringify(data, null, 1) } } });
+    write(github, data) {
+    // 이미 보존한 경품 기록과 일반 기록을 합쳐 마감 전 기록만 보관
+    const unique = new Map();
+
+    for (const r of [
+      ...(data.prizeRecords ?? []),
+      ...(data.records ?? []),
+    ]) {
+      const end = Date.parse(r.end);
+      if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) continue;
+
+      // 같은 기록이 두 목록에 있어도 한 번만 보관
+      const key = JSON.stringify([
+        r.id,
+        r[this.score],
+        r.at,
+        r.end,
+      ]);
+      if (!unique.has(key)) unique.set(key, { ...r });
+    }
+
+    const saved = {
+      ...data,
+      prizeRecords: [...unique.values()],
+    };
+
+    return this.request(github, 'PATCH', {
+      files: {
+        [this.file]: {
+          content: JSON.stringify(saved, null, 1),
+        },
+      },
+    });
   }
 
   /**
