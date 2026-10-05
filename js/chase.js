@@ -57,8 +57,14 @@ const Chase = (() => {
     form.elements.password.value = password;
     resultEl.hidden = !result;
     if (result) {
-      const rank = result.rank && result.rank <= 3 ? ` · ${result.rank}위! ☕ 쿠폰 순위` : result.rank ? ` · ${result.rank}위` : '';
-      resultEl.textContent = `⏱ ${fmtTime(result.ms)} 버텼어요${rank}`;
+            const rank = result.rank ? ` · 일반 ${result.rank}위` : '';
+      const prize = result.prize;
+      const prizeText = prize?.rank
+        ? prize.closed
+          ? ` · 🎁경품 최종 ${prize.rank}위`
+          : ` · 🎁경품 후보 ${prize.rank}위 (미확정)`
+        : '';
+      resultEl.textContent = `⏱ ${fmtTime(result.ms)} 버텼어요${rank}${prizeText}`;
             board.render({ ranking: result.ranking, hasContact: result.hasContact, prize: result.prize });
     }
     showError('');
