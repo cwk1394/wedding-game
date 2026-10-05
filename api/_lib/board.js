@@ -158,11 +158,11 @@ export class Board {
     throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
   }
 
-    result(id, { records, contacts }) {
+    result(id, { records, contacts, prizeRecords = [] }) {
     const top = this.ranking(records);
     const rank = top.findIndex((r) => r.id === id) + 1;
 
-    const prizeTop = this.prizeRanking(records);
+    const prizeTop = this.prizeRanking([...prizeRecords, ...records]);
     const prizeRank = prizeTop.findIndex((r) => r.id === id) + 1;
     const hasContact = Boolean(contacts[id]);
 
