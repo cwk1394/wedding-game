@@ -76,7 +76,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     }
   }
 
-  function render({ ranking = [], mine: history, hasContact }) {
+    function render({ ranking = [], mine: history, hasContact, prize }) {
     const medals = ['🥇', '🥈', '🥉'];
     $('.rps-ranking').replaceChildren(
       ...ranking.map((r, i) => {
@@ -93,9 +93,9 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     );
     $('.rps-empty').hidden = ranking.length > 0;
     $('.rps-empty').textContent = '아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!';
-    // 랭킹에 들었는데 연락처가 없으면 남기기 (도전 중엔 숨김)
-    const ranked = mine && ranking.some((r) => r.id === mine.info.id);
-    if (hasContact !== undefined) contactForm.hidden = !ranked || hasContact || isPlaying();
+        // 서버가 경품 연락처 등록을 허용한 캐릭터만 표시 (도전 중엔 숨김)
+    const canContact = Boolean(mine && prize?.canContact);
+    contactForm.hidden = !canContact || Boolean(prize?.hasContact ?? hasContact) || isPlaying();
     contactForm.querySelector('.rps-contact-pw').hidden = Boolean(password.get());
     if (history) {
       $('.rps-mine-title').hidden = !history.length;
