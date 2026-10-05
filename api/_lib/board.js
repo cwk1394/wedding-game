@@ -259,7 +259,7 @@ export class Board {
     const github = this.gist();
     for (let attempt = 0; attempt < 3; attempt++) {
       const data = await this.read(github);
-      if (!this.prizeRanking(data.records).some((r) => r.id === id)) throw new HttpError(403, '마감 전 경품 후보 TOP 3 또는 마감 후 최종 TOP 3만 연락처를 남길 수 있어요.');
+      if (!this.prizeRanking([...(data.prizeRecords ?? []), ...data.records]).some((r) => r.id === id)) throw new HttpError(403, '마감 전 경품 후보 TOP 3 또는 마감 후 최종 TOP 3만 연락처를 남길 수 있어요.');
       const c = encrypt(contact);
       data.contacts[id] = { c, at: new Date().toISOString() };
       await this.write(github, data);
