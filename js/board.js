@@ -182,19 +182,43 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     }
   }
 
-  $('.rps-admin-view').addEventListener('click', async () => {
+    $('.rps-admin-view').addEventListener('click', async () => {
+    const list = $('.rps-admin-list');
+    list.replaceChildren();
+
     const r = await adminCall({ action: 'admin' });
     if (!r) return;
-    const list = $('.rps-admin-list');
+
+    if (!Array.isArray(r.prize?.ranking)) {
+      list.textContent = '경품 순위 정보를 불러오지 못했어요.';
+      return;
+    }
+
+    const ranking = r.prize.ranking.slice(0, 3);
     list.replaceChildren(
-      ...r.ranking.map((x) => {
+      ...ranking.map((x, i) => {
         const li = document.createElement('li');
-        li.append(`${x.name} · ${score(x)} — `, Object.assign(document.createElement('b'), { textContent: x.contact ?? '연락처 없음' }));
+        li.append(
+          `${i + 1}위 · ${x.name} · ${score(x)} — `,
+          Object.assign(document.createElement('b'), {
+            textContent: x.contact ?? '연락처 없음'
+          })
+        );
         return li;
       })
     );
-    if (!r.ranking.length) list.textContent = '랭킹이 비어 있어요.';
+    if (!ranking.length) {
+      list.textContent = '경품 대상 기록이 없어요.';
+    }
+
+    UI.showToast(
+      r.prize.closed
+        ? '마감된 경품 최종 TOP 3의 연락처예요.'
+        : '현재 경품 후보 TOP 3의 연락처예요. 수상 확정은 아니에요.',
+      4000
+    );
   });
+
 
   $('.rps-admin-reset').addEventListener('click', async () => {
     if (!confirm('랭킹·도전 기록·연락처를 모두 지울까요? 되돌릴 수 없어요.')) return;
