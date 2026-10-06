@@ -128,10 +128,9 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
         return li;
       })
     );
-    prizeEmpty.hidden = hasPrizeRanking && prizeRanking.length > 0;
-    prizeEmpty.textContent = hasPrizeRanking
-      ? '경품 대상 기록이 없어요.'
-      : '경품 순위 정보를 불러오지 못했어요.';
+        prizeTitle.hidden = true;
+    prizeList.hidden = true;
+    prizeEmpty.hidden = true;
 
     // 서버가 경품 연락처 등록을 허용한 캐릭터만 표시 (도전 중엔 숨김)
     const canContact = Boolean(mine && prize?.canContact);
