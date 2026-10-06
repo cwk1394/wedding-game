@@ -30,10 +30,13 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       </div>
       <ol class="rps-admin-list"></ol>
     </section>
-    <section class="rps-board">
+        <section class="rps-board">
       <h3></h3>
       <ol class="rps-ranking"></ol>
       <p class="rps-empty" hidden></p>
+      <h3 class="rps-prize-title" hidden></h3>
+      <ol class="rps-ranking rps-prize-ranking" hidden></ol>
+      <p class="rps-prize-empty" hidden></p>
       <h3 class="rps-mine-title" hidden>내 도전 기록</h3>
       <ul class="rps-mine"></ul>
     </section>`;
@@ -76,8 +79,11 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     }
   }
 
-    function render({ ranking = [], mine: history, hasContact, prize }) {
+      function render({ ranking = [], mine: history, hasContact, prize }) {
     const medals = ['🥇', '🥈', '🥉'];
+
+    // 일반 랭킹: 경품 여부와 관계없이 현재 최고 기록 표시
+    $('.rps-board h3').textContent = `${title} (일반)`;
     $('.rps-ranking').replaceChildren(
       ...ranking.map((r, i) => {
         const li = document.createElement('li');
@@ -87,13 +93,47 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
         li.querySelector('.rk').textContent = medals[i] ?? i + 1;
         li.querySelector('.nm').textContent = r.name;
         li.querySelector('.st').textContent = score(r);
-        li.querySelector('.tm').textContent = i < 3 ? `🎁 선물 · ${fmt(r.end)}` : fmt(r.end);
+        li.querySelector('.tm').textContent = fmt(r.end);
         return li;
       })
     );
     $('.rps-empty').hidden = ranking.length > 0;
     $('.rps-empty').textContent = '아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!';
-        // 서버가 경품 연락처 등록을 허용한 캐릭터만 표시 (도전 중엔 숨김)
+
+    // 경품 랭킹: 서버가 보내 준 경품 TOP 3만 표시
+    const hasPrizeRanking = Array.isArray(prize?.ranking);
+    const prizeRanking = hasPrizeRanking ? prize.ranking.slice(0, 3) : [];
+    const prizeTitle = $('.rps-prize-title');
+    const prizeList = $('.rps-prize-ranking');
+    const prizeEmpty = $('.rps-prize-empty');
+
+    prizeTitle.hidden = false;
+    prizeTitle.textContent = hasPrizeRanking
+      ? prize.closed
+        ? '🎁 경품 최종 TOP 3'
+        : '🎁 경품 후보 TOP 3 (미확정)'
+      : '🎁 경품 TOP 3';
+
+    prizeList.hidden = !hasPrizeRanking;
+    prizeList.replaceChildren(
+      ...prizeRanking.map((r, i) => {
+        const li = document.createElement('li');
+        li.classList.add('top');
+        li.classList.toggle('me', r.id === mine?.info.id);
+        li.innerHTML = '<span class="rk"></span><span class="nm"></span><b class="st"></b><small class="tm"></small>';
+        li.querySelector('.rk').textContent = medals[i] ?? i + 1;
+        li.querySelector('.nm').textContent = r.name;
+        li.querySelector('.st').textContent = score(r);
+        li.querySelector('.tm').textContent = `🎁선물 · ${fmt(r.end)}`;
+        return li;
+      })
+    );
+    prizeEmpty.hidden = hasPrizeRanking && prizeRanking.length > 0;
+    prizeEmpty.textContent = hasPrizeRanking
+      ? '경품 대상 기록이 없어요.'
+      : '경품 순위 정보를 불러오지 못했어요.';
+
+    // 서버가 경품 연락처 등록을 허용한 캐릭터만 표시 (도전 중엔 숨김)
     const canContact = Boolean(mine && prize?.canContact);
     contactForm.hidden = !canContact || Boolean(prize?.hasContact ?? hasContact) || isPlaying();
     contactForm.querySelector('.rps-contact-pw').hidden = Boolean(password.get());
