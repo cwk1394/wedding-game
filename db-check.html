@@ -31,7 +31,7 @@
       result.textContent = '확인 중…';
 
       try {
-        const response = await fetch('/api/db-check', {
+                const response = await fetch('/api/db-inspect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store',
@@ -43,14 +43,31 @@
         if (!response.ok) {
           throw new Error(data.error || '접속 확인에 실패했어요.');
         }
-        if (data.ok !== true || data.connectionOk !== true) {
-          throw new Error('예상한 접속 확인 결과가 아니에요.');
+                if (
+          data.ok !== true ||
+          data.readOnly !== true ||
+          !Array.isArray(data.source) ||
+          !Array.isArray(data.database)
+        ) {
+          throw new Error('예상한 기록 수 조회 결과가 아니에요.');
         }
 
+        const describe = (item) =>
+          (item.game === 'rps' ? '가위바위보' : '도둑잡기') +
+          '\n일반 기록: ' + item.records + '개' +
+          '\n경품 보존 기록: ' + item.prizeRecords + '개' +
+          '\n등록 연락처: ' + item.contacts + '개' +
+          '\n사용한 토큰 정보: ' + item.burned + '개';
+
         result.textContent =
-          'DB 접속 성공\n' +
-          '데이터베이스: ' + data.database + '\n' +
-          '스키마: ' + data.schema;
+          '기록 수 조회 성공 (조회만 실행)\n\n' +
+          '[기존 Gist]\n' +
+          data.source.map(describe).join('\n\n') +
+          '\n\n[새 DB]\n' +
+          (data.database.length
+            ? data.database.map(describe).join('\n\n')
+            : '아직 복사된 게임 데이터가 없어요.') +
+          '\n\n이번 조회에서는 기록을 복사하거나 변경하지 않았어요.';
       } catch (error) {
         result.textContent = '확인 실패: ' + error.message;
       } finally {
