@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>관리자 DB 접속 확인</title>
+</head>
+<body>
+  <h1>관리자 DB 접속 확인</h1>
+  <p>DB 접속만 확인하며, 게임 기록을 변경하지 않습니다.</p>
+
+  <form id="check-form">
+    <label for="password">개발자 비밀번호</label>
+    <input id="password" type="password" autocomplete="off" required />
+    <button id="check-button" type="submit">접속 확인</button>
+  </form>
+
+  <pre id="result" aria-live="polite"></pre>
+
+  <script>
+    const form = document.getElementById('check-form');
+    const passwordInput = document.getElementById('password');
+    const button = document.getElementById('check-button');
+    const result = document.getElementById('result');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+
+      button.disabled = true;
+      result.textContent = '확인 중…';
+
+      try {
+        const response = await fetch('/api/db-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ password: passwordInput.value })
+        });
+        passwordInput.value = '';
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '접속 확인에 실패했어요.');
+        }
+        if (data.ok !== true || data.connectionOk !== true) {
+          throw new Error('예상한 접속 확인 결과가 아니에요.');
+        }
+
+        result.textContent =
+          'DB 접속 성공\n' +
+          '데이터베이스: ' + data.database + '\n' +
+          '스키마: ' + data.schema;
+      } catch (error) {
+        result.textContent = '확인 실패: ' + error.message;
+      } finally {
+        passwordInput.value = '';
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
