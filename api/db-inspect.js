@@ -1,5 +1,5 @@
 // 관리자 전용 이관 준비 점검: Gist와 DB를 조회만 한다.
-import { Board } from './_lib/board.js';
+import { readGistSnapshot } from './_lib/gist-snapshot.js';
 import { withDbClient } from './_lib/db.js';
 import {
   HttpError,
@@ -44,21 +44,18 @@ export function POST(request) {
 
     const source = [];
 
-    try {
+        try {
+      const snapshot = await readGistSnapshot();
+
       for (const item of games) {
-        const board = new Board({
-          file: item.file,
-          score: item.score,
-          tokenKey: item.game,
-          ttl: 0,
-        });
-        const data = await board.read(board.gist());
         source.push({
           game: item.game,
-          ...summarize(data),
+          ...summarize(snapshot[item.game]),
         });
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+
       throw new HttpError(
         503,
         'Gist 기록 조회에 실패했어요. 복사는 진행하지 않았어요.'
