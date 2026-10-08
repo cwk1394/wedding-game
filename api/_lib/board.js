@@ -35,8 +35,51 @@ export class Board {
     throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
   }
 
-  async readDb() {
+    async readDb() {
     return readGameState(this.dbGame());
+  }
+
+  // DB용 종료 기록 저장. 게임별 API 연결 전까지는 실행되지 않는다.
+  async finishDb(run, score, receivedAt) {
+    if (
+      !Number.isFinite(receivedAt) ||
+      !Number.isFinite(score) ||
+      score < 0
+    ) {
+      throw new HttpError(400, '기록 정보가 잘못됐어요.');
+    }
+
+    return this.updateDb((data) => {
+      const now = Date.now();
+
+      // DB 잠금을 기다리는 동안 토큰이 만료된 경우도 중단
+      if (run.e < now) {
+        throw new HttpError(
+          410,
+          '도전 시간이 지났어요. 다시 도전해 주세요.'
+        );
+      }
+
+      if (data.burned[run.n]) {
+        throw new HttpError(409, '이미 끝난 도전이에요.');
+      }
+
+      data.burned = Object.fromEntries(
+        Object.entries(data.burned).filter(([, e]) => e > now)
+      );
+
+      data.burned[run.n] = run.e;
+
+      data.records.push({
+        id: run.id,
+        name: run.name,
+        [this.score]: score,
+        at: new Date(run.t).toISOString(),
+        end: new Date(receivedAt).toISOString(),
+      });
+
+      return this.result(run.id, data);
+    });
   }
 
   async updateDb(change) {
