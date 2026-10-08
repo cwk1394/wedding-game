@@ -35,8 +35,52 @@ export class Board {
     throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
   }
 
-    async readDb() {
+      async readDb() {
     return readGameState(this.dbGame());
+  }
+
+  // DB용 연락처 저장. 공통 요청 연결 전까지는 실행되지 않는다.
+  async saveContactDb(body) {
+    const contact = typeof body.contact === 'string'
+      ? body.contact.trim()
+      : '';
+
+    if (!contact) {
+      throw new HttpError(400, '연락처를 입력해 주세요.');
+    }
+
+    if (contact.length > CONTACT_MAX) {
+      throw new HttpError(
+        400,
+        `연락처는 ${CONTACT_MAX}자까지 쓸 수 있어요.`
+      );
+    }
+
+    // 외부 API를 사용하는 캐릭터 인증은 DB 잠금 전에 완료
+    const { id } = await findGuest(body);
+    const c = encrypt(contact);
+
+    return this.updateDb((data) => {
+      // 잠금 안에서 최신 경품 순위로 등록 자격 확인
+      const eligible = this.prizeRanking([
+        ...data.prizeRecords,
+        ...data.records,
+      ]).some((r) => r.id === id);
+
+      if (!eligible) {
+        throw new HttpError(
+          403,
+          '마감 전 경품 후보 TOP 3 또는 마감 후 최종 TOP 3만 연락처를 남길 수 있어요.'
+        );
+      }
+
+      data.contacts[id] = {
+        c,
+        at: new Date().toISOString(),
+      };
+
+      return { ok: true };
+    });
   }
 
   // DB용 종료 기록 저장. 게임별 API 연결 전까지는 실행되지 않는다.
