@@ -11,6 +11,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, 
 import { GITHUB_ENV, GitHub } from './github.js';
 import { HttpError, checkDevPassword, corsHeaders, json } from './http.js';
 import { findGuest, secret } from '../guestbook.js';
+import { readGameState, updateGameState } from './board-db.js';
 
 // gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 만듦). gist 주소(…/<id>.js)를 넣어도 id만
 const GIST_ID = (process.env.RPS_GIST_ID || '').match(/[0-9a-f]{20,}/i)?.[0];
@@ -22,8 +23,49 @@ const PRIZE_SIZE = 3;
 
 export class Board {
   /** file: gist 파일 이름, score: 기록의 점수 필드, tokenKey: 토큰 서명 구분(게임끼리 토큰을 못 섞게), ttl: 토큰 유효 시간 */
-  constructor({ file, score, tokenKey, ttl }) {
+    constructor({ file, score, tokenKey, ttl }) {
     Object.assign(this, { file, score, tokenKey, ttl });
+  }
+
+  // ---------- DB 연결 준비 (기존 게임 호출은 아직 Gist 사용) ----------
+
+  dbGame() {
+    if (this.file === 'rps.json' && this.score === 'streak') return 'rps';
+    if (this.file === 'chase.json' && this.score === 'ms') return 'chase';
+    throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
+  }
+
+  async readDb() {
+    return readGameState(this.dbGame());
+  }
+
+  async updateDb(change) {
+    return updateGameState(this.dbGame(), async (data) => {
+      const response = await change(data);
+
+      // 기존 Gist 저장과 같은 기준으로 마감 전 경품 기록 보존
+      const unique = new Map();
+
+      for (const r of [
+        ...data.prizeRecords,
+        ...data.records,
+      ]) {
+        const end = Date.parse(r.end);
+        if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) continue;
+
+        const key = JSON.stringify([
+          r.id,
+          r[this.score],
+          r.at,
+          r.end,
+        ]);
+
+        if (!unique.has(key)) unique.set(key, { ...r });
+      }
+
+      data.prizeRecords = [...unique.values()];
+      return response;
+    });
   }
 
   // ---------- 토큰 ----------
