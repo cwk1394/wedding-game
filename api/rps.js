@@ -18,27 +18,26 @@ const HANDS = ['rock', 'scissors', 'paper']; // 앞이 뒤를 이김 (바위 > �
 const board = new Board({ file: 'rps.json', score: 'streak', tokenKey: 'rps', ttl: 6 * 60 * 60 * 1000 });
 
 export const OPTIONS = preflight;
-export const GET = (request) => board.get(request);
+export const GET = (request) => board.getDb(request);
 
 export function POST(request) {
   const receivedAt = Date.now();
   return handlePost(request, async (body) => {
-    const common = await board.common(body);
+    const common = await board.commonDb(body);
     if (common) return common;
     if (body.action === 'start') {
       const { data, id } = await findGuest(body);
       const token = board.sign({ id, name: data.name, s: 0, t: Date.now() });
       return { status: 200, body: { token, name: data.name, streak: 0 } };
     }
-    const run = board.verify(body.token);
-    if (body.action === 'stop') return { status: 200, body: { streak: run.s, ...(await board.finish(run, run.s, undefined, receivedAt)) } };
+        const run = board.verify(body.token);
+    if (body.action === 'stop') return { status: 200, body: { streak: run.s, ...(await board.finishDb(run, run.s, receivedAt)) } };
     if (body.action === 'play') {
       if (!HANDS.includes(body.choice)) throw new HttpError(400, '가위·바위·보 중에 골라 주세요.');
-      const github = board.gist();
-      if ((await board.read(github)).burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요. 다시 도전해 주세요.');
+      if ((await board.readDb()).burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요. 다시 도전해 주세요.');
       const cpu = HANDS[randomInt(3)];
       const result = cpu === body.choice ? 'draw' : HANDS[(HANDS.indexOf(body.choice) + 1) % 3] === cpu ? 'win' : 'lose';
-      if (result === 'lose') return { status: 200, body: { result, cpu, streak: run.s, ...(await board.finish(run, run.s, github, receivedAt)) } };
+      if (result === 'lose') return { status: 200, body: { result, cpu, streak: run.s, ...(await board.finishDb(run, run.s, receivedAt)) } };
       const streak = run.s + (result === 'win' ? 1 : 0);
       return { status: 200, body: { result, cpu, streak, token: board.sign({ id: run.id, name: run.name, s: streak, t: run.t }) } };
     }
