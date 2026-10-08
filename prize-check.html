@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>관리자 경품 순위 검사</title>
+</head>
+<body>
+  <h1>관리자 경품 순위 검사</h1>
+  <p>가상 기록으로 두 게임의 순위 계산을 검사합니다.</p>
+  <p>운영 기록·실제 마감일·서버 시계는 변경하지 않습니다.</p>
+  <p>DB·Gist 조회 및 저장 없이 메모리 안에서만 검사합니다.</p>
+
+  <form id="check-form">
+    <label for="password">개발자 비밀번호</label>
+    <input id="password" type="password" autocomplete="off" required />
+    <button id="check-button" type="submit">경품 순위 검사</button>
+  </form>
+
+  <pre id="result" aria-live="polite" style="white-space: pre-wrap;"></pre>
+
+  <script>
+    const form = document.getElementById('check-form');
+    const passwordInput = document.getElementById('password');
+    const button = document.getElementById('check-button');
+    const result = document.getElementById('result');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+
+      button.disabled = true;
+      result.textContent = '검사 중…';
+
+      try {
+        const payload = JSON.stringify({
+          password: passwordInput.value
+        });
+        passwordInput.value = '';
+
+        const response = await fetch('/api/prize-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: payload
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || '검사 요청에 실패했어요.');
+        }
+
+        if (
+          data.memoryOnly !== true ||
+          typeof data.ok !== 'boolean' ||
+          !Array.isArray(data.checks) ||
+          data.total !== 18 ||
+          data.checks.length !== 18 ||
+          !data.checks.every((item) =>
+            item &&
+            ['rps', 'chase'].includes(item.game) &&
+            typeof item.name === 'string' &&
+            typeof item.passed === 'boolean'
+          ) ||
+          !['rps', 'chase'].every((game) =>
+            data.checks.filter((item) => item.game === game).length === 9
+          )
+        ) {
+          throw new Error('예상한 18개 검사 결과가 아니에요.');
+        }
+
+        const passed = data.checks.filter((item) => item.passed).length;
+
+        if (
+          data.passed !== passed ||
+          data.ok !== (passed === 18)
+        ) {
+          throw new Error('검사 결과 집계가 일치하지 않아요.');
+        }
+
+        result.textContent =
+          (data.ok ? '순위 계산 검사 통과' : '실패 항목 확인 필요') +
+          '\n통과: ' + passed + ' / 18\n\n' +
+          data.checks.map((item) =>
+            (item.game === 'rps' ? '가위바위보' : '도둑잡기') +
+            ' · ' + (item.passed ? '통과' : '실패') +
+            ' · ' + item.name
+          ).join('\n') +
+          '\n\n운영 기록은 변경하지 않았습니다.' +
+          '\n이 결과는 가상 기록의 순위 계산 검사입니다.' +
+          '\n실제 마감 후 표시·연락처 저장·DB 지연 검증은 포함하지 않습니다.';
+      } catch (error) {
+        result.textContent = '확인 필요: ' + error.message;
+      } finally {
+        passwordInput.value = '';
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
