@@ -5,9 +5,9 @@
 // POST /api/rps { action: 'stop', token } → 지금 연승으로 기록 저장 { ended: true, rank }
 // contact·admin·reset·GET(랭킹)은 공통 (_lib/board.js). 기록은 gist의 rps.json { records: [{ id, name, streak, at, end }] }
 //
-// 판정은 서버가 한다(브라우저가 결과를 정하지 않음). 진행 중인 연승은 서명한 토큰(HMAC, 방명록 비밀번호와 같은 비밀키)에 들어 있어 저장 없이 이어가고,
-// 도전이 끝날 때(짐·그만하기)만 기록 + 그 토큰을 "끝남"으로 표시 → 진 토큰으로 다시 내기 불가.
-// ponytail: 한 토큰으로 동시에 여러 번 요청하면 끝남 표시 전에 결과를 골라낼 수 있음 — 막으려면 라운드마다 저장해야 해서 안 함
+// 승패는 서버가 판정하며, 진행 중인 연승은 서명한 토큰에 담는다.
+// 매 라운드 DB 행 잠금 안에서 이전 토큰을 확인·소모하고, 승리·무승부이면 새 토큰을 반환한다.
+// 종료 기록은 패배·그만하기 때 저장한다. 동일 토큰 재사용 차단의 실제 실행 검증은 별도로 진행한다.
 
 import { randomInt } from 'node:crypto';
 import { Board } from './_lib/board.js';
