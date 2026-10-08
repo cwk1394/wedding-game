@@ -35,8 +35,40 @@ export class Board {
     throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
   }
 
-      async readDb() {
+        async readDb() {
     return readGameState(this.dbGame());
+  }
+
+  // DB용 랭킹 조회. 게임별 GET 연결 전까지는 실행되지 않는다.
+  async getDb(request) {
+    const cors = {
+      ...corsHeaders(request),
+      'Cache-Control': 'no-store',
+    };
+
+    try {
+      const id = new URL(request.url).searchParams.get('id');
+      const data = await this.readDb();
+      const { records, contacts } = data;
+
+      const mine = id
+        ? records.filter((r) => r.id === id).slice(-10).reverse()
+        : [];
+
+      return json({
+        ranking: this.ranking(records),
+        mine,
+        total: records.length,
+        hasContact: Boolean(id && contacts[id]),
+        prize: this.result(id, data).prize,
+      }, 200, cors);
+    } catch (err) {
+      return json({
+        error: err instanceof HttpError
+          ? err.message
+          : '기록을 불러오지 못했어요.',
+      }, err instanceof HttpError ? err.status : 500, cors);
+    }
   }
 
   // DB용 연락처 저장. 공통 요청 연결 전까지는 실행되지 않는다.
