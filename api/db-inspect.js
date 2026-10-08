@@ -1,4 +1,5 @@
 // 관리자 전용 이관 준비 점검: Gist와 DB를 조회만 한다.
+import { isDeepStrictEqual } from 'node:util';
 import { readGistSnapshot } from './_lib/gist-snapshot.js';
 import { withDbClient } from './_lib/db.js';
 import {
@@ -62,16 +63,46 @@ export function POST(request) {
       );
     }
 
-    const database = await withDbClient(async (client) => {
+        const database = await withDbClient(async (client) => {
+      const before = await readGistSnapshot();
+
       const result = await client.query(`
         SELECT game, data, revision
         FROM public.wedding_game_state
         ORDER BY game
       `);
 
+      const after = await readGistSnapshot();
+
+      if (!isDeepStrictEqual(before, after)) {
+        throw new HttpError(
+          409,
+          '비교 중 Gist 원본이 바뀌었어요. 게임과 연락처 등록을 멈춘 뒤 확인해 주세요.'
+        );
+      }
+
+      if (result.rows.length !== 2) {
+        throw new HttpError(
+          409,
+          'DB에 두 게임의 자료가 모두 있는지 확인해야 해요.'
+        );
+      }
+
+      for (const game of ['rps', 'chase']) {
+        const row = result.rows.find((item) => item.game === game);
+
+        if (!row || !isDeepStrictEqual(row.data, before[game])) {
+          throw new HttpError(
+            409,
+            `${game}의 Gist 원본과 DB 내용이 달라요. 저장소 전환을 중단해 주세요.`
+          );
+        }
+      }
+
       return result.rows.map((row) => ({
         game: row.game,
         revision: String(row.revision),
+        fullMatch: true,
         ...summarize(row.data),
       }));
     });
