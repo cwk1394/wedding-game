@@ -15,12 +15,12 @@ const MAX_MS = 10 * 60 * 1000; // 이보다 오래 버틴 기록은 이 값으�
 const board = new Board({ file: 'chase.json', score: 'ms', tokenKey: 'chase', ttl: 60 * 60 * 1000 });
 
 export const OPTIONS = preflight;
-export const GET = (request) => board.get(request);
+export const GET = (request) => board.getDb(request);
 
 export function POST(request) {
-    const receivedAt = Date.now();
+  const receivedAt = Date.now();
   return handlePost(request, async (body) => {
-    const common = await board.common(body);
+    const common = await board.commonDb(body);
     if (common) return common;
     if (body.action === 'start') {
       const { data, id } = await findGuest(body);
@@ -29,7 +29,7 @@ export function POST(request) {
     if (body.action === 'end') {
       const run = board.verify(body.token);
       const ms = Math.min(MAX_MS, Math.max(0, receivedAt - run.t - COUNTDOWN));
-      return { status: 200, body: { ms, ...(await board.finish(run, ms, undefined, receivedAt)) } };
+      return { status: 200, body: { ms, ...(await board.finishDb(run, ms, receivedAt)) } };
     }
     throw new HttpError(400, '알 수 없는 요청이에요.');
   });
