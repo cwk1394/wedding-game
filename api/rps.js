@@ -32,14 +32,82 @@ export function POST(request) {
     }
         const run = board.verify(body.token);
     if (body.action === 'stop') return { status: 200, body: { streak: run.s, ...(await board.finishDb(run, run.s, receivedAt)) } };
-    if (body.action === 'play') {
-      if (!HANDS.includes(body.choice)) throw new HttpError(400, '가위·바위·보 중에 골라 주세요.');
-      if ((await board.readDb()).burned[run.n]) throw new HttpError(409, '이미 끝난 도전이에요. 다시 도전해 주세요.');
-      const cpu = HANDS[randomInt(3)];
-      const result = cpu === body.choice ? 'draw' : HANDS[(HANDS.indexOf(body.choice) + 1) % 3] === cpu ? 'win' : 'lose';
-      if (result === 'lose') return { status: 200, body: { result, cpu, streak: run.s, ...(await board.finishDb(run, run.s, receivedAt)) } };
-      const streak = run.s + (result === 'win' ? 1 : 0);
-      return { status: 200, body: { result, cpu, streak, token: board.sign({ id: run.id, name: run.name, s: streak, t: run.t }) } };
+        if (body.action === 'play') {
+      if (!HANDS.includes(body.choice)) {
+        throw new HttpError(400, '가위·바위·보 중에 골라 주세요.');
+      }
+
+      const response = await board.updateDb((data) => {
+        const now = Date.now();
+
+        if (run.e < now) {
+          throw new HttpError(
+            410,
+            '도전 시간이 지났어요. 다시 도전해 주세요.'
+          );
+        }
+
+        if (data.burned[run.n]) {
+          throw new HttpError(
+            409,
+            '이미 사용한 도전 정보예요. 같은 요청을 다시 처리하지 않았어요.'
+          );
+        }
+
+        // 같은 게임의 행 잠금 안에서만 판정한다.
+        const cpu = HANDS[randomInt(3)];
+        const result = cpu === body.choice
+          ? 'draw'
+          : HANDS[(HANDS.indexOf(body.choice) + 1) % 3] === cpu
+            ? 'win'
+            : 'lose';
+
+        // 승리·무승부·패배 모두 이전 토큰을 한 번만 사용한다.
+        data.burned = Object.fromEntries(
+          Object.entries(data.burned).filter(([, e]) => e > now)
+        );
+        data.burned[run.n] = run.e;
+
+        if (result === 'lose') {
+          data.records.push({
+            id: run.id,
+            name: run.name,
+            streak: run.s,
+            at: new Date(run.t).toISOString(),
+            end: new Date(receivedAt).toISOString(),
+          });
+
+          return {
+            status: 200,
+            body: {
+              result,
+              cpu,
+              streak: run.s,
+              ...board.result(run.id, data),
+            },
+          };
+        }
+
+        const streak = run.s + (result === 'win' ? 1 : 0);
+        const token = board.sign({
+          id: run.id,
+          name: run.name,
+          s: streak,
+          t: run.t,
+        });
+
+        return {
+          status: 200,
+          body: {
+            result,
+            cpu,
+            streak,
+            token,
+          },
+        };
+      });
+
+      return response;
     }
     throw new HttpError(400, '알 수 없는 요청이에요.');
   });
