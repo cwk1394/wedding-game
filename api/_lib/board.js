@@ -35,8 +35,61 @@ export class Board {
     throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
   }
 
-        async readDb() {
+          async readDb() {
     return readGameState(this.dbGame());
+  }
+
+  // DB용 공통 요청. 게임별 POST 연결 전까지는 실행되지 않는다.
+  async commonDb(body) {
+    if (body.action === 'contact') {
+      return {
+        status: 200,
+        body: await this.saveContactDb(body),
+      };
+    }
+
+    if (body.action !== 'admin' && body.action !== 'reset') {
+      return null;
+    }
+
+    // 관리자 인증을 통과해야 DB 조회 및 연락처 복호화 가능
+    checkDevPassword(body.password);
+
+    // 초기화는 DB에서도 차단. 자료를 읽거나 변경하지 않는다.
+    if (body.action === 'reset') {
+      throw new HttpError(
+        403,
+        '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.'
+      );
+    }
+
+    const data = await this.readDb();
+    const { records, contacts, prizeRecords } = data;
+
+    const top = this.ranking(records).map((r) => ({
+      ...r,
+      contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
+    }));
+
+    const prizeTop = this.prizeRanking([
+      ...prizeRecords,
+      ...records,
+    ]).map((r) => ({
+      ...r,
+      contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
+    }));
+
+    return {
+      status: 200,
+      body: {
+        ranking: top,
+        total: records.length,
+        prize: {
+          ...this.result(null, data).prize,
+          ranking: prizeTop,
+        },
+      },
+    };
   }
 
   // DB용 랭킹 조회. 게임별 GET 연결 전까지는 실행되지 않는다.
