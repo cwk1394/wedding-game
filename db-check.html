@@ -43,14 +43,25 @@
         if (!response.ok) {
           throw new Error(data.error || '접속 확인에 실패했어요.');
         }
-                if (
-          data.ok !== true ||
-          data.readOnly !== true ||
-          !Array.isArray(data.source) ||
-          !Array.isArray(data.database)
-        ) {
-          throw new Error('예상한 기록 수 조회 결과가 아니에요.');
-        }
+                      if (
+        data.ok !== true ||
+        data.readOnly !== true ||
+        !Array.isArray(data.source) ||
+        !Array.isArray(data.database)
+      ) {
+        throw new Error('예상한 기록 수 조회 결과가 아니에요.');
+      }
+
+      if (
+        data.database.length !== 2 ||
+        !['rps', 'chase'].every((game) =>
+          data.database.some((item) =>
+            item.game === game && item.fullMatch === true
+          )
+        )
+      ) {
+        throw new Error('두 게임의 전체 내용 일치를 확인하지 못했어요. 저장소 전환을 진행하지 마세요.');
+      }
 
         const describe = (item) =>
           (item.game === 'rps' ? '가위바위보' : '도둑잡기') +
@@ -60,7 +71,7 @@
           '\n사용한 토큰 정보: ' + item.burned + '개';
 
         result.textContent =
-          '기록 수 조회 성공 (조회만 실행)\n\n' +
+                  '복사 후 전체 비교 성공 (조회만 실행)\n가위바위보·도둑잡기 모두 Gist와 DB 전체 내용 일치\n\n' +
           '[기존 Gist]\n' +
           data.source.map(describe).join('\n\n') +
           '\n\n[새 DB]\n' +
