@@ -40,10 +40,10 @@ class Controller {
     character.setControlled(true);
     this.controlled = character;
     this.pad.hidden = !matchMedia('(pointer: coarse)').matches;
-    if (zoom) {
+        if (zoom) {
       const view = this.scene.view;
       view.touched = true;
-      view.zoom = CONFIG.view.controlZoom * DPR;
+      view.zoom = view.coverZoom;
       view.center = { x: character.x, y: character.y - 40 };
       view.apply();
     }
