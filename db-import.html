@@ -3,94 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>관리자 기록 최초 복사</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <title>DB 최초 복사 기능 사용 중단</title>
 </head>
 <body>
-  <h1>관리자 기록 최초 복사</h1>
-  <p>Gist 원본을 빈 DB에 복사합니다. Gist 원본은 변경하지 않습니다.</p>
-  <p>DB에 자료가 있으면 덮어쓰지 않습니다. 게임 저장소는 아직 전환하지 않습니다.</p>
-
-  <form id="import-form">
-    <p>
-      <label for="password">개발자 비밀번호</label>
-      <input id="password" type="password" autocomplete="off" required />
-    </p>
-    <p>
-      <label>
-        <input id="confirmed" type="checkbox" required />
-        최신 Gist ZIP을 보관했고, 모든 이용자의 게임 도전과 연락처 등록을 멈췄습니다.
-      </label>
-    </p>
-    <button id="import-button" type="submit">빈 DB에 최초 복사</button>
-  </form>
-
-  <pre id="result" aria-live="polite" style="white-space: pre-wrap;"></pre>
-
-  <script>
-    const form = document.getElementById('import-form');
-    const passwordInput = document.getElementById('password');
-    const button = document.getElementById('import-button');
-    const result = document.getElementById('result');
-    let submitted = false;
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (submitted) return;
-      if (!confirm('두 게임의 Gist 기록을 빈 DB에 복사할까요?')) return;
-
-      submitted = true;
-      button.disabled = true;
-      result.textContent = '복사 확인 중… 창을 닫거나 다시 누르지 마세요.';
-
-      try {
-        const payload = JSON.stringify({
-          password: passwordInput.value,
-          confirmation: 'COPY_GIST_TO_EMPTY_DB'
-        });
-        passwordInput.value = '';
-
-        const response = await fetch('/api/db-import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          cache: 'no-store',
-          body: payload
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || '복사 결과를 확인하지 못했어요.');
-        }
-        if (
-          data.ok !== true ||
-          data.copied !== true ||
-          data.verifiedBeforeCommit !== true ||
-          !Array.isArray(data.games)
-        ) {
-          throw new Error('예상한 복사 결과가 아니에요.');
-        }
-
-        result.textContent =
-          '최초 복사 성공\n저장 확정 전 원본·DB 전체 내용 비교 통과\n\n' +
-          data.games.map((item) =>
-            (item.game === 'rps' ? '가위바위보' : '도둑잡기') +
-            '\n일반 기록: ' + item.records +
-            '\n경품 보존 기록: ' + item.prizeRecords +
-            '\n등록 연락처: ' + item.contacts +
-            '\n사용한 토큰 정보: ' + item.burned
-          ).join('\n\n') +
-          '\n\n게임 저장소는 아직 Gist입니다.' +
-          '\n게임·연락처 등록을 재개하지 말고, 복사 후 재비교를 진행하세요.';
-      } catch (error) {
-        result.textContent =
-          '확인 필요: ' + error.message +
-          '\n\n다시 복사 버튼을 누르지 마세요.' +
-          '\n통신 오류라면 실제 저장 여부가 불확실할 수 있습니다.' +
-          '\n결과 화면을 전달하고 DB 상태부터 확인하세요.';
-      } finally {
-        passwordInput.value = '';
-      }
-    });
-  </script>
+  <h1>DB 이전 완료</h1>
+  <p>DB 이전이 완료되어 최초 복사 기능을 사용하지 않습니다.</p>
+  <p>현재 게임 기록과 경품 연락처는 DB에 저장됩니다.</p>
+  <p>이 페이지는 안내만 표시하며, DB·Gist 조회나 변경 요청을 보내지 않습니다.</p>
+  <p><a href="/">게임으로 돌아가기</a></p>
 </body>
 </html>
