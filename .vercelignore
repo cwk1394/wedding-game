@@ -1,4 +1,5 @@
 .git/
 .github/
 node_modules/
-img/gallery/
+img/gallery/*
+!img/gallery/wonki-hyewon/
