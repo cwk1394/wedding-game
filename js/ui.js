@@ -129,9 +129,36 @@ const UI = (() => {
     const statsEl = document.getElementById('modal-stats');
     statsEl.hidden = !stats;
     if (stats) renderStats(statsEl, stats);
-    document.getElementById('modal-short').textContent = shortMsg ? `“${shortMsg}”` : '';
-    document.getElementById('modal-long').textContent = longMsg || '';
+        document.getElementById('modal-short').textContent = shortMsg ? `“${shortMsg}”` : '';
+    const longEl = document.getElementById('modal-long');
+    const message = longMsg || '';
+    longEl.textContent = message;
+
+    if (name === '웨딩카' && message.includes('\n설명: ')) {
+      const splitAt = message.indexOf('\n설명: ');
+      const description = document.createElement('span');
+      description.style.display = 'flex';
+      description.style.textAlign = 'left';
+
+      const label = document.createElement('span');
+      label.textContent = '설명: ';
+      label.style.flexShrink = '0';
+      label.style.whiteSpace = 'pre';
+
+      const body = document.createElement('span');
+      body.textContent = message.slice(splitAt + '\n설명: '.length);
+      body.style.minWidth = '0';
+      body.style.whiteSpace = 'pre-wrap';
+      body.style.overflowWrap = 'anywhere';
+      description.append(label, body);
+      longEl.replaceChildren(
+        document.createTextNode(message.slice(0, splitAt)),
+        description
+      );
+    }
+
     const avatar = document.getElementById('modal-avatar');
+
     avatar.parentElement.hidden = !avatarUrl;
     if (avatarUrl) avatar.src = avatarUrl;
     viewModal.open();
