@@ -90,7 +90,7 @@ const MAP_DATA = {
     "cat-byeol": {"shortMsg":"미야옹~","longMsg":"신랑의 누나가 키우는 고양이다.\n가끔 신랑 집에 머물며 자연스럽게 신랑의 주인 노릇을 한다.\n겁이 많아 낯선 사람이 오면 숨어서 바들바들 떨지만, 30분쯤 지나면 호기심을 못 참고 슬그머니 나와 부비댄다.\n지금은 누나 집에서 아기와 동고동락 중이다.","floor":"heartBridge","x":746},
     "groom": {"name":"신랑","shortMsg":"와줘서 고마워!","longMsg":"바쁘신 와중에 저희 결혼식에 와주셔서 진심으로 감사드립니다.\n행복하게 잘 살겠습니다!"},
     "bride": {"name":"신부","shortMsg":"행복하게 살게요","longMsg":"함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요 :)"},
-    "album-studio": {"name":"제주 사진 앨범","shortMsg":"제주도 셀프 스냅도 찍었어요 !","longMsg":"스튜디오 사진 앨범","mode":"fixed","x":552,"y":221,"album":"studio","def":{"desc":"둥둥 떠있는 빨간 하트 풍선에 매달려있는 사진앨범","height":100,"motions":[]}},
+        "album-studio": {"name":"제주 사진 앨범","shortMsg":"제주도 셀프 스냅도 찍었어요 !","longMsg":"스튜디오 사진 앨범","mode":"fixed","x":552,"y":221,"album":"studio","def":{"desc":"둥둥 떠있는 빨간 하트 풍선에 매달려있는 사진앨범","height":100,"motions":[]},"deleted":true},
     "album-jeju": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"제주도 스냅사진 앨범","mode":"fixed","x":668,"y":793,"album":"jeju","def":{"desc":"둥둥 떠있는 노란색 하트 풍선에 매달려있는 사진앨범","height":90,"motions":[]}},
     "wedding-car": {"name":"웨딩카","shortMsg":"","longMsg":"분류: 탈것 (캐시)\n옵션: 이동속도 +150%, 행복 +200%\n설명: 원기와 혜원이의 새로운 출발을 위한 웨딩카\n하객 여러분의 축복으로 주유 완료 ⛽","mode":"fixed","x":391,"y":910},
     "rps-machine": {"shortMsg":"연승 도전! 🎁","longMsg":"","mode":"fixed","x":987,"y":1078},
