@@ -80,7 +80,7 @@ const MAP_DATA = {
   couple: {"groom":{"floor":"stage1","x":727},"bride":{"floor":"stage1","x":787}}, // 신랑·신부 자리 { groom: { floor, x }, bride: { floor, x }, fixed } (null이면 무대 가운데, fixed면 자리 고정·아니면 무대 안에서 돌아다님)
   // NPC 설정 (js/npcs.js 값을 덮어씀) { name, shortMsg, longMsg, mode: fixed|random|stage, floor, x, y } — mode 없으면 처음 발판에서 돌아다님. def가 있으면 개발자 모드에서 추가한 NPC { desc, height, motions }, album이면 앨범 NPC(img/gallery/<album>/), deleted면 기본 NPC 숨김
   npcs: {
-    "dog-mongsil": {"shortMsg":"🐾 꽃길만 걷자 💐 ","longMsg":"신랑이 초등학생 때부터 함께 지낸 페키니즈 강아지다.\n페키니즈 특유의 귀여운 멍청미를 지니고 있다.\n지금은 강아지별에 살고 있지만, 결혼 소식을 듣고 잠시 놀러왔다.\n분홍색 삑삑이 장난감을 무척 아껴 언제나 품에 지니고 다닌다.","floor":"upperRoute_1","x":881},
+    "dog-mongsil": {"shortMsg":"🐾 꽃길만 걷자 💐 ","longMsg":"신랑이 초등학생 때부터 함께 지낸 페키니즈 강아지다.\n페키니즈 특유의 귀여운 멍청미를 지니고 있다.\n지금은 강아지별에 살고 있지만, 결혼 소식을 듣고 잠시 놀러왔다.\n분홍색 삑삑이 장난감을 무척 아껴 언제나 품에 지니고 다닌다.","floor":"upperRoute_1","x":475},
     "dog-esso": {"shortMsg":"🐶 멍멍! 축하하러 왔멍~","longMsg":"신랑 부모님이 키우는 보더콜리 강아지다.\n아주 영리하고 리더십이 강하다.\n최근 질투심에 고양이밥을 몰래 훔쳐 먹다가 살이 쪄, 리트리버와 분간이 잘 되지 않는다.\n현재는 포도밭을 누비며 행복하게 살고 있다.","floor":"middleRoute","x":419},
     "cat-ongi": {"shortMsg":"🐱 천년만년 행복하라냥~","longMsg":"신부가 키우던 첫째 반려묘다.\n식구들에게는 개냥이지만 낯선 사람에게는 호랑이로 돌변한다.\n처음에는 미미, 복실이를 쥐 잡듯 잡았지만 나중에는 어엿한 식구로 인정해주었다.\n지금은 미미, 복실이와 함께 고양이별에서 살고 있다.","floor":"f23","x":247},
     "cat-mimi": {"shortMsg":"냐옹~","longMsg":"신부가 키우던 둘째 반려묘다.\n세상 모든 것이 조금 무서운 겁쟁이다.\n그래도 옹이와 복실이 사이에서는 나름대로 씩씩하게 살아왔다.\n지금은 둘과 함께 고양이별에서 평화롭게 지내고 있다.","floor":"lowerRoute_1","x":823},
