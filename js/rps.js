@@ -167,7 +167,7 @@ const Rps = (() => {
         stage.classList.remove('rolling');
         cpuHand.textContent = '';
         UI.showToast(err.message, 3000);
-        if (/끝난|지났|잘못/.test(err.message)) end(null);
+                if (/끝난|지났|잘못|이미 사용한/.test(err.message)) end(null);
       } finally {
         busy = false;
         play.classList.remove('busy');
