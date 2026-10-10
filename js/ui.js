@@ -701,7 +701,12 @@ const UI = (() => {
       if (!side) return '누구의 하객인지 골라 주세요.';
       if (!relation) return '어떤 사이인지 골라 주세요.';
     }
-    if (n === 2 && !personality) return '캐릭터 성향을 골라 주세요.';
+        if (n === 2) {
+      if (!personality) return '캐릭터 성향을 골라 주세요.';
+      if (!generating && (!preparing || frontPreview.hidden)) {
+        return '아래의 ‘캐릭터 생성’ 버튼을 눌러 캐릭터를 먼저 만들어 주세요. 사진 없이도 만들 수 있어요.';
+      }
+    }
     if (n === 3 && (!shortMsg || !longMsg)) return '한줄 멘트와 방명록을 모두 입력해 주세요.';
     if (n === 4 && [...password].length < 4) return '비밀번호를 4자 이상 입력해 주세요.';
     return '';
@@ -893,7 +898,15 @@ const UI = (() => {
     prevBtn.disabled = true;
     submitBtn.textContent = '등록 중...';
     try {
-      const images = await (preparing ?? Promise.resolve(null));
+            const images = await (preparing ?? Promise.resolve(null));
+      if (
+        !images ||
+        typeof images.front !== 'string' ||
+        !images.front.trim()
+      ) {
+        showStep(2);
+        throw new Error('캐릭터 이미지가 준비되지 않았어요. ‘캐릭터 생성’ 버튼으로 캐릭터를 만든 뒤 등록해 주세요.');
+      }
       const guest = await submitGuestbook({ name, shortMsg, longMsg, password, side, relation, personality, title, stats, images });
       myGuest.set(guest.id);
       myCreated.add(guest.id);
