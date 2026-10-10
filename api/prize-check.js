@@ -144,11 +144,95 @@ export function POST(request) {
         ['a', 'b', 'c', 'd']
       );
 
-      check(
+            check(
         game,
         '경품은 TOP 3까지만',
         board.prizeRanking(candidates).map((r) => r.id),
         ['a', 'b', 'c']
+      );
+
+      // 등록 가능 여부 계산만 검사한다.
+      // 실제 캐릭터 인증·연락처 저장·403 응답·DB 잠금은 검사하지 않는다.
+      for (const [id, expectedRank] of [
+        ['a', 1],
+        ['b', 2],
+        ['c', 3],
+      ]) {
+        const prize = board.result(id, state(candidates)).prize;
+
+        check(
+          game,
+          `경품 ${expectedRank}위 연락처 등록 가능 여부`,
+          {
+            rank: prize.rank,
+            canContact: prize.canContact,
+          },
+          {
+            rank: expectedRank,
+            canContact: true,
+          }
+        );
+      }
+
+      for (const [id, label] of [
+        ['d', '경품 4위'],
+        ['zero', '0점 캐릭터'],
+        ['missing', '기록 없는 캐릭터'],
+      ]) {
+        const prize = board.result(id, state(candidates)).prize;
+
+        check(
+          game,
+          `${label} 연락처 등록 불가 여부`,
+          {
+            rank: prize.rank,
+            canContact: prize.canContact,
+          },
+          {
+            rank: null,
+            canContact: false,
+          }
+        );
+      }
+
+      const lateLeader = record('d', 99, deadline + 1);
+      const withLateRecord = state(
+        [...candidates, lateLeader],
+        candidates
+      );
+
+      const outsider = board.result('d', withLateRecord);
+
+      check(
+        game,
+        '마감 후 기록으로 일반 1위여도 경품 자격 없음',
+        {
+          generalRank: outsider.rank,
+          prizeRank: outsider.prize.rank,
+          canContact: outsider.prize.canContact,
+        },
+        {
+          generalRank: 1,
+          prizeRank: null,
+          canContact: false,
+        }
+      );
+
+      const retained = board.result('c', withLateRecord);
+
+      check(
+        game,
+        '마감 후 기록 추가에도 기존 경품 3위 자격 유지',
+        {
+          generalRank: retained.rank,
+          prizeRank: retained.prize.rank,
+          canContact: retained.prize.canContact,
+        },
+        {
+          generalRank: 4,
+          prizeRank: 3,
+          canContact: true,
+        }
       );
     }
 
