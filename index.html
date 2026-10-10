@@ -380,6 +380,27 @@
     </form>
   </div>
 
+    <!-- 다른 기기에서 만든 내 캐릭터 접속: 기존 비밀번호 확인 -->
+  <div id="character-auth-modal" class="modal" hidden>
+    <form id="character-auth-form" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="character-auth-title" novalidate>
+      <div class="modal-header">
+        <span id="character-auth-title" class="modal-title">내 캐릭터 비밀번호 확인</span>
+        <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body form-body">
+        <p class="character-auth-name"></p>
+        <label class="field">
+          <span>비밀번호 <small>(이 캐릭터를 등록할 때 정한 비밀번호)</small></span>
+          <input name="password" type="password" maxlength="30" autocomplete="off" />
+        </label>
+        <p class="form-error" role="alert" hidden></p>
+      </div>
+      <div class="modal-footer modal-footer-end">
+        <button type="submit" class="btn btn-primary character-auth-submit">확인 후 시작</button>
+      </div>
+    </form>
+  </div>
+
   <!-- 캐릭터 선택 (로비의 "내 캐릭터로 접속"): 항상 전체 화면 -->
   <div id="select-modal" class="modal select-screen" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="select-title">
