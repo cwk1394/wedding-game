@@ -1116,7 +1116,7 @@ const UI = (() => {
   function renderSelect() {
     const mineIds = myCreated.get();
     const all = sortedGuests();
-    selectEl.querySelector('#select-title').textContent = showOthers ? '다른 캐릭터' : '내 캐릭터';
+        selectEl.querySelector('#select-title').textContent = showOthers ? '내 캐릭터 찾기' : '내 캐릭터';
     selectEl.querySelector('.select-mine').hidden = showOthers;
     selectEl.querySelector('.select-others').hidden = !showOthers;
 
@@ -1183,12 +1183,137 @@ const UI = (() => {
     return li;
   }
 
-  function startSelected() {
-    if (!selected) return;
-    myGuest.set(selected.id);
-    selectModal.close();
-    UI.onGuestPicked?.(selected);
+    // 다른 기기에서 만든 내 캐릭터: 서버 비밀번호 확인 후 시작
+  const characterAuthEl = document.getElementById('character-auth-modal');
+  const characterAuthForm = document.getElementById('character-auth-form');
+  const characterAuthPassword = characterAuthForm.elements.password;
+  const characterAuthError = characterAuthForm.querySelector('.form-error');
+  const characterAuthSubmit = characterAuthForm.querySelector('.character-auth-submit');
+  let characterAuthSession = null;
+  let characterAuthOpenedAt = 0;
+
+  selectEl.querySelector('.select-others-btn').textContent =
+    '다른 기기에서 만든 내 캐릭터 찾기';
+
+  function setCharacterAuthError(message) {
+    characterAuthError.textContent = message || '';
+    characterAuthError.hidden = !message;
   }
+
+  function closeCharacterAuth(returnToSelect = true) {
+    // 창을 닫은 뒤 늦게 도착한 인증 응답으로 시작하지 않도록 무효화
+    characterAuthSession = null;
+    characterAuthPassword.value = '';
+    characterAuthSubmit.disabled = false;
+    characterAuthSubmit.textContent = '확인 후 시작';
+    setCharacterAuthError('');
+    characterAuthEl.hidden = true;
+    if (returnToSelect) selectModal.open();
+    else notifyModalChange();
+  }
+
+  closers.set(characterAuthEl, () => closeCharacterAuth());
+
+  characterAuthEl.addEventListener('click', (e) => {
+    if (Date.now() - characterAuthOpenedAt < 400) return;
+    if (e.target.closest('[data-close]')) closeCharacterAuth();
+  });
+
+  function beginSelectedCharacter(info) {
+    // 찾은 캐릭터를 '이 브라우저에서 생성한 캐릭터'로 자동 편입하지 않음.
+    // 구형 myGuestId 호환 처리로 다음 접속 때 잘못 편입되는 것도 방지.
+    const createdIds = myCreated.get();
+    if (!createdIds.includes(info.id)) {
+      try {
+        localStorage.setItem('myGuestIds', JSON.stringify(createdIds));
+      } catch {
+        UI.showToast('브라우저 저장소를 사용할 수 없어 접속 정보를 기억하지 못할 수 있어요.');
+        selectModal.close();
+        UI.onGuestPicked?.(info);
+        return;
+      }
+    }
+
+    myGuest.set(info.id);
+    selectModal.close();
+    UI.onGuestPicked?.(info);
+  }
+
+  function startSelected() {
+    if (!selected || characterAuthSession) return;
+    const info = selected;
+
+    // 내 캐릭터 목록에서는 기존 접속 방식 유지
+    if (!showOthers) {
+      beginSelectedCharacter(info);
+      return;
+    }
+
+    if (!info.id || !info.number) {
+      return UI.showToast('캐릭터의 방명록 정보를 확인할 수 없어요. 새로고침 후 다시 시도해 주세요.');
+    }
+
+    characterAuthSession = { info, busy: false };
+    characterAuthPassword.value = '';
+    setCharacterAuthError('');
+    characterAuthSubmit.disabled = false;
+    characterAuthSubmit.textContent = '확인 후 시작';
+    characterAuthForm.querySelector('.character-auth-name').textContent =
+      `${info.name} 캐릭터를 등록할 때 정한 비밀번호를 입력해 주세요.`;
+
+    // 선택 화면 뒤에 인증창이 가려지지 않도록 선택 화면을 잠시 닫음
+    selectModal.close();
+    characterAuthOpenedAt = Date.now();
+    characterAuthEl.hidden = false;
+    notifyModalChange();
+    characterAuthPassword.focus();
+  }
+
+  characterAuthForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const session = characterAuthSession;
+    if (!session || session.busy) return;
+
+    const password = characterAuthPassword.value;
+    if (!password) {
+      setCharacterAuthError('비밀번호를 입력해 주세요.');
+      characterAuthPassword.focus();
+      return;
+    }
+
+    session.busy = true;
+    characterAuthSubmit.disabled = true;
+    characterAuthSubmit.textContent = '확인 중...';
+    setCharacterAuthError('');
+    characterAuthPassword.value = '';
+
+    try {
+      const response = await manageGuestbook('verify', {
+        number: session.info.number,
+        id: session.info.id,
+        password,
+      });
+
+      // 취소하거나 다른 인증창을 연 뒤 도착한 응답은 무시
+      if (characterAuthSession !== session || characterAuthEl.hidden) return;
+      if (response?.ok !== true) {
+        throw new Error('비밀번호 확인 결과를 확인하지 못했어요. 다시 시도해 주세요.');
+      }
+
+      closeCharacterAuth(false);
+      beginSelectedCharacter(session.info);
+    } catch (err) {
+      if (characterAuthSession !== session || characterAuthEl.hidden) return;
+      setCharacterAuthError(err.message || '비밀번호를 확인하지 못했어요.');
+      characterAuthPassword.focus();
+    } finally {
+      if (characterAuthSession === session) {
+        session.busy = false;
+        characterAuthSubmit.disabled = false;
+        characterAuthSubmit.textContent = '확인 후 시작';
+      }
+    }
+  });
 
   selectSearch.addEventListener('input', renderSelect);
   const setOthers = (on) => {
