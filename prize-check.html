@@ -51,12 +51,12 @@
           throw new Error(data.error || '검사 요청에 실패했어요.');
         }
 
-        if (
+                if (
           data.memoryOnly !== true ||
           typeof data.ok !== 'boolean' ||
           !Array.isArray(data.checks) ||
-          data.total !== 18 ||
-          data.checks.length !== 18 ||
+          data.total !== 34 ||
+          data.checks.length !== 34 ||
           !data.checks.every((item) =>
             item &&
             ['rps', 'chase'].includes(item.game) &&
@@ -64,32 +64,33 @@
             typeof item.passed === 'boolean'
           ) ||
           !['rps', 'chase'].every((game) =>
-            data.checks.filter((item) => item.game === game).length === 9
+            data.checks.filter((item) => item.game === game).length === 17
           )
         ) {
-          throw new Error('예상한 18개 검사 결과가 아니에요.');
+          throw new Error('예상한 34개 검사 결과가 아니에요.');
         }
 
         const passed = data.checks.filter((item) => item.passed).length;
 
         if (
           data.passed !== passed ||
-          data.ok !== (passed === 18)
+          data.ok !== (passed === 34)
         ) {
           throw new Error('검사 결과 집계가 일치하지 않아요.');
         }
 
         result.textContent =
-          (data.ok ? '순위 계산 검사 통과' : '실패 항목 확인 필요') +
-          '\n통과: ' + passed + ' / 18\n\n' +
+          (data.ok ? '순위·연락처 등록 가능 여부 계산 검사 통과' : '실패 항목 확인 필요') +
+          '\n통과: ' + passed + ' / 34\n\n' +
           data.checks.map((item) =>
             (item.game === 'rps' ? '가위바위보' : '도둑잡기') +
             ' · ' + (item.passed ? '통과' : '실패') +
             ' · ' + item.name
           ).join('\n') +
           '\n\n운영 기록은 변경하지 않았습니다.' +
-          '\n이 결과는 가상 기록의 순위 계산 검사입니다.' +
-          '\n실제 마감 후 표시·연락처 저장·DB 지연 검증은 포함하지 않습니다.';
+          '\n이 결과는 가상 기록의 순위·연락처 등록 가능 여부 계산 검사입니다.' +
+          '\n실제 캐릭터 인증·연락처 저장·403 응답·DB 잠금 및 지연 검증은 포함하지 않습니다.' +
+          '\n서버 시계는 변경하지 않았으며, 실제 마감 후 화면의 closed 전환도 검사하지 않았습니다.';
       } catch (error) {
         result.textContent = '확인 필요: ' + error.message;
       } finally {
