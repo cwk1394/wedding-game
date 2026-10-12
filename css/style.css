@@ -1236,3 +1236,19 @@ fieldset.chip-field legend { margin-bottom: 8px; padding: 0; }
 }
 .chase-count.show { animation: chase-count .9s ease-out forwards; }
 @keyframes chase-count { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 45% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* 아이폰: 조작 버튼을 길게 눌러도 글자·영역이 선택되지 않도록 방지 */
+.ctl-pad,
+.ctl-pad * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* 조이스틱과 점프 버튼의 터치를 브라우저 기본 제스처와 분리 */
+.ctl-pad .ctl-stick,
+.ctl-pad .ctl-jump {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
