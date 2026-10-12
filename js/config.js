@@ -111,7 +111,7 @@ const CONFIG = {
   chase: {
     guests: 3,
     coupleSpeed: 2,
-    guestSpeed: 1.5,
+    guestSpeed: 2,
     minStartDist: 350, // 추격자는 내 캐릭터에서 이만큼 떨어진 곳에서 시작 (px)
     catchX: 20, // 추격자와 발 위치 차이가 이 안이면 잡힘 (px)
     catchY: 36,
