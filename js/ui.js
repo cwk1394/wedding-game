@@ -1193,7 +1193,7 @@ const UI = (() => {
   let characterAuthOpenedAt = 0;
 
   selectEl.querySelector('.select-others-btn').textContent =
-    '다른 기기에서 만든 내 캐릭터 찾기';
+    '다른 인터넷에서 만든 내 캐릭터 찾기';
 
   function setCharacterAuthError(message) {
     characterAuthError.textContent = message || '';
