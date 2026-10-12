@@ -43,7 +43,7 @@ class Controller {
         if (zoom) {
       const view = this.scene.view;
       view.touched = true;
-      view.zoom = view.coverZoom;
+            view.zoom = view.coverZoom * 1.1;
       view.center = { x: character.x, y: character.y - 40 };
       view.apply();
     }
