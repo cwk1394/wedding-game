@@ -764,8 +764,121 @@ html, body {
 .guest-text small.guest-meta { font-size: 11.5px; font-variant-numeric: tabular-nums; }
 
 /* 로비: 처음 접속 화면 (내 캐릭터로 접속 / 캐릭터 만들기) */
-.modal.lobby { background: radial-gradient(circle at 50% 40%, #fff, #ffe6df 75%); color: var(--ink); animation: none; }
-.lobby-card { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.modal.lobby {
+  padding: calc(10px + env(safe-area-inset-top, 0px))
+           16px
+           calc(10px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(circle at 50% 40%, #fff, #ffe6df 75%);
+  color: var(--ink);
+  animation: none;
+}
+.lobby-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* 로비 하단: 기존 안내와 별개의 제작·배포 안내 말풍선 */
+.lobby-notice {
+  position: relative;
+  flex: none;
+  width: min(300px, 84vw);
+  margin: 10px 0 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: center;
+  word-break: keep-all;
+  box-shadow: 0 4px 14px rgba(216, 88, 74, .12);
+}
+.lobby-notice::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: solid var(--line);
+  border-width: 1px 0 0 1px;
+  transform: translateX(-50%) rotate(45deg);
+}
+.lobby-notice strong {
+  color: var(--coral-deep);
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* 화면 높이가 부족하면 로비 여백부터 줄임 */
+@media (max-height: 740px) {
+  #lobby-modal .lobby-card {
+    gap: 4px;
+  }
+  #lobby-modal .loading-title {
+    margin-top: 6px;
+    font-size: 30px;
+  }
+  #lobby-modal .lobby-demo {
+    height: 68px;
+    margin-top: 0;
+  }
+  #lobby-modal .lobby-actions {
+    margin-top: 16px;
+    gap: 8px;
+  }
+  #lobby-modal .lobby-actions .btn {
+    padding: 13px 22px;
+  }
+}
+
+/* 더 낮은 화면에서는 캐릭터 표시 영역과 간격을 추가 축소 */
+@media (max-height: 620px) {
+  #lobby-modal .lobby-card {
+    gap: 3px;
+  }
+  #lobby-modal .loading-heart {
+    font-size: 32px;
+  }
+  #lobby-modal .loading-title {
+    margin-top: 2px;
+    font-size: 28px;
+  }
+  #lobby-modal .lobby-demo {
+    height: 40px;
+  }
+  #lobby-modal .lobby-intro {
+    margin-top: 2px;
+    padding: 8px 12px;
+    gap: 4px;
+    font-size: 12.5px;
+  }
+  #lobby-modal .lobby-actions {
+    margin-top: 10px;
+    gap: 6px;
+  }
+  #lobby-modal .lobby-actions .btn {
+    padding: 11px 18px;
+  }
+  #lobby-modal .lobby-guide {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  #lobby-modal .lobby-notice {
+    margin-top: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+}
 .lobby-actions { display: flex; flex-direction: column; gap: 10px; width: min(300px, 84vw); margin-top: 24px; }
 .lobby-actions .btn { padding: 16px 22px; border-radius: 16px; font-size: 16px; }
 /* 강조 버튼: 코랄 + 은은하게 번지는 링 / 안내 말풍선은 강조 버튼 바로 아래 */
