@@ -828,9 +828,10 @@ html, body {
     margin-top: 6px;
     font-size: 30px;
   }
-  #lobby-modal .lobby-demo {
-    height: 68px;
+    #lobby-modal .lobby-demo {
+    height: 104px;
     margin-top: 0;
+    flex-shrink: 0;
   }
   #lobby-modal .lobby-actions {
     margin-top: 16px;
@@ -853,8 +854,9 @@ html, body {
     margin-top: 2px;
     font-size: 28px;
   }
-  #lobby-modal .lobby-demo {
-    height: 40px;
+    #lobby-modal .lobby-demo {
+    height: 104px;
+    flex-shrink: 0;
   }
   #lobby-modal .lobby-intro {
     margin-top: 2px;
