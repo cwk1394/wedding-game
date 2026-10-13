@@ -1,11 +1,11 @@
 // 이벤트 NPC "도둑 잡기 경찰관":
-// 내 캐릭터가 도둑 → 신랑·신부와 하객 몇 명이 쫓아옴.
+// 내 캐릭터가 도둑 → 신랑·신부와 하객 몇 명이 쫓아온다.
 // 잡힐 때까지 버틴 시간을 기록한다 (api/chase.js).
-// - 시작: 비밀번호 확인 → 창 닫기 → 플레이 모드 → 카운트다운 → 추격
-// - 추격자는 GuestCharacter.tickControlled에 추격 입력을 전달한다.
-// - 추격자에 한해 공중 이동 목표에 도달하면 가로 속도를 멈춘다.
-// - 조종을 놓거나 다른 탭으로 가면 그 자리에서 종료한다.
-// - 랭킹·연락처·개발자 관리 칸은 공통 js/board.js를 사용한다.
+// - 추격자는 기존 GuestCharacter.tickControlled의 실제 이동 입력을 사용한다.
+// - 전체 경로를 유지하고, 다음 발판에 실제로 도착했을 때 구간을 완료한다.
+// - 목표에 접근하지 못하거나 이동 구간을 끝내지 못하면 대체 경로를 찾는다.
+// - 실패 구간 제외는 추격자마다 따로 적용하며 잠시 뒤 다시 사용할 수 있다.
+// - 일반 플레이어 물리·속도·잡힘 거리·기록 저장·경품 규칙은 변경하지 않는다.
 
 const Chase = (() => {
   const el = document.getElementById('chase-modal');
@@ -133,7 +133,7 @@ const Chase = (() => {
   // ---------- 게임 ----------
 
   function begin(s, me, token, countdown) {
-    hooks.play(); // 기존 플레이 모드 진입 동작 유지
+    hooks.play();
 
     // 추격자: 신랑·신부 + 나를 제외한 활성 하객 중 무작위 선택
     const others = Phaser.Utils.Array.Shuffle(
@@ -173,7 +173,6 @@ const Chase = (() => {
     hud.hidden = false;
     hud.querySelector('.chase-time').textContent = `⏱ ${fmtTime(0)}`;
 
-    // 3·2·1 → 도망쳐!
     const steps = Math.round(countdown / 1000);
 
     for (let i = 0; i <= steps; i++) {
@@ -229,7 +228,6 @@ const Chase = (() => {
     hud.querySelector('.chase-time').textContent =
       `⏱ ${fmtTime(Math.max(0, now - g.startAt))}`;
 
-    // 로비·관람 모드 등으로 조종을 놓으면 종료
     if (g.s.control.controlled !== g.me) return finish('stop');
     if (!g.started) return;
 
@@ -288,10 +286,7 @@ const Chase = (() => {
     if (document.hidden) finish('stop');
   });
 
-  // ---------- 추격 AI ----------
-  // 발판을 노드로, 이동 방법을 간선으로 구성한다.
-  // 걷기·낙하·점프·사다리·로프·발판 통과·점프해서 로프 잡기를 지원한다.
-  // 그래프는 게임마다 한 번 만들고, 추격 경로는 진행 중 갱신한다.
+  // ---------- 추격 경로 ----------
 
   /** x에서 y 아래에 있는 가장 가까운 발판. except 발판은 제외 */
   function landingBelow(x, y, except) {
@@ -317,11 +312,19 @@ const Chase = (() => {
   function buildGraph() {
     const jumpUp = 50;
     const g = {};
-    const add = (from, e) => (g[from] ??= []).push(e);
     const names = Object.keys(CONFIG.floors);
     const control = CONFIG.motion.control;
+    let serial = 0;
 
-    // 실제 점프 최고점보다 여유를 두어 로프 잡기 경로를 계산한다.
+    // 실패한 구간만 잠시 제외할 수 있도록 구간별 식별자를 붙인다.
+    const add = (from, e) => {
+      (g[from] ??= []).push({
+        ...e,
+        from,
+        key: `edge-${serial++}`,
+      });
+    };
+
     const safeJumpHeight = Math.min(
       jumpUp,
       (control.jumpVelocity * control.jumpVelocity) /
@@ -337,17 +340,20 @@ const Chase = (() => {
         const next = floorContinuation(a, dir);
 
         if (next) {
+          // 이어진 발판으로 넘어갈 때 실제 도착 범위를 반영한다.
+          const ns = floorSpan(CONFIG.floors[next]);
+          const land = Math.min(Math.max(edge, ns.x1), ns.x2);
+
           add(a, {
             to: next,
             x: edge,
             act: 'walk',
             dir,
-            land: edge,
+            land,
           });
           continue;
         }
 
-        // 발판 끝에서 걸어 나가 아래 발판으로 떨어지기
         const fall = landingBelow(
           edge + dir * 10,
           floorY(fa, edge),
@@ -364,7 +370,6 @@ const Chase = (() => {
           });
         }
 
-        // 가까운 발판으로 점프해서 건너가기
         for (const t of gapJumpTargets(a, edge, dir)) {
           add(a, {
             to: t.name,
@@ -393,7 +398,6 @@ const Chase = (() => {
           dy > 2 &&
           landingBelow(x, floorY(fa, x) + 2, a)?.name === b
         ) {
-          // 바로 아래 발판으로 엎드려 내려가기
           add(a, {
             to: b,
             x,
@@ -401,7 +405,6 @@ const Chase = (() => {
             land: x,
           });
         } else if (dy < 0 && dy >= -jumpUp) {
-          // 위쪽 발판으로 점프해 착지하기
           add(a, {
             to: b,
             x,
@@ -417,7 +420,6 @@ const Chase = (() => {
 
       const { top, bottom } = climbEnds(c);
 
-      // 아래 발판이 연결된 사다리·로프는 바로 올라갈 수 있다.
       if (bottom.name) {
         add(bottom.name, {
           to: top.name,
@@ -427,7 +429,6 @@ const Chase = (() => {
         });
       }
 
-      // 아래 끝이 허공이면 손을 놓은 뒤 착지할 발판을 찾는다.
       const down = bottom.name
         ? bottom
         : landingBelow(
@@ -451,19 +452,14 @@ const Chase = (() => {
 
         const floor = CONFIG.floors[name];
         const { x1, x2 } = floorSpan(floor);
-
-        // 로프 바로 아래에 설 수 있는 발판만 연결한다.
         if (c.x < x1 || c.x > x2) continue;
 
         const footY = floorY(floor, c.x);
         const handY = footY - control.grabHeight;
 
         if (footY <= top.y + 2) continue;
-
-        // 점프 중 손 높이가 잡기 범위 안으로 들어오는지 확인한다.
-        const highestHandY = handY - safeJumpHeight;
         if (handY <= top.y - 4) continue;
-        if (highestHandY >= bottom.y + 4) continue;
+        if (handY - safeJumpHeight >= bottom.y + 4) continue;
 
         add(name, {
           to: top.name,
@@ -482,61 +478,130 @@ const Chase = (() => {
     return g;
   }
 
-  /** 현재 발판과 x에서 목적 발판으로 가는 첫 이동 구간 */
-  function firstStep(graph, from, x, to) {
-    const dist = { [from]: 0 };
-    const pos = { [from]: x };
-    const first = {};
-    const done = new Set();
+  /** 이동 구간의 예상 동작 시간. 경로 선택·실패 판단용이며 실제 속도는 변경하지 않는다. */
+  function actionMs(e, speed) {
+    const control = CONFIG.motion.control;
+    const walk = Math.max(1, control.walkSpeed * speed);
+    const y0 = floorY(CONFIG.floors[e.from], e.x);
+    const y1 = floorY(CONFIG.floors[e.to], e.land);
+    const vertical = Math.abs(y1 - y0);
+
+    if (
+      e.act === 'up' ||
+      e.act === 'down' ||
+      e.act === 'grab'
+    ) {
+      return (
+        (vertical / control.climbSpeed) * 1000 +
+        (e.act === 'grab' ? 800 : 150)
+      );
+    }
+
+    if (e.act === 'jump' || e.act === 'gap') {
+      return Math.max(
+        750,
+        (Math.abs(e.land - e.x) / walk) * 1000 + 150
+      );
+    }
+
+    if (e.act === 'fall' || e.act === 'drop') {
+      return (
+        Math.sqrt((2 * vertical) / control.gravity) * 1000 + 250
+      );
+    }
+
+    return 120;
+  }
+
+  /**
+   * 목적 발판까지의 전체 경로를 찾는다.
+   * 같은 발판이라도 도착 x가 다르면 별도 상태로 계산한다.
+   * blocked는 이 추격자에게서 최근 실패한 구간의 임시 제외 목록이다.
+   */
+  function findRoute(graph, from, x, to, speed, blocked, now) {
+    if (
+      !CONFIG.floors[from] ||
+      !CONFIG.floors[to] ||
+      from === to
+    ) {
+      return [];
+    }
+
+    const walk = Math.max(
+      1,
+      CONFIG.motion.control.walkSpeed * speed
+    );
+
+    const states = new Map();
+    states.set('start', {
+      floor: from,
+      x,
+      cost: 0,
+      route: [],
+      done: false,
+    });
 
     for (;;) {
       let u = null;
 
-      for (const n in dist) {
-        if (!done.has(n) && (u === null || dist[n] < dist[u])) {
-          u = n;
+      for (const state of states.values()) {
+        if (!state.done && (!u || state.cost < u.cost)) {
+          u = state;
         }
       }
 
-      if (u === null) return null;
-      if (u === to) return first[u] ?? null;
+      if (!u) return [];
+      if (u.floor === to) return u.route;
 
-      done.add(u);
+      u.done = true;
 
-      for (const e of graph[u] ?? []) {
-        // 동작 지점까지의 가로 거리 + 동작당 기본 비용
-        const d = dist[u] + Math.abs(e.x - pos[u]) + 40;
+      for (const e of graph[u.floor] ?? []) {
+        if ((blocked.get(e.key) ?? 0) > now) continue;
 
-        if (d < (dist[e.to] ?? Infinity)) {
-          dist[e.to] = d;
-          pos[e.to] = e.land;
-          first[e.to] = first[u] ?? e;
+        const cost =
+          u.cost +
+          (Math.abs(e.x - u.x) / walk) * 1000 +
+          actionMs(e, speed);
+
+        const key = `${e.to}@${e.land}`;
+        const old = states.get(key);
+
+        if (!old || cost < old.cost) {
+          states.set(key, {
+            floor: e.to,
+            x: e.land,
+            cost,
+            route: [...u.route, e],
+            done: false,
+          });
         }
       }
     }
   }
 
-  /** 추격자 한 명의 이동 입력을 생성한다. */
+  // ---------- 추격 입력 ----------
+
   function brain(c, target, graph) {
     const mem = {
-      still: 0,
-      lastX: c.x,
-      lastY: c.y,
-      wander: 0,
-      wanderDir: 1,
+      clock: 0,
+      route: [],
+      goal: null,
+      edge: null,
+      edgeStarted: 0,
+      edgeBudget: 0,
+      bestDistance: Infinity,
+      progressAt: 0,
+      retryAt: 0,
+      blocked: new Map(),
       jumpCd: 0,
       climbDir: -1,
-      step: null,
-      stepAt: 0,
-      stepFrom: null,
-      stepTo: null,
       airX: null,
       grabStep: null,
       lastMode: null,
+      escapeUntil: 0,
+      escapeDir: 1,
     };
 
-    // 실제로 같은 사다리·로프인지 확인한다.
-    // 매달린 끝의 bottom.y에는 grabHeight가 더해져 있다.
     const sameClimb = (a, b) =>
       Boolean(
         a &&
@@ -549,7 +614,6 @@ const Chase = (() => {
         Math.abs(a.bottom.y - b.bottom.y) < 1
       );
 
-    // 지금 잡을 수 있는 구조물이 경로에서 노린 구조물인지 확인한다.
     const matchesGrab = (climb, step) =>
       Boolean(
         climb &&
@@ -562,10 +626,49 @@ const Chase = (() => {
           climb.bottom.y -
           (
             step.climbEnd +
-            (step.climbBottom ? 0 : CONFIG.motion.control.grabHeight)
+            (step.climbBottom
+              ? 0
+              : CONFIG.motion.control.grabHeight)
           )
         ) < 1
       );
+
+    const clearRoute = () => {
+      mem.route = [];
+      mem.edge = null;
+      mem.grabStep = null;
+    };
+
+    // 같은 구간을 진행하는 동안 제한 시간과 진행 상황을 초기화하지 않는다.
+    const activate = (edge) => {
+      if (mem.edge === edge) return;
+
+      mem.edge = edge;
+      mem.edgeStarted = mem.clock;
+      mem.bestDistance = Math.abs(edge.x - c.x);
+      mem.progressAt = mem.clock;
+
+      const walk = Math.max(
+        1,
+        CONFIG.motion.control.walkSpeed * c.chaser.speed
+      );
+
+      mem.edgeBudget =
+        (mem.bestDistance / walk) * 1000 +
+        actionMs(edge, c.chaser.speed) +
+        2400;
+    };
+
+    // 해당 추격자에게 실패한 구간만 5초 동안 피한다.
+    const failEdge = () => {
+      if (mem.edge?.key) {
+        mem.blocked.set(mem.edge.key, mem.clock + 5000);
+      }
+
+      clearRoute();
+      mem.airX = null;
+      mem.retryAt = 0;
+    };
 
     return (delta) => {
       const input = {
@@ -587,18 +690,31 @@ const Chase = (() => {
       if (!c.chaser?.speed || !p) return out;
 
       const control = CONFIG.motion.control;
-      const dt = Math.min(delta, 50) / 1000;
-      const moveStep = control.walkSpeed * c.chaser.speed * dt;
-      const tolerance = Math.max(3, moveStep / 2 + 0.1);
-      const targetPhys = target.phys;
-      const targetClimb =
-        targetPhys?.mode === 'climb' ? targetPhys.climb : null;
+      const elapsed = Math.max(0, Math.min(delta, 50));
+      const dt = elapsed / 1000;
+      const moveStep =
+        control.walkSpeed * c.chaser.speed * dt;
 
-      // 빠르게 이동할 때 목표 좌표 양옆을 반복해서 넘지 않도록
-      // 한 프레임 이동량을 고려해 도착 허용 범위를 잡는다.
+      // 물리 처리와 같은 시간 단위를 사용한다.
+      mem.clock += elapsed;
+      mem.jumpCd = Math.max(0, mem.jumpCd - elapsed);
+
+      for (const [key, until] of mem.blocked) {
+        if (until <= mem.clock) mem.blocked.delete(key);
+      }
+
+      // 한 프레임 이동량을 고려해 목표 좌표 양옆의 반복 반전을 줄인다.
+      const tolerance = Math.max(3, moveStep + 0.5);
+
       const go = (distance) => {
         if (distance < -tolerance) input.left = true;
         else if (distance > tolerance) input.right = true;
+      };
+
+      // 발판 끝으로 계속 나아갈 때는 거리 판정과 방향 입력을 분리한다.
+      const goDir = (dir) => {
+        input.left = dir < 0;
+        input.right = dir > 0;
       };
 
       const jump = () => {
@@ -609,45 +725,40 @@ const Chase = (() => {
         return true;
       };
 
-      mem.jumpCd = Math.max(0, mem.jumpCd - delta);
+      const targetPhys = target.phys;
+      const targetClimb =
+        targetPhys?.mode === 'climb'
+          ? targetPhys.climb
+          : null;
 
-      // 착지하면 이전 공중 이동 목표를 끝내고 경로를 다시 찾는다.
-      if (p.mode === 'ground' && mem.lastMode !== 'ground') {
+      if (
+        p.mode === 'ground' &&
+        mem.lastMode !== 'ground'
+      ) {
         mem.airX = null;
         mem.grabStep = null;
-        mem.step = null;
-        mem.still = 0;
+
+        // 같은 발판으로 되돌아온 실패한 점프는 경로와 제한 시간을 유지한다.
       }
 
       mem.lastMode = p.mode;
 
-      // 지상에서 일정 시간 거의 움직이지 못하면 막힘으로 판단한다.
-      const moved = Math.hypot(c.x - mem.lastX, c.y - mem.lastY);
-
-      mem.still =
-        p.mode === 'ground' && moved < 0.5
-          ? mem.still + delta
-          : 0;
-
-      mem.lastX = c.x;
-      mem.lastY = c.y;
+      // ---------- 사다리·로프 위 ----------
 
       if (p.mode === 'climb') {
-        mem.wander = 0;
         mem.grabStep = null;
+        mem.escapeUntil = 0;
 
-        // 같은 사다리·로프 위에 있으면 대상의 실제 높이를 따라간다.
         if (sameClimb(p.climb, targetClimb)) {
           const dy = target.y - c.y;
           const climbTolerance = Math.max(
             2,
-            control.climbSpeed * dt / 2 + 0.1
+            control.climbSpeed * dt + 0.5
           );
 
           input.up = dy < -climbTolerance;
           input.down = dy > climbTolerance;
         } else {
-          // 다른 곳의 대상에게 가는 중이면 계획한 끝점까지 이동한다.
           input.up = mem.climbDir < 0;
           input.down = mem.climbDir > 0;
         }
@@ -655,12 +766,15 @@ const Chase = (() => {
         return Object.assign(out, input);
       }
 
+      // ---------- 공중 ----------
+
       if (p.mode === 'air') {
-        const aimX = mem.grabStep?.x ?? mem.airX ?? target.x;
+        const aimX =
+          mem.grabStep?.x ?? mem.airX ?? target.x;
+
         go(aimX - c.x);
 
-        // 추격자에 한해 목표 x에 도달하면 남은 가로 속도를 멈춘다.
-        // 일반 플레이어의 조작 코드는 변경하지 않는다.
+        // 추격자만 목표 x에서 가로 관성을 멈춘다.
         if (!input.left && !input.right) p.vx = 0;
 
         if (mem.grabStep) {
@@ -675,31 +789,20 @@ const Chase = (() => {
         return Object.assign(out, input);
       }
 
-      // 막혔을 때 잠깐 좌우 이동과 점프로 빠져나온다.
-      if (mem.still > 1000) {
-        mem.still = 0;
-        mem.wander = 800;
-        mem.wanderDir = Math.random() < 0.5 ? -1 : 1;
-        mem.step = null;
-        mem.grabStep = null;
-      }
-
-      if (mem.wander > 0) {
-        mem.wander -= delta;
-        go(mem.wanderDir * 10);
-        jump();
-        return Object.assign(out, input);
-      }
+      // ---------- 지상 ----------
 
       const dx = target.x - c.x;
 
-      // 대상이 실제로 지상에 있을 때만 같은 발판 직접 추격을 사용한다.
-      // 공중·매달림 상태에서는 이전 floorName만으로 판단하지 않는다.
       if (
         targetPhys?.mode === 'ground' &&
         c.floorName === target.floorName
       ) {
-        mem.step = null;
+        clearRoute();
+        mem.escapeUntil = 0;
+
+        // 엎드린 상태라면 먼저 일어난다.
+        if (p.prone) input.up = true;
+
         go(dx);
         return Object.assign(out, input);
       }
@@ -707,89 +810,188 @@ const Chase = (() => {
       let goalFloor;
 
       if (targetClimb) {
-        // 매달린 대상은 해당 사다리·로프의 상단 발판으로 접근한다.
         goalFloor = targetClimb.top.name;
       } else if (targetPhys?.mode === 'air') {
-        // 공중의 대상은 현재 위치 아래의 발판을 임시 목적지로 삼는다.
-        goalFloor = landingBelow(target.x, target.y, null)?.name;
+        goalFloor =
+          landingBelow(target.x, target.y, null)?.name;
       } else {
         goalFloor = target.floorName;
       }
 
-      let e = null;
-
-      // 대상이 매달린 로프의 상단에 도착하면 아래로 내려가 추격한다.
-      // 아래 끝에 발판이 없는 로프도 대상에게 접근할 수 있게 한다.
-      if (targetClimb && c.floorName === targetClimb.top.name) {
-        e = {
-          x: targetClimb.x,
-          act: 'down',
-          land: targetClimb.x,
-        };
-      } else {
-        const now = performance.now();
-
-        // 현재 발판·목적 발판이 바뀌거나 0.3초가 지나면 경로 갱신
+      // 다음 발판에 실제로 도착했을 때만 구간 완료.
+      // 경로 전체를 버리지 않고 그다음 구간을 이어서 실행한다.
+      if (
+        mem.edge &&
+        c.floorName !== mem.edge.from
+      ) {
         if (
-          !mem.step ||
-          mem.stepFrom !== c.floorName ||
-          mem.stepTo !== goalFloor ||
-          now - mem.stepAt > 300
+          c.floorName === mem.edge.to &&
+          mem.route[0] === mem.edge
         ) {
-          mem.step = goalFloor
-            ? firstStep(graph, c.floorName, c.x, goalFloor)
-            : null;
-
-          mem.stepFrom = c.floorName;
-          mem.stepTo = goalFloor;
-          mem.stepAt = now;
+          mem.route.shift();
+          mem.edge = null;
+        } else {
+          // 예상과 다른 발판에 착지했다면 경로를 다시 찾는다.
+          failEdge();
         }
-
-        e = mem.step;
       }
 
-      if (!e) {
-        // 등록된 경로가 없으면 기존처럼 대상의 가로 방향으로 이동한다.
-        go(dx);
+      // 대상의 목적 발판이 바뀌었을 때 경로를 새로 계산한다.
+      if (mem.goal !== goalFloor) {
+        clearRoute();
+        mem.goal = goalFloor;
+        mem.retryAt = 0;
+        mem.escapeUntil = 0;
+      }
+
+      // 대체 경로도 없을 때 사용하는 짧은 방향 고정 탈출.
+      if (mem.escapeUntil > mem.clock) {
+        goDir(mem.escapeDir);
+
+        if (p.prone) input.up = true;
+        else jump();
+
         return Object.assign(out, input);
       }
 
+      // 대상이 매달린 로프의 상단에 도착하면 아래로 내려간다.
+      if (
+        targetClimb &&
+        c.floorName === targetClimb.top.name
+      ) {
+        const key =
+          `target-rope-${targetClimb.type}-` +
+          `${targetClimb.x}-${targetClimb.top.name}`;
+
+        if (!mem.edge || mem.edge.key !== key) {
+          const e = {
+            key,
+            from: c.floorName,
+            to: targetClimb.bottom.name || c.floorName,
+            x: targetClimb.x,
+            land: targetClimb.x,
+            act: 'down',
+          };
+
+          mem.route = [e];
+          activate(e);
+        }
+      } else if (
+        !mem.route.length &&
+        mem.clock >= mem.retryAt
+      ) {
+        mem.route = findRoute(
+          graph,
+          c.floorName,
+          c.x,
+          goalFloor,
+          c.chaser.speed,
+          mem.blocked,
+          mem.clock
+        );
+
+        if (!mem.route.length) {
+          // 경로가 없을 때 가만히 가로 목표만 쫓지 않고,
+          // 짧게 방향을 고정해 실제 이동·점프로 벗어난 뒤 재탐색한다.
+          mem.escapeDir =
+            Math.sign(dx) ||
+            (Math.random() < 0.5 ? -1 : 1);
+
+          mem.escapeUntil = mem.clock + 450;
+          mem.retryAt = mem.clock + 900;
+          mem.airX = c.x + mem.escapeDir * 45;
+
+          goDir(mem.escapeDir);
+
+          if (p.prone) input.up = true;
+          else jump();
+
+          return Object.assign(out, input);
+        }
+      }
+
+      const e = mem.route[0];
+
+      if (!e) {
+        return Object.assign(out, input);
+      }
+
+      activate(e);
+
       const near = Math.abs(e.x - c.x);
-      const actionRange = Math.max(5, tolerance);
+      const actionRange = Math.min(
+        control.grabRange - 1,
+        Math.max(5, tolerance)
+      );
+
+      // 좌우로 움직였는지가 아니라 목표에 더 가까워졌는지 확인한다.
+      if (near < mem.bestDistance - 2) {
+        mem.bestDistance = near;
+        mem.progressAt = mem.clock;
+      }
+
+      const approachStalled =
+        near > actionRange &&
+        mem.clock - mem.progressAt > 1600;
+
+      // 반복 점프·왕복으로도 구간을 끝내지 못하면 실패로 처리한다.
+      const actionTimedOut =
+        mem.clock - mem.edgeStarted > mem.edgeBudget;
+
+      if (approachStalled || actionTimedOut) {
+        failEdge();
+
+        if (p.prone) input.up = true;
+
+        return Object.assign(out, input);
+      }
+
+      // 내려가기 이외의 동작에서는 엎드린 자세부터 해제한다.
+      if (
+        p.prone &&
+        e.act !== 'drop' &&
+        e.act !== 'down'
+      ) {
+        input.up = true;
+        return Object.assign(out, input);
+      }
 
       if (e.act === 'walk') {
-        go(e.dir * 10);
+        goDir(e.dir);
       } else if (e.act === 'fall') {
-        go(e.dir * 10);
+        goDir(e.dir);
         mem.airX = e.land;
       } else if (e.act === 'gap') {
-        go(e.dir * 10);
-        if (near < 14 && jump()) mem.airX = e.land;
+        goDir(e.dir);
+
+        if (
+          near <= Math.max(14, moveStep + 2) &&
+          jump()
+        ) {
+          mem.airX = e.land;
+        }
       } else if (near > actionRange) {
         go(e.x - c.x);
-      } else if (e.act === 'up' || e.act === 'down') {
+      } else if (
+        e.act === 'up' ||
+        e.act === 'down'
+      ) {
         mem.climbDir = e.act === 'up' ? -1 : 1;
         input.up = e.act === 'up';
         input.down = e.act === 'down';
         mem.airX = e.land;
       } else if (e.act === 'grab') {
-        // 지상에서 수직 점프한 뒤 공중에서 노린 사다리·로프를 잡는다.
-        if (p.prone) {
-          input.up = true;
-        } else if (jump()) {
+        if (jump()) {
           mem.grabStep = e;
           mem.airX = e.x;
           mem.climbDir = -1;
         }
       } else if (e.act === 'drop') {
-        // 아래 입력으로 엎드린 뒤 점프 입력으로 발판을 통과한다.
         input.down = true;
         input.jump = true;
         mem.airX = e.land;
       } else if (e.act === 'jump') {
-        if (p.prone) {
-          input.up = true;
-        } else if (jump()) {
+        if (jump()) {
           mem.airX = e.land;
         }
       }
