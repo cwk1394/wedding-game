@@ -1,7 +1,7 @@
 // 이벤트 게임 창의 공통 영역 — 서버는 api/_lib/board.js
 // 일반 랭킹·내 도전 기록·경품 연락처·개발자 관리 영역을 표시한다.
-// 랭킹의 표시 이름은 캐릭터 ID로 최신 방명록 이름과 연결한다.
-// 표시 이름만 바꾸며, 서버의 기록·점수·순위·연락처는 수정하지 않는다.
+// 표시 이름만 최신 방명록 이름과 연결하며 기록·점수·순위는 변경하지 않는다.
+// 경품 연락처는 서버의 자격 검사와 캐릭터 인증을 거쳐 등록·수정한다.
 
 function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   // score: 기록을 표시 문구로 변환
@@ -11,19 +11,42 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   const root = el.querySelector('.event-board');
 
   root.innerHTML = `
-    <form class="rps-contact" hidden novalidate>
-      <p class="rps-rule">🎉 <b>경품 연락처 등록</b><br />랭킹 <b>TOP 3</b>에게는 <b>🎁선물</b>을 드려요.<br />미리 등록해도 수상 확정은 아니에요.<br /><b>(12월 12일 마감)</b></p>
-      <label class="field">
-        <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
-        <input name="contact" type="text" autocomplete="tel" maxlength="50" placeholder="010-0000-0000" />
-      </label>
-      <label class="field rps-contact-pw">
-        <span>내 캐릭터 비밀번호</span>
-        <input name="password" type="password" autocomplete="current-password" maxlength="30" />
-      </label>
-      <p class="form-error rps-contact-error" hidden></p>
-      <button type="submit" class="btn btn-primary">연락처 남기기</button>
-    </form>
+    <section class="rps-contact-area" hidden>
+      <div class="rps-contact-saved" hidden>
+        <p class="rps-rule">
+          ✅ <b>경품 연락처가 등록되어 있어요.</b><br />
+          잘못 입력했다면 아래 버튼으로 수정해 주세요.<br />
+          이 게임의 연락처만 변경됩니다.
+        </p>
+        <button type="button" class="btn btn-ghost rps-contact-edit">
+          연락처 수정
+        </button>
+      </div>
+      <form class="rps-contact" hidden novalidate>
+        <p class="rps-rule rps-contact-guide"></p>
+        <label class="field">
+          <span>연락처 <small>(신랑·신부만 볼 수 있어요)</small></span>
+          <input name="contact" type="text" autocomplete="tel"
+                 maxlength="50" placeholder="010-0000-0000" />
+        </label>
+        <p class="note rps-contact-replace-note" hidden>
+          기존 연락처는 표시하지 않아요. 새 연락처 전체를 입력해 주세요.
+          저장하면 이 게임의 기존 연락처가 새 값으로 바뀝니다.
+        </p>
+        <label class="field rps-contact-pw">
+          <span>내 캐릭터 비밀번호</span>
+          <input name="password" type="password"
+                 autocomplete="current-password" maxlength="30" />
+        </label>
+        <p class="form-error rps-contact-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-primary rps-contact-submit">
+          연락처 남기기
+        </button>
+        <button type="button" class="btn btn-ghost rps-contact-cancel" hidden>
+          수정 취소
+        </button>
+      </form>
+    </section>
     <section class="rps-admin" hidden>
       <h3>🔧 관리 (개발자 모드)</h3>
       <div class="rps-admin-btns">
@@ -47,12 +70,27 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   const $ = (sel) => root.querySelector(sel);
   $('.rps-board h3').textContent = title;
 
+  const contactArea = $('.rps-contact-area');
+  const contactSavedBox = $('.rps-contact-saved');
   const contactForm = $('.rps-contact');
+  const contactEditButton = $('.rps-contact-edit');
+  const contactCancelButton = $('.rps-contact-cancel');
+  const contactSubmitButton = $('.rps-contact-submit');
+  const contactError = $('.rps-contact-error');
   const admin = $('.rps-admin');
   const api = (body) => postJson(path, body);
 
   let mine = null;
   let onSettings = null;
+  let contactEligible = false;
+  let contactSaved = false;
+  let contactEditing = false;
+  let contactBusy = false;
+  let prizeClosed = false;
+
+  // 다른 캐릭터로 바뀌거나 창을 다시 열었을 때 이전 응답을 적용하지 않는다.
+  let screenVersion = 0;
+  let loadVersion = 0;
 
   // 최신 이름은 페이지 메모리에만 보관한다.
   // 비밀번호·연락처를 이 목록이나 브라우저 저장소에 저장하지 않는다.
@@ -80,7 +118,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       : '이름 없음';
   }
 
-  // 나중에 이름 조회가 끝나면 이름 부분만 갱신할 수 있도록 표시한다.
+  // 이름 조회가 끝나면 이름 부분만 갱신할 수 있도록 표시한다.
   function setNameNode(node, record) {
     node.dataset.boardName = '';
     node.dataset.guestId = typeof record.id === 'string' ? record.id : '';
@@ -101,8 +139,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   }
 
   // 최신 방명록 조회는 읽기 전용이다.
-  // 요청 중에는 중복 요청하지 않고, 반복 렌더링에서는 30초 간격으로 제한한다.
-  // 조회가 실패해도 기존 랭킹과 마지막으로 확인한 이름을 유지한다.
+  // 요청 중에는 중복 요청하지 않고 반복 렌더링에서는 30초 간격으로 제한한다.
   function refreshGuestNames(force = false) {
     if (nameRequest) return nameRequest;
 
@@ -145,14 +182,11 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
           if (id && name) names.set(id, name);
         }
 
-        // 성공한 전체 목록으로 교체한다.
-        // 목록에서 사라진 캐릭터는 기록에 남은 이름으로 표시된다.
         guestNames = names;
         nextNameRefreshAt = Date.now() + 30000;
         refreshVisibleNames();
       } catch {
-        // 이름 조회 실패 때문에 게임 기록 표시를 중단하지 않는다.
-        // 다음 랭킹 갱신 때 재시도하되 연속 요청은 제한한다.
+        // 조회 실패 때문에 게임 기록 표시를 중단하지 않는다.
         nextNameRefreshAt = Date.now() + 10000;
       } finally {
         if (timer !== null) clearTimeout(timer);
@@ -163,43 +197,124 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     return nameRequest;
   }
 
+  function clearContactInputs() {
+    contactForm.elements.contact.value = '';
+    contactForm.elements.password.value = '';
+    contactError.hidden = true;
+    contactError.textContent = '';
+  }
+
+  // 등록 여부와 서버가 알려준 경품 자격에 따라 연락처 영역을 표시한다.
+  function updateContactView() {
+    const visible = Boolean(mine && contactEligible && !isPlaying());
+    const showForm = visible && (!contactSaved || contactEditing);
+
+    contactArea.hidden = !visible;
+    contactSavedBox.hidden = !visible || !contactSaved || contactEditing;
+    contactForm.hidden = !showForm;
+
+    // 수정 시에는 이전 도전에서 기억한 비밀번호 대신 다시 입력받는다.
+    $('.rps-contact-pw').hidden =
+      contactSaved ? false : Boolean(password.get());
+
+    $('.rps-contact-replace-note').hidden = !contactSaved;
+    contactCancelButton.hidden = !contactSaved;
+
+    $('.rps-contact-guide').innerHTML = prizeClosed
+      ? '🎁 <b>경품 최종 TOP 3 연락처</b><br />선물 전달을 위한 연락처를 정확히 입력해 주세요.'
+      : '🎉 <b>경품 연락처 등록·수정</b><br />랭킹 <b>TOP 3</b>에게는 <b>🎁선물</b>을 드려요.<br />미리 등록해도 수상 확정은 아니에요.<br /><b>(12월 12일 마감)</b>';
+
+    contactSubmitButton.textContent = contactBusy
+      ? '저장 중…'
+      : contactSaved
+        ? '새 연락처로 저장'
+        : '연락처 남기기';
+
+    contactSubmitButton.disabled = contactBusy;
+    contactEditButton.disabled = contactBusy;
+    contactCancelButton.disabled = contactBusy;
+    contactForm.elements.contact.disabled = contactBusy;
+    contactForm.elements.password.disabled = contactBusy;
+  }
+
+  // 게임이 시작되면 등록 폼과 수정 버튼을 함께 숨긴다.
+  function hideContact() {
+    contactArea.hidden = true;
+    contactForm.hidden = true;
+    contactSavedBox.hidden = true;
+
+    if (!contactBusy) {
+      contactEditing = false;
+      clearContactInputs();
+    }
+  }
+
   /** 창을 열 때: 내 캐릭터와 개발자 설정 연결 */
   function reset(me, settings) {
+    screenVersion++;
+    loadVersion++;
     mine = me;
     onSettings = settings || null;
     admin.hidden = !onSettings;
     $('.rps-admin-list').replaceChildren();
-    contactForm.hidden = true;
 
-    // 창을 다시 열면 다음 렌더링에서 최신 이름을 새로 조회한다.
+    contactEligible = false;
+    contactSaved = false;
+    contactEditing = false;
+    contactBusy = false;
+    prizeClosed = false;
+    clearContactInputs();
+    updateContactView();
+
     nextNameRefreshAt = 0;
   }
 
   /** 랭킹과 내 도전 기록 조회. data가 있으면 해당 응답 사용 */
   async function load(data) {
+    const currentScreen = screenVersion;
+    const currentLoad = ++loadVersion;
+
     try {
       if (!data) {
         const id = mine?.info.id
           ? `?id=${encodeURIComponent(mine.info.id)}`
           : '';
 
-        const res = await fetch(`${CONFIG.apiUrl}${path}${id}`);
+        const res = await fetch(`${CONFIG.apiUrl}${path}${id}`, {
+          cache: 'no-store',
+        });
         data = await res.json();
 
         if (!res.ok) throw new Error(data.error);
       }
 
+      if (
+        currentScreen !== screenVersion ||
+        currentLoad !== loadVersion
+      ) {
+        return;
+      }
+
       render(data);
     } catch {
+      if (
+        currentScreen !== screenVersion ||
+        currentLoad !== loadVersion
+      ) {
+        return;
+      }
+
       $('.rps-empty').hidden = false;
       $('.rps-empty').textContent = '랭킹을 불러오지 못했어요.';
     }
   }
 
   function render({ ranking = [], mine: history, hasContact, prize }) {
+    // 직접 전달된 최신 결과보다 오래된 조회 응답은 적용하지 않는다.
+    loadVersion++;
+
     const medals = ['🥇', '🥈', '🥉'];
 
-    // 일반 랭킹: 서버가 정한 순서와 최고 기록을 그대로 표시한다.
     $('.rps-board h3').textContent = `${title} (일반)`;
 
     $('.rps-ranking').replaceChildren(
@@ -224,21 +339,19 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     $('.rps-empty').textContent =
       '아직 기록이 없어요. 첫 번째 도전자가 되어 보세요!';
 
-    // 경품 순위도 서버 응답만 사용한다. 기존 숨김 처리는 유지한다.
+    // 경품 순위는 서버 응답만 사용하며 기존 숨김 처리를 유지한다.
     const hasPrizeRanking = Array.isArray(prize?.ranking);
     const prizeRanking = hasPrizeRanking ? prize.ranking.slice(0, 3) : [];
     const prizeTitle = $('.rps-prize-title');
     const prizeList = $('.rps-prize-ranking');
     const prizeEmpty = $('.rps-prize-empty');
 
-    prizeTitle.hidden = false;
     prizeTitle.textContent = hasPrizeRanking
       ? prize.closed
         ? '🎁 경품 최종 TOP 3'
         : '🎁 경품 후보 TOP 3 (미확정)'
       : '🎁 경품 TOP 3';
 
-    prizeList.hidden = !hasPrizeRanking;
     prizeList.replaceChildren(
       ...prizeRanking.map((r, i) => {
         const li = document.createElement('li');
@@ -261,16 +374,15 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     prizeList.hidden = true;
     prizeEmpty.hidden = true;
 
-    // 연락처 등록 자격은 기존처럼 서버 판단만 사용한다.
-    const canContact = Boolean(mine && prize?.canContact);
+    contactEligible = Boolean(mine && prize?.canContact);
+    contactSaved = Boolean(prize?.hasContact ?? hasContact);
+    prizeClosed = Boolean(prize?.closed);
 
-    contactForm.hidden =
-      !canContact ||
-      Boolean(prize?.hasContact ?? hasContact) ||
-      isPlaying();
+    if (!contactEligible || !contactSaved) {
+      contactEditing = false;
+    }
 
-    contactForm.querySelector('.rps-contact-pw').hidden =
-      Boolean(password.get());
+    updateContactView();
 
     if (history) {
       $('.rps-mine-title').hidden = !history.length;
@@ -283,55 +395,150 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       );
     }
 
-    // 기록은 먼저 표시하고 최신 이름 조회가 끝나면 이름만 갱신한다.
     void refreshGuestNames();
   }
+
+  contactEditButton.addEventListener('click', () => {
+    if (
+      contactBusy ||
+      !mine ||
+      !contactEligible ||
+      !contactSaved ||
+      isPlaying()
+    ) {
+      return;
+    }
+
+    clearContactInputs();
+    contactEditing = true;
+    updateContactView();
+    contactForm.elements.contact.focus();
+  });
+
+  // 저장 요청을 보내기 전의 수정 취소만 처리한다. 저장 중에는 취소 버튼을 비활성화한다.
+  contactCancelButton.addEventListener('click', () => {
+    if (contactBusy) return;
+
+    contactEditing = false;
+    clearContactInputs();
+    updateContactView();
+  });
 
   contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const err = contactForm.querySelector('.rps-contact-error');
-    const pw = password.get() || contactForm.elements.password.value;
-    const contact = contactForm.elements.contact.value.trim();
+    if (contactBusy) return;
 
-    err.hidden = true;
+    contactError.hidden = true;
+    contactError.textContent = '';
 
-    if (!contact || !pw) {
-      return Object.assign(err, {
-        hidden: false,
-        textContent: contact
-          ? '비밀번호를 입력해 주세요.'
-          : '연락처를 입력해 주세요.',
-      });
+    const showError = (message) => {
+      contactError.hidden = false;
+      contactError.textContent = message;
+    };
+
+    if (!mine?.info.id || !mine.info.number) {
+      showError('먼저 본인 캐릭터로 접속해 주세요.');
+      return;
     }
 
-    const btn = contactForm.querySelector('button');
-    btn.disabled = true;
+    if (!contactEligible || isPlaying()) {
+      showError('현재 연락처를 저장할 수 없어요. 도전을 마치고 게임 창을 다시 열어 주세요.');
+      return;
+    }
+
+    if (contactSaved && !contactEditing) return;
+
+    // 요청 시작 당시의 캐릭터를 고정한다.
+    const currentScreen = screenVersion;
+    const guestId = mine.info.id;
+    const guestNumber = mine.info.number;
+    const wasEditing = contactSaved;
+
+    const pw = wasEditing
+      ? contactForm.elements.password.value
+      : password.get() || contactForm.elements.password.value;
+
+    const contact = contactForm.elements.contact.value.trim();
+
+    if (!contact || !pw) {
+      showError(
+        contact
+          ? '비밀번호를 입력해 주세요.'
+          : '연락처를 입력해 주세요.'
+      );
+      return;
+    }
+
+    if (contact.length > 50) {
+      showError('연락처는 50자까지 쓸 수 있어요.');
+      return;
+    }
+
+    contactBusy = true;
+    updateContactView();
 
     try {
-      await api({
+      const result = await api({
         action: 'contact',
-        number: mine.info.number,
-        id: mine.info.id,
+        number: guestNumber,
+        id: guestId,
         password: pw,
         contact,
       });
 
+      if (result?.ok !== true) {
+        throw new Error(
+          '저장 결과를 확인하지 못했어요. 게임 창을 다시 열어 확인해 주세요.'
+        );
+      }
+
+      // 다른 캐릭터로 바뀌었거나 창을 다시 열었다면 이전 화면을 갱신하지 않는다.
+      if (
+        currentScreen !== screenVersion ||
+        mine?.info.id !== guestId
+      ) {
+        return;
+      }
+
+      // 저장 전에 시작한 조회가 옛 등록 여부를 다시 표시하지 않도록 한다.
+      loadVersion++;
       password.set(pw);
-      contactForm.hidden = true;
-      contactForm.elements.contact.value = '';
+      contactSaved = true;
+      contactEditing = false;
+      clearContactInputs();
+
+      // 개발자 목록에 이전 연락처가 남지 않도록 비운다.
+      // 새 연락처는 관리자의 '연락처 보기' 인증 요청으로만 다시 조회한다.
+      $('.rps-admin-list').replaceChildren();
 
       UI.showToast(
-        '연락처를 저장했어요. 경품은 마감 기준 최종 TOP 3에게 지급돼요.',
+        wasEditing
+          ? '이 게임의 연락처를 새 연락처로 변경했어요.'
+          : '연락처를 저장했어요. 경품은 마감 기준 최종 TOP 3에게 지급돼요.',
         4000
       );
-    } catch (e2) {
-      Object.assign(err, {
-        hidden: false,
-        textContent: e2.message,
-      });
+    } catch (err) {
+      if (
+        currentScreen !== screenVersion ||
+        mine?.info.id !== guestId
+      ) {
+        return;
+      }
+
+      contactForm.elements.password.value = '';
+      showError(
+        err.message ||
+        '저장 결과를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.'
+      );
     } finally {
-      btn.disabled = false;
+      if (
+        currentScreen === screenVersion &&
+        mine?.info.id === guestId
+      ) {
+        contactBusy = false;
+        updateContactView();
+      }
     }
   });
 
@@ -353,11 +560,12 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
   }
 
   $('.rps-admin-view').addEventListener('click', async () => {
+    const currentScreen = screenVersion;
     const list = $('.rps-admin-list');
     list.replaceChildren();
 
     const r = await adminCall({ action: 'admin' });
-    if (!r) return;
+    if (!r || currentScreen !== screenVersion) return;
 
     if (!Array.isArray(r.prize?.ranking)) {
       list.textContent = '경품 순위 정보를 불러오지 못했어요.';
@@ -390,8 +598,6 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       list.textContent = '경품 대상 기록이 없어요.';
     }
 
-    // 관리자 연락처 목록도 캐릭터 ID로 최신 이름을 연결한다.
-    // 서버가 반환한 연락처와 순위는 그대로 유지한다.
     void refreshGuestNames(true);
 
     UI.showToast(
@@ -402,7 +608,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     );
   });
 
-    // 해당 게임의 자료만 삭제하도록 게임 구분과 명시적인 확인값을 전달한다.
+  // 해당 게임의 자료만 삭제하도록 게임 구분과 명시적인 확인값을 전달한다.
   // 실제 관리자 인증·삭제·이전 토큰 차단은 서버에서 수행한다.
   $('.rps-admin-reset').addEventListener('click', async () => {
     const game =
@@ -420,6 +626,11 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
       return;
     }
 
+    if (contactBusy) {
+      UI.showToast('연락처 저장이 끝난 뒤 초기화해 주세요.', 3000);
+      return;
+    }
+
     const gameName = game === 'rps' ? '가위바위보' : '도둑잡기';
 
     const confirmed = confirm(
@@ -433,6 +644,7 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
 
     if (!confirmed) return;
 
+    const currentScreen = screenVersion;
     const btn = $('.rps-admin-reset');
     btn.disabled = true;
 
@@ -442,10 +654,19 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
         confirmation: `${game}:ALL`,
       });
 
-      if (!result) return;
+      if (!result || currentScreen !== screenVersion) return;
 
+      // 초기화 이전에 시작한 화면 조회 응답도 더 이상 적용하지 않는다.
+      screenVersion++;
+      loadVersion++;
       $('.rps-admin-list').replaceChildren();
-      contactForm.hidden = true;
+
+      contactEligible = false;
+      contactSaved = false;
+      contactEditing = false;
+      contactBusy = false;
+      clearContactInputs();
+      updateContactView();
 
       UI.showToast(
         `${gameName}의 일반·경품 기록과 등록 연락처를 초기화했어요.`,
@@ -467,6 +688,6 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     reset,
     load,
     render,
-    hideContact: () => (contactForm.hidden = true),
+    hideContact,
   };
-}
+      }
