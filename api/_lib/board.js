@@ -1,45 +1,79 @@
-// 이벤트 게임 공통 (가위바위보 api/rps.js, 도둑 잡기 api/chase.js): 서명 토큰, GitHub Gist 기록·랭킹, 랭킹 연락처(암호화), 개발자 관리
-// 게임마다 gist 안의 파일이 다르다 (rps.json, chase.json). 기록 { id, name, <score>: 점수, at(시작), end } — 점수가 클수록 높은 순위
-//
-// POST { action: 'contact', number, id, password, contact } → 랭킹에 든 캐릭터의 연락처 저장 (쿠폰 연락용)
-// POST { action: 'admin', password(DEV_PASSWORD) } → 랭킹 + 연락처 · { action: 'reset', password } → 기록·연락처 초기화
-// GET  [?id=<하객 id>] → { ranking: 캐릭터별 최고 점수 TOP 10, mine: 그 캐릭터의 최근 도전, hasContact }
-//
-// 환경변수(Vercel): GIST_TOKEN(gist 쓰기 권한 토큰, 없으면 GITHUB_TOKEN). 선택: RPS_GIST_ID(기본은 아래 gist)
+// 이벤트 게임 공통 서버.
+// 운영 게임은 DB용 메서드를 사용한다.
+// 일반 기록·경품 기록·연락처는 게임별로 분리한다.
+// 관리자 초기화는 해당 게임의 DB 행 잠금 안에서 수행한다.
+// 초기화 버전을 증가시켜 이전 도전의 기록 재저장을 차단한다.
+// 기존 Gist 관련 메서드는 유지하되, Gist 초기화는 계속 차단한다.
 
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 import { GITHUB_ENV, GitHub } from './github.js';
-import { HttpError, checkDevPassword, corsHeaders, json } from './http.js';
+import {
+  HttpError,
+  checkDevPassword,
+  corsHeaders,
+  json,
+} from './http.js';
 import { findGuest, secret } from '../guestbook.js';
 import { readGameState, updateGameState } from './board-db.js';
 
-// gist.github.com/kobe-KANG/<id> (비밀 gist, 파일이 없으면 첫 기록 때 만듦). gist 주소(…/<id>.js)를 넣어도 id만
-const GIST_ID = (process.env.RPS_GIST_ID || '').match(/[0-9a-f]{20,}/i)?.[0];
+const GIST_ID =
+  (process.env.RPS_GIST_ID || '').match(/[0-9a-f]{20,}/i)?.[0];
 
 const RANKING_SIZE = 10;
 const CONTACT_MAX = 50;
 const PRIZE_DEADLINE = Date.parse('2026-12-13T00:00:00+09:00');
 const PRIZE_SIZE = 3;
 
+// 초기화한 적 없는 기존 DB 자료와 기존 토큰은 버전 0으로 취급한다.
+// 잘못된 버전 값은 임의로 보정하지 않고 중단한다.
+function resetVersion(value) {
+  if (value === undefined) return 0;
+
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new HttpError(
+      503,
+      '게임 초기화 버전을 확인해야 해요.'
+    );
+  }
+
+  return value;
+}
+
 export class Board {
-  /** file: gist 파일 이름, score: 기록의 점수 필드, tokenKey: 토큰 서명 구분(게임끼리 토큰을 못 섞게), ttl: 토큰 유효 시간 */
-    constructor({ file, score, tokenKey, ttl }) {
+  // 게임별 파일 구분·점수 필드·토큰 서명 구분·유효 시간.
+  constructor({ file, score, tokenKey, ttl }) {
     Object.assign(this, { file, score, tokenKey, ttl });
   }
 
-  // ---------- DB 연결 준비 (기존 게임 호출은 아직 Gist 사용) ----------
+  // ---------- 운영 DB ----------
 
   dbGame() {
-    if (this.file === 'rps.json' && this.score === 'streak') return 'rps';
-    if (this.file === 'chase.json' && this.score === 'ms') return 'chase';
-    throw new HttpError(503, '게임 DB 구분을 확인해야 해요.');
+    if (this.file === 'rps.json' && this.score === 'streak') {
+      return 'rps';
+    }
+
+    if (this.file === 'chase.json' && this.score === 'ms') {
+      return 'chase';
+    }
+
+    throw new HttpError(
+      503,
+      '게임 DB 구분을 확인해야 해요.'
+    );
   }
 
-          async readDb() {
+  async readDb() {
     return readGameState(this.dbGame());
   }
 
-  // DB용 공통 요청. 게임별 POST 연결 전까지는 실행되지 않는다.
+  // 연락처 저장·관리자 조회·초기화를 처리한다.
   async commonDb(body) {
     if (body.action === 'contact') {
       return {
@@ -52,15 +86,14 @@ export class Board {
       return null;
     }
 
-    // 관리자 인증을 통과해야 DB 조회 및 연락처 복호화 가능
+    // DB 조회·연락처 복호화·초기화 전에 관리자 인증을 수행한다.
     checkDevPassword(body.password);
 
-    // 초기화는 DB에서도 차단. 자료를 읽거나 변경하지 않는다.
     if (body.action === 'reset') {
-      throw new HttpError(
-        403,
-        '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.'
-      );
+      return {
+        status: 200,
+        body: await this.resetDb(body),
+      };
     }
 
     const data = await this.readDb();
@@ -68,7 +101,9 @@ export class Board {
 
     const top = this.ranking(records).map((r) => ({
       ...r,
-      contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
+      contact: contacts[r.id]
+        ? decrypt(contacts[r.id].c)
+        : null,
     }));
 
     const prizeTop = this.prizeRanking([
@@ -76,7 +111,9 @@ export class Board {
       ...records,
     ]).map((r) => ({
       ...r,
-      contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
+      contact: contacts[r.id]
+        ? decrypt(contacts[r.id].c)
+        : null,
     }));
 
     return {
@@ -92,7 +129,48 @@ export class Board {
     };
   }
 
-  // DB용 랭킹 조회. 게임별 GET 연결 전까지는 실행되지 않는다.
+  // 관리자 인증과 게임별 삭제 확인값을 검사한 뒤 초기화한다.
+  async resetDb(body) {
+    // 다른 위치에서 호출하더라도 관리자 인증을 생략하지 않는다.
+    checkDevPassword(body.password);
+
+    const game = this.dbGame();
+
+    if (body.confirmation !== `${game}:ALL`) {
+      throw new HttpError(
+        400,
+        '삭제 범위를 확인할 수 없어요. 화면을 새로고침한 뒤 다시 확인해 주세요.'
+      );
+    }
+
+    return this.updateDb((data) => {
+      const version = resetVersion(data.resetVersion);
+
+      if (version >= Number.MAX_SAFE_INTEGER) {
+        throw new HttpError(
+          503,
+          '게임 초기화 버전을 더 증가시킬 수 없어요.'
+        );
+      }
+
+      // 해당 게임의 행 잠금 안에서 한 번에 변경한다.
+      // 다른 게임·캐릭터·방명록·사진에는 접근하지 않는다.
+      data.resetVersion = version + 1;
+      data.records = [];
+      data.prizeRecords = [];
+      data.contacts = {};
+      data.burned = {};
+
+      return {
+        ok: true,
+        reset: true,
+        game,
+        resetVersion: data.resetVersion,
+      };
+    });
+  }
+
+  // 일반 랭킹과 내 도전 기록을 읽는다.
   async getDb(request) {
     const cors = {
       ...corsHeaders(request),
@@ -124,7 +202,7 @@ export class Board {
     }
   }
 
-  // DB용 연락처 저장. 공통 요청 연결 전까지는 실행되지 않는다.
+  // 캐릭터 인증 후 최신 경품 자격을 확인하고 연락처를 저장한다.
   async saveContactDb(body) {
     const contact = typeof body.contact === 'string'
       ? body.contact.trim()
@@ -141,12 +219,12 @@ export class Board {
       );
     }
 
-    // 외부 API를 사용하는 캐릭터 인증은 DB 잠금 전에 완료
+    // 외부 캐릭터 인증은 DB 잠금 전에 완료한다.
     const { id } = await findGuest(body);
     const c = encrypt(contact);
 
     return this.updateDb((data) => {
-      // 잠금 안에서 최신 경품 순위로 등록 자격 확인
+      // 초기화와 동일한 행 잠금 안에서 최신 자격을 검사한다.
       const eligible = this.prizeRanking([
         ...data.prizeRecords,
         ...data.records,
@@ -168,7 +246,7 @@ export class Board {
     });
   }
 
-  // DB용 종료 기록 저장. 게임별 API 연결 전까지는 실행되지 않는다.
+  // 도둑잡기 종료·가위바위보 그만하기의 기록을 저장한다.
   async finishDb(run, score, receivedAt) {
     if (
       !Number.isFinite(receivedAt) ||
@@ -181,7 +259,18 @@ export class Board {
     return this.updateDb((data) => {
       const now = Date.now();
 
-      // DB 잠금을 기다리는 동안 토큰이 만료된 경우도 중단
+      // 반드시 DB 행 잠금 안에서 최신 초기화 버전을 비교한다.
+      // 초기화 이전 토큰이면 기록과 사용한 토큰 목록을 변경하지 않는다.
+      if (
+        resetVersion(run.rv) !== resetVersion(data.resetVersion)
+      ) {
+        throw new HttpError(
+          410,
+          '관리자가 이 게임의 기록을 초기화했어요. 게임 창을 닫고 새로 도전해 주세요.'
+        );
+      }
+
+      // DB 잠금을 기다리는 동안 만료된 경우도 중단한다.
       if (run.e < now) {
         throw new HttpError(
           410,
@@ -215,7 +304,8 @@ export class Board {
     return updateGameState(this.dbGame(), async (data) => {
       const response = await change(data);
 
-      // 기존 Gist 저장과 같은 기준으로 마감 전 경품 기록 보존
+      // 기존 기준대로 마감 전 경품 기록을 중복 없이 보존한다.
+      // 초기화에서는 두 기록 배열을 모두 비워 옛 기록이 다시 합쳐지지 않는다.
       const unique = new Map();
 
       for (const r of [
@@ -223,7 +313,10 @@ export class Board {
         ...data.records,
       ]) {
         const end = Date.parse(r.end);
-        if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) continue;
+
+        if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) {
+          continue;
+        }
 
         const key = JSON.stringify([
           r.id,
@@ -232,7 +325,9 @@ export class Board {
           r.end,
         ]);
 
-        if (!unique.has(key)) unique.set(key, { ...r });
+        if (!unique.has(key)) {
+          unique.set(key, { ...r });
+        }
       }
 
       data.prizeRecords = [...unique.values()];
@@ -240,71 +335,141 @@ export class Board {
     });
   }
 
-  // ---------- 토큰 ----------
+  // ---------- 서명 토큰 ----------
 
   sign(payload) {
-    const data = Buffer.from(JSON.stringify({ ...payload, n: randomBytes(9).toString('base64url'), e: Date.now() + this.ttl })).toString('base64url');
+    const data = Buffer.from(JSON.stringify({
+      ...payload,
+      n: randomBytes(9).toString('base64url'),
+      e: Date.now() + this.ttl,
+    })).toString('base64url');
+
     return `${data}.${this.mac(data)}`;
   }
 
   mac(data) {
-    return createHmac('sha256', `${this.tokenKey}:${secret()}`).update(data).digest('base64url');
+    return createHmac(
+      'sha256',
+      `${this.tokenKey}:${secret()}`
+    ).update(data).digest('base64url');
   }
 
   verify(token) {
-    const [data, sig] = typeof token === 'string' ? token.split('.') : [];
+    const [data, sig] =
+      typeof token === 'string' ? token.split('.') : [];
+
     const a = Buffer.from(sig ?? '');
     const b = Buffer.from(data ? this.mac(data) : '');
-    if (!data || a.length !== b.length || !timingSafeEqual(a, b)) throw new HttpError(400, '도전 정보가 잘못됐어요. 다시 도전해 주세요.');
-    const run = JSON.parse(Buffer.from(data, 'base64url').toString());
-    if (run.e < Date.now()) throw new HttpError(410, '도전 시간이 지났어요. 다시 도전해 주세요.');
+
+    if (
+      !data ||
+      a.length !== b.length ||
+      !timingSafeEqual(a, b)
+    ) {
+      throw new HttpError(
+        400,
+        '도전 정보가 잘못됐어요. 다시 도전해 주세요.'
+      );
+    }
+
+    const run = JSON.parse(
+      Buffer.from(data, 'base64url').toString()
+    );
+
+    if (run.e < Date.now()) {
+      throw new HttpError(
+        410,
+        '도전 시간이 지났어요. 다시 도전해 주세요.'
+      );
+    }
+
     return run;
   }
 
-  // ---------- 기록 (GitHub Gist) ----------
+  // ---------- 기존 Gist 호환 코드 ----------
 
   gist() {
-    if (!GIST_ID) throw new HttpError(503, '기록 저장소가 설정되지 않았어요. (RPS_GIST_ID)');
-    return new GitHub({ ...GITHUB_ENV, GITHUB_TOKEN: process.env.GIST_TOKEN || GITHUB_ENV.GITHUB_TOKEN });
+    if (!GIST_ID) {
+      throw new HttpError(
+        503,
+        '기록 저장소가 설정되지 않았어요. (RPS_GIST_ID)'
+      );
+    }
+
+    return new GitHub({
+      ...GITHUB_ENV,
+      GITHUB_TOKEN:
+        process.env.GIST_TOKEN || GITHUB_ENV.GITHUB_TOKEN,
+    });
   }
 
-  /** gist 요청. 토큰에 gist 권한이 없으면(401·403·404) 원인이 보이는 문구로 */
+  // Gist 접근 오류의 상세 정보는 서버 로그에만 남긴다.
   async request(github, method, body) {
     try {
-      return await github.request(method, `/gists/${GIST_ID}`, body);
+      return await github.request(
+        method,
+        `/gists/${GIST_ID}`,
+        body
+      );
     } catch (err) {
       if ([401, 403, 404].includes(err.status)) {
-        console.error(`gist ${GIST_ID}, token ${process.env.GIST_TOKEN ? 'GIST_TOKEN' : 'GITHUB_TOKEN'}`, err); // gist id는 비밀이라 응답엔 안 넣고 Vercel 로그에만
-        throw new HttpError(503, `기록 저장소(gist)에 접근하지 못했어요. Vercel GIST_TOKEN을 확인해 주세요. (GitHub ${err.status})`);
+        console.error(
+          `gist ${GIST_ID}, token ${
+            process.env.GIST_TOKEN ? 'GIST_TOKEN' : 'GITHUB_TOKEN'
+          }`,
+          err
+        );
+
+        throw new HttpError(
+          503,
+          `기록 저장소(gist)에 접근하지 못했어요. Vercel GIST_TOKEN을 확인해 주세요. (GitHub ${err.status})`
+        );
       }
+
       throw err;
     }
   }
 
-  /** { records: [{ id, name, <score>, at, end }], burned: { <토큰 nonce>: 만료 시각 }, contacts: { <하객 id>: { c: 암호문, at } } } */
-    async read(github) {
+  async read(github) {
     const g = await this.request(github, 'GET');
     const file = g.files?.[this.file];
 
-    // 내용이 잘린 응답으로 기존 기록을 덮어쓰지 않도록 중단
+    // 잘린 응답으로 기존 기록을 덮어쓰지 않는다.
     if (file?.truncated) {
-      throw new HttpError(503, '기록 파일 전체를 읽지 못했어요. 관리자 확인이 필요해요.');
+      throw new HttpError(
+        503,
+        '기록 파일 전체를 읽지 못했어요. 관리자 확인이 필요해요.'
+      );
     }
 
     const text = file?.content;
-    if (file && (typeof text !== 'string' || !text.trim())) {
-      throw new HttpError(503, '기록 파일 내용이 비어 있어요. 관리자 확인이 필요해요.');
+
+    if (
+      file &&
+      (typeof text !== 'string' || !text.trim())
+    ) {
+      throw new HttpError(
+        503,
+        '기록 파일 내용이 비어 있어요. 관리자 확인이 필요해요.'
+      );
     }
 
     const data = file ? JSON.parse(text) : {};
+
     if (
       !data ||
       typeof data !== 'object' ||
       Array.isArray(data) ||
       (data.records != null && !Array.isArray(data.records)) ||
-      (data.prizeRecords != null && !Array.isArray(data.prizeRecords))
+      (
+        data.prizeRecords != null &&
+        !Array.isArray(data.prizeRecords)
+      )
     ) {
-      throw new HttpError(503, '기록 파일 형식 확인이 필요해요.');
+      throw new HttpError(
+        503,
+        '기록 파일 형식 확인이 필요해요.'
+      );
     }
 
     return {
@@ -316,8 +481,8 @@ export class Board {
     };
   }
 
-    write(github, data) {
-    // 이미 보존한 경품 기록과 일반 기록을 합쳐 마감 전 기록만 보관
+  write(github, data) {
+    // 기존 Gist 저장 방식의 경품 기록 보존 처리를 유지한다.
     const unique = new Map();
 
     for (const r of [
@@ -325,16 +490,21 @@ export class Board {
       ...(data.records ?? []),
     ]) {
       const end = Date.parse(r.end);
-      if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) continue;
 
-      // 같은 기록이 두 목록에 있어도 한 번만 보관
+      if (!Number.isFinite(end) || end >= PRIZE_DEADLINE) {
+        continue;
+      }
+
       const key = JSON.stringify([
         r.id,
         r[this.score],
         r.at,
         r.end,
       ]);
-      if (!unique.has(key)) unique.set(key, { ...r });
+
+      if (!unique.has(key)) {
+        unique.set(key, { ...r });
+      }
     }
 
     const saved = {
@@ -351,33 +521,65 @@ export class Board {
     });
   }
 
-  /**
-   * 도전 끝: 기록 추가 + 토큰 끝남 표시. 이미 끝난 토큰이면 409.
-   * gist는 "읽은 뒤 안 바뀌었을 때만 쓰기"가 없어서, 쓰고 다시 읽어 내 기록이 남았는지 확인 → 동시에 끝난 기록에 덮였으면 다시 합쳐 씀
-   */
-  async finish(run, score, github = this.gist(), receivedAt = Date.now()) {
+  // 기존 Gist 종료 저장 방식. 운영 DB의 종료 처리는 finishDb를 사용한다.
+  async finish(
+    run,
+    score,
+    github = this.gist(),
+    receivedAt = Date.now()
+  ) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const data = await this.read(github);
+
       if (data.burned[run.n]) {
-        if (attempt === 0) throw new HttpError(409, '이미 끝난 도전이에요.');
-        return this.result(run.id, data); // 앞에서 쓴 내 기록이 남아 있음
+        if (attempt === 0) {
+          throw new HttpError(409, '이미 끝난 도전이에요.');
+        }
+
+        return this.result(run.id, data);
       }
-      if (attempt === 3) break; // 세 번 써도 덮이면 포기 (마지막은 확인만)
+
+      if (attempt === 3) break;
+
       const now = Date.now();
-      data.burned = Object.fromEntries(Object.entries(data.burned).filter(([, e]) => e > now)); // 만료된 토큰은 어차피 못 씀
+
+      data.burned = Object.fromEntries(
+        Object.entries(data.burned).filter(([, e]) => e > now)
+      );
+
       data.burned[run.n] = run.e;
-      data.records.push({ id: run.id, name: run.name, [this.score]: score, at: new Date(run.t).toISOString(), end: new Date(receivedAt).toISOString() });
+
+      data.records.push({
+        id: run.id,
+        name: run.name,
+        [this.score]: score,
+        at: new Date(run.t).toISOString(),
+        end: new Date(receivedAt).toISOString(),
+      });
+
       await this.write(github, data);
     }
-    throw new HttpError(503, '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+
+    throw new HttpError(
+      503,
+      '기록이 몰려서 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'
+    );
   }
 
-    result(id, { records, contacts, prizeRecords = [] }) {
+  // ---------- 공통 순위 계산 ----------
+
+  result(id, { records, contacts, prizeRecords = [] }) {
     const top = this.ranking(records);
     const rank = top.findIndex((r) => r.id === id) + 1;
 
-    const prizeTop = this.prizeRanking([...prizeRecords, ...records]);
-    const prizeRank = prizeTop.findIndex((r) => r.id === id) + 1;
+    const prizeTop = this.prizeRanking([
+      ...prizeRecords,
+      ...records,
+    ]);
+
+    const prizeRank =
+      prizeTop.findIndex((r) => r.id === id) + 1;
+
     const hasContact = Boolean(contacts[id]);
 
     return {
@@ -396,110 +598,247 @@ export class Board {
     };
   }
 
-  /** 캐릭터별 최고 점수 (같으면 먼저 달성한 사람), 0점은 제외 */
+  // 캐릭터별 최고 양수 점수를 선택한다.
+  // 캐릭터 간 동점은 기록의 종료 시각 순으로 정렬한다.
   ranking(records) {
     const s = this.score;
     const best = new Map();
+
     for (const r of records) {
       const cur = best.get(r.id);
-      if (r[s] > 0 && (!cur || r[s] > cur[s])) best.set(r.id, r);
+
+      if (r[s] > 0 && (!cur || r[s] > cur[s])) {
+        best.set(r.id, r);
+      }
     }
-    return [...best.values()].sort((a, b) => b[s] - a[s] || a.end.localeCompare(b.end)).slice(0, RANKING_SIZE);
+
+    return [...best.values()]
+      .sort(
+        (a, b) =>
+          b[s] - a[s] ||
+          a.end.localeCompare(b.end)
+      )
+      .slice(0, RANKING_SIZE);
   }
 
-    // 마감 전 서버 접수 기록으로 경품 TOP 3 계산
+  // 마감 전 서버 접수 기록만으로 경품 TOP 3을 계산한다.
   prizeRanking(records) {
     const eligible = records.filter((r) => {
       const end = Date.parse(r.end);
-      return Number.isFinite(end) && end < PRIZE_DEADLINE;
+
+      return (
+        Number.isFinite(end) &&
+        end < PRIZE_DEADLINE
+      );
     });
+
     return this.ranking(eligible).slice(0, PRIZE_SIZE);
   }
 
-  // ---------- 공통 요청 ----------
+  // ---------- 기존 Gist 공통 요청 ----------
 
   async get(request) {
     const cors = corsHeaders(request);
+
     try {
       const id = new URL(request.url).searchParams.get('id');
-      const { records, contacts, prizeRecords } = await this.read(this.gist());
-      const mine = id ? records.filter((r) => r.id === id).slice(-10).reverse() : [];
+
+      const {
+        records,
+        contacts,
+        prizeRecords,
+      } = await this.read(this.gist());
+
+      const mine = id
+        ? records.filter((r) => r.id === id).slice(-10).reverse()
+        : [];
+
       return json({
-  ranking: this.ranking(records),
-  mine,
-  total: records.length,
-  hasContact: Boolean(id && contacts[id]),
-  prize: this.result(id, { records, contacts, prizeRecords }).prize,
-}, 200, cors);
+        ranking: this.ranking(records),
+        mine,
+        total: records.length,
+        hasContact: Boolean(id && contacts[id]),
+        prize: this.result(id, {
+          records,
+          contacts,
+          prizeRecords,
+        }).prize,
+      }, 200, cors);
     } catch (err) {
       console.error(err);
-      return json({ error: err instanceof HttpError ? err.message : '기록을 불러오지 못했어요.' }, err.status || 500, cors);
+
+      return json({
+        error: err instanceof HttpError
+          ? err.message
+          : '기록을 불러오지 못했어요.',
+      }, err.status || 500, cors);
     }
   }
 
-  /** contact·admin·reset이면 처리해서 { status, body }, 아니면 null (게임별 요청) */
+  // 기존 Gist 요청용. Gist 초기화는 계속 거절한다.
   async common(body) {
-    if (body.action === 'contact') return { status: 200, body: await this.saveContact(body) };
-    if (body.action !== 'admin' && body.action !== 'reset') return null;
+    if (body.action === 'contact') {
+      return {
+        status: 200,
+        body: await this.saveContact(body),
+      };
+    }
+
+    if (body.action !== 'admin' && body.action !== 'reset') {
+      return null;
+    }
+
     checkDevPassword(body.password);
-    const github = this.gist();
-    const { records, burned, contacts, prizeRecords } = await this.read(github);
+
+    // 옛 저장소의 초기화 요청은 조회·변경 전에 차단한다.
     if (body.action === 'reset') {
-  throw new HttpError(403, '경품 기록 보존을 위해 랭킹 초기화를 사용하지 않아요.');
-}
-    const top = this.ranking(records).map((r) => ({ ...r, contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null }));
+      throw new HttpError(
+        403,
+        '옛 Gist 저장소의 초기화는 사용하지 않아요.'
+      );
+    }
+
+    const github = this.gist();
+
+    const {
+      records,
+      contacts,
+      prizeRecords,
+    } = await this.read(github);
+
+    const top = this.ranking(records).map((r) => ({
+      ...r,
+      contact: contacts[r.id]
+        ? decrypt(contacts[r.id].c)
+        : null,
+    }));
+
     return {
-  status: 200,
-  body: {
-    ranking: top,
-    total: records.length,
-    prize: {
-            ...this.result(null, { records, contacts, prizeRecords }).prize,
-      ranking: this.prizeRanking([...prizeRecords, ...records]).map((r) => ({
-        ...r,
-        contact: contacts[r.id] ? decrypt(contacts[r.id].c) : null,
-      })),
-    },
-  },
-};
+      status: 200,
+      body: {
+        ranking: top,
+        total: records.length,
+        prize: {
+          ...this.result(null, {
+            records,
+            contacts,
+            prizeRecords,
+          }).prize,
+          ranking: this.prizeRanking([
+            ...prizeRecords,
+            ...records,
+          ]).map((r) => ({
+            ...r,
+            contact: contacts[r.id]
+              ? decrypt(contacts[r.id].c)
+              : null,
+          })),
+        },
+      },
+    };
   }
 
-  /** 내 캐릭터 비밀번호 확인 → 랭킹에 들어 있으면 연락처 저장 (다시 보내면 덮어씀) */
+  // 기존 Gist 연락처 저장 방식.
   async saveContact(body) {
-    const contact = typeof body.contact === 'string' ? body.contact.trim() : '';
-    if (!contact) throw new HttpError(400, '연락처를 입력해 주세요.');
-    if (contact.length > CONTACT_MAX) throw new HttpError(400, `연락처는 ${CONTACT_MAX}자까지 쓸 수 있어요.`);
+    const contact = typeof body.contact === 'string'
+      ? body.contact.trim()
+      : '';
+
+    if (!contact) {
+      throw new HttpError(400, '연락처를 입력해 주세요.');
+    }
+
+    if (contact.length > CONTACT_MAX) {
+      throw new HttpError(
+        400,
+        `연락처는 ${CONTACT_MAX}자까지 쓸 수 있어요.`
+      );
+    }
+
     const { id } = await findGuest(body);
     const github = this.gist();
+
     for (let attempt = 0; attempt < 3; attempt++) {
       const data = await this.read(github);
-      if (!this.prizeRanking([...(data.prizeRecords ?? []), ...data.records]).some((r) => r.id === id)) throw new HttpError(403, '마감 전 경품 후보 TOP 3 또는 마감 후 최종 TOP 3만 연락처를 남길 수 있어요.');
+
+      const eligible = this.prizeRanking([
+        ...(data.prizeRecords ?? []),
+        ...data.records,
+      ]).some((r) => r.id === id);
+
+      if (!eligible) {
+        throw new HttpError(
+          403,
+          '마감 전 경품 후보 TOP 3 또는 마감 후 최종 TOP 3만 연락처를 남길 수 있어요.'
+        );
+      }
+
       const c = encrypt(contact);
-      data.contacts[id] = { c, at: new Date().toISOString() };
+
+      data.contacts[id] = {
+        c,
+        at: new Date().toISOString(),
+      };
+
       await this.write(github, data);
-      if ((await this.read(github)).contacts[id]?.c === c) return { ok: true }; // 동시에 쓴 기록에 덮였으면 다시
+
+      if ((await this.read(github)).contacts[id]?.c === c) {
+        return { ok: true };
+      }
     }
-    throw new HttpError(503, '저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+
+    throw new HttpError(
+      503,
+      '저장하지 못했어요. 잠시 후 다시 시도해 주세요.'
+    );
   }
 }
 
-// ---------- 연락처 (gist는 id만 알면 읽히므로 AES-256-GCM으로 암호화) ----------
+// ---------- 연락처 암호화 ----------
 
-const contactKey = () => createHash('sha256').update(`rps-contact:${secret()}`).digest();
+// 기존 키 생성 방식을 유지한다.
+// 비밀키가 바뀌면 기존 연락처를 복호화하지 못할 수 있다.
+const contactKey = () =>
+  createHash('sha256')
+    .update(`rps-contact:${secret()}`)
+    .digest();
 
 function encrypt(text) {
   const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', contactKey(), iv);
-  const enc = Buffer.concat([c.update(text, 'utf8'), c.final()]);
-  return [iv, c.getAuthTag(), enc].map((b) => b.toString('base64url')).join('.');
+  const c = createCipheriv(
+    'aes-256-gcm',
+    contactKey(),
+    iv
+  );
+
+  const enc = Buffer.concat([
+    c.update(text, 'utf8'),
+    c.final(),
+  ]);
+
+  return [iv, c.getAuthTag(), enc]
+    .map((b) => b.toString('base64url'))
+    .join('.');
 }
 
 function decrypt(value) {
   try {
-    const [iv, tag, enc] = value.split('.').map((s) => Buffer.from(s, 'base64url'));
-    const d = createDecipheriv('aes-256-gcm', contactKey(), iv);
+    const [iv, tag, enc] = value
+      .split('.')
+      .map((s) => Buffer.from(s, 'base64url'));
+
+    const d = createDecipheriv(
+      'aes-256-gcm',
+      contactKey(),
+      iv
+    );
+
     d.setAuthTag(tag);
-    return Buffer.concat([d.update(enc), d.final()]).toString('utf8');
+
+    return Buffer.concat([
+      d.update(enc),
+      d.final(),
+    ]).toString('utf8');
   } catch {
     return '(읽을 수 없음 — 비밀키가 바뀜)';
   }
