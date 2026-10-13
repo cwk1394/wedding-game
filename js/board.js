@@ -402,20 +402,60 @@ function eventBoard(el, { path, title, score, password, isPlaying, close }) {
     );
   });
 
-  // 기존 초기화 버튼 연결 유지. 현재 DB 서버에서는 초기화를 거절한다.
-  // 이번 이름 표시 수정의 확인 과정에서는 이 버튼을 사용하지 않는다.
+    // 해당 게임의 자료만 삭제하도록 게임 구분과 명시적인 확인값을 전달한다.
+  // 실제 관리자 인증·삭제·이전 토큰 차단은 서버에서 수행한다.
   $('.rps-admin-reset').addEventListener('click', async () => {
-    if (
-      !confirm('랭킹·도전 기록·연락처를 모두 지울까요? 되돌릴 수 없어요.')
-    ) {
+    const game =
+      path === '/api/rps' ? 'rps' :
+      path === '/api/chase' ? 'chase' :
+      null;
+
+    if (!game) {
+      UI.showToast('초기화할 게임을 확인할 수 없어요.', 3000);
       return;
     }
 
-    if (!(await adminCall({ action: 'reset' }))) return;
+    if (isPlaying()) {
+      UI.showToast('진행 중인 도전을 종료한 뒤 초기화해 주세요.', 3000);
+      return;
+    }
 
-    $('.rps-admin-list').replaceChildren();
-    UI.showToast('랭킹을 초기화했어요', 2500);
-    load();
+    const gameName = game === 'rps' ? '가위바위보' : '도둑잡기';
+
+    const confirmed = confirm(
+      `[${gameName}] 기록을 모두 초기화할까요?\n\n` +
+      '삭제: 이 게임의 일반 랭킹·전체 도전 기록·경품 기록·등록 연락처\n' +
+      '유지: 캐릭터·방명록·사진·다른 게임 자료\n\n' +
+      '초기화 전에 시작한 이 게임의 도전도 무효 처리됩니다.\n' +
+      '삭제한 자료는 이 화면에서 되돌릴 수 없습니다.\n' +
+      '필요한 최신 백업을 보관한 뒤 진행해 주세요.'
+    );
+
+    if (!confirmed) return;
+
+    const btn = $('.rps-admin-reset');
+    btn.disabled = true;
+
+    try {
+      const result = await adminCall({
+        action: 'reset',
+        confirmation: `${game}:ALL`,
+      });
+
+      if (!result) return;
+
+      $('.rps-admin-list').replaceChildren();
+      contactForm.hidden = true;
+
+      UI.showToast(
+        `${gameName}의 일반·경품 기록과 등록 연락처를 초기화했어요.`,
+        4000
+      );
+
+      await load();
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   $('.rps-admin-npc').addEventListener('click', () => {
