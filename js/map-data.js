@@ -91,7 +91,7 @@ const MAP_DATA = {
     "groom": {"name":"신랑","shortMsg":"함께 즐겨요","longMsg":"함께해 주시는 여러분과 조금 더 특별한 추억을\n나누고 싶어, 이 공간을 준비하였습니다.\n즐겁게 둘러보시고,\n이곳에 여러분의 추억도 한 줄 남겨주세요."},
     "bride": {"name":"신부","shortMsg":"행복하게 살게요","longMsg":"저희의 시작을 함께해 주셔서 감사합니다.\n오늘 남겨주신 따뜻한 말들 오래오래 간직할게요."},
     "album-studio": {"deleted":true},
-    "album-jeju": {"name":"스튜디오 앨범","shortMsg":"스튜디오 앨범 보고 가세요!","longMsg":"제주도 스냅사진 앨범","mode":"fixed","x":668,"y":793,"album":"wonki-hyewon","def":{"desc":"둥둥 떠있는 노란색 하트 풍선에 매달려있는 사진앨범","height":90,"motions":[]}},
+    "album-jeju": {"name":"스튜디오 앨범","shortMsg":"🖼️ 스튜디오 앨범 보고 가세요~","longMsg":"","mode":"fixed","x":668,"y":793,"album":"wonki-hyewon","def":{"desc":"둥둥 떠있는 노란색 하트 풍선에 매달려있는 사진앨범","height":90,"motions":[]}},
     "wedding-car": {"name":"웨딩카","shortMsg":"","longMsg":"분류: 탈것 (캐시)\n옵션: 이동속도 +150%, 행복 +200%\n설명: 원기와 혜원이의 새로운 출발을 위한 웨딩카\n하객 여러분의 축복으로 주유 완료 ⛽","mode":"fixed","x":391,"y":910},
     "rps-machine": {"shortMsg":"연승 도전! 🎁","longMsg":"","mode":"fixed","x":987,"y":1078},
     "chase-police": {"mode":"fixed","x":226,"y":693},
