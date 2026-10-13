@@ -7,8 +7,13 @@ const COUPLE = [
     titleStyle: 'gold',
     shortMsg: '와줘서 고마워!',
     longMsg: '저희 결혼을 축하해 주셔서 감사합니다.\n행복하게 잘 살겠습니다!',
-    spriteUrl: 'img/npc/groom/front.webp',
-    walkUrl: 'img/npc/groom/walk.webp',
+        // 신랑 외형만 조원기 캐릭터 이미지로 사용
+    spriteUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/front.png',
+    walkUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/walk.png',
+    jumpUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/jump.png',
+    ladderUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/ladder.png',
+    ropeUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/rope.png',
+    proneUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/prone.png',
     look: { type: 'groom', hair: 0x2b1d0e },
   },
   {
@@ -24,11 +29,13 @@ const COUPLE = [
   },
 ];
 
-// 개발자 모드에서 사용하는 동작 이미지
+// 개발자 모드: 별도로 지정한 동작 이미지는 유지하고, 없는 경로만 기본값 사용
 if (new URLSearchParams(location.search).has('dev')) {
   for (const c of COUPLE) {
     for (const m of ['jump', 'ladder', 'rope', 'prone']) {
-      c[`${m}Url`] = `img/npc/${c.id}/${m}.webp`;
+      if (!c[`${m}Url`]) {
+        c[`${m}Url`] = `img/npc/${c.id}/${m}.webp`;
+      }
     }
   }
 }
