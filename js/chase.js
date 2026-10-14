@@ -791,11 +791,24 @@ const Chase = (() => {
 
       // ---------- 지상 ----------
 
+            // ---------- 지상 ----------
+
       const dx = target.x - c.x;
 
+      // 대상이 점프 중이면 현재 위치 바로 아래의 착지 후보 발판을 확인한다.
+      const targetLandingFloor =
+        targetPhys?.mode === 'air'
+          ? landingBelow(target.x, target.y, null)?.name
+          : target.floorName;
+
+      // 같은 발판으로 착지할 대상은 불필요하게 따라 점프하지 않고 지상에서 추격한다.
       if (
-        targetPhys?.mode === 'ground' &&
-        c.floorName === target.floorName
+        (
+          targetPhys?.mode === 'ground' ||
+          targetPhys?.mode === 'air'
+        ) &&
+        Boolean(c.floorName) &&
+        c.floorName === targetLandingFloor
       ) {
         clearRoute();
         mem.escapeUntil = 0;
