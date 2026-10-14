@@ -251,7 +251,7 @@ class Character extends Phaser.GameObjects.Container {
   }
 
   say(message, duration = CONFIG.bubble.duration) {
-    if (!message) return;
+        if (!message || this.chaser) return;
     this.hideBubble();
 
     const text = this.scene.add
@@ -804,20 +804,64 @@ class GuestCharacter extends Character {
   }
 
   /** 도둑 잡기 추격자로: 조종 물리에 input(delta)이 주는 입력으로 움직인다 (speed = 걷기 속도 배율). stopChase로 원래대로 */
-  startChase(input, speed) {
+    startChase(input, speed) {
     this.setControlled(true);
     this.marker?.destroy();
     this.marker = null;
     this.chaser = { input, speed };
+
+    // 이미 떠 있는 말풍선을 숨긴다.
+    // 추격 중 새 말풍선은 say()에서 차단한다.
+    this.hideBubble();
+
+    // 이전 표식이 남아 있다면 제거해 중복 생성을 방지한다.
+    this.chaseBadge?.destroy();
+    this.chaseRing?.destroy();
+
+    // 발밑 표식은 캐릭터보다 뒤에 그린다.
+    // 흰색 테두리를 함께 그려 배경과 구분한다.
+    this.chaseRing = this.scene.add.graphics();
+    this.chaseRing.lineStyle(4, 0xffffff, 0.9);
+    this.chaseRing.strokeEllipse(0, -2, 44, 14);
+    this.chaseRing.lineStyle(2.5, 0xef4444, 1);
+    this.chaseRing.strokeEllipse(0, -2, 44, 14);
+    this.addAt(this.chaseRing, 0);
+
+    // 기존 칭호 위에 별도의 빨간 술래 표식을 표시한다.
+    this.chaseBadge = this.scene.add.text(0, 0, '🚨 술래', {
+      fontFamily: CONFIG.fontFamily,
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      backgroundColor: '#dc2626',
+      padding: { x: 6, y: 3 },
+      resolution: TEXT_RESOLUTION,
+    }).setOrigin(0.5, 1);
+
+    this.add(this.chaseBadge);
+    this.placeMarker();
   }
 
   stopChase() {
+    // 게임이 끝나면 추가한 표식만 제거한다.
+    this.chaseBadge?.destroy();
+    this.chaseBadge = null;
+    this.chaseRing?.destroy();
+    this.chaseRing = null;
+
+    // 추격 상태를 해제하면 이후 예약된 말풍선은 다시 표시된다.
     this.chaser = null;
     this.setControlled(false);
   }
 
   placeMarker() {
+    // 플레이어의 기존 노란 화살표는 유지한다.
     if (this.marker) this.marker.setY(this.headY() - 4);
+
+    // 걷기·점프·사다리 등 포즈가 바뀌면 표식 높이도 맞춘다.
+    if (this.chaseBadge) {
+      this.chaseBadge.setY(this.headY() - 8);
+    }
   }
 
   /** (x, y) 아래(또는 같은 높이)에 있는 가장 가까운 발판 이름 (설 수 없는 발판 제외) */
