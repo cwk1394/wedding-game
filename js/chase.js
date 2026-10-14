@@ -857,12 +857,12 @@ const Chase = (() => {
         mem.escapeUntil = 0;
       }
 
-      // 대체 경로도 없을 때 사용하는 짧은 방향 고정 탈출.
+            // 대체 경로가 없으면 잠시 방향을 고정해 걷는다.
+      // 이 탈출 처리에서는 불필요한 점프를 실행하지 않는다.
       if (mem.escapeUntil > mem.clock) {
         goDir(mem.escapeDir);
 
         if (p.prone) input.up = true;
-        else jump();
 
         return Object.assign(out, input);
       }
@@ -903,9 +903,9 @@ const Chase = (() => {
           mem.clock
         );
 
-        if (!mem.route.length) {
-          // 경로가 없을 때 가만히 가로 목표만 쫓지 않고,
-          // 짧게 방향을 고정해 실제 이동·점프로 벗어난 뒤 재탐색한다.
+                if (!mem.route.length) {
+          // 경로가 없다는 이유만으로 점프하지 않는다.
+          // 짧게 방향을 고정해 걸어서 이동한 뒤 경로를 다시 찾는다.
           mem.escapeDir =
             Math.sign(dx) ||
             (Math.random() < 0.5 ? -1 : 1);
@@ -917,7 +917,6 @@ const Chase = (() => {
           goDir(mem.escapeDir);
 
           if (p.prone) input.up = true;
-          else jump();
 
           return Object.assign(out, input);
         }
