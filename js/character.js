@@ -828,12 +828,11 @@ class GuestCharacter extends Character {
     this.addAt(this.chaseRing, 0);
 
     // 기존 칭호 위에 별도의 빨간 술래 표식을 표시한다.
-    this.chaseBadge = this.scene.add.text(0, 0, '🚨 술래', {
+    this.chaseBadge = this.scene.add.text(0, 0, '🚨', {
       fontFamily: CONFIG.fontFamily,
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#ffffff',
-      backgroundColor: '#dc2626',
       padding: { x: 6, y: 3 },
       resolution: TEXT_RESOLUTION,
     }).setOrigin(0.5, 1);
