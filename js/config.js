@@ -109,7 +109,7 @@ const CONFIG = {
   bgm: { src: 'audio/bgm.mp3', volume: 0.35 },
   // 이벤트 "도둑 잡기" (js/chase.js): 신랑·신부 + 하객 guests명이 내 캐릭터를 쫓음. 속도 = 조종 걷기 속도 배율
   chase: {
-    guests: 2,
+    guests: 1,
     coupleSpeed: 2,
     guestSpeed: 2,
     minStartDist: 350, // 추격자는 내 캐릭터에서 이만큼 떨어진 곳에서 시작 (px)
