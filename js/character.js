@@ -830,7 +830,7 @@ class GuestCharacter extends Character {
     // 기존 칭호 위에 별도의 빨간 술래 표식을 표시한다.
     this.chaseBadge = this.scene.add.text(0, 0, '🚨', {
       fontFamily: CONFIG.fontFamily,
-      fontSize: '16px',
+      fontSize: '18px',
       fontStyle: 'bold',
       color: '#ffffff',
       padding: { x: 6, y: 3 },
