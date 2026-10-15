@@ -860,8 +860,8 @@ class GuestCharacter extends Character {
     // 신랑·신부와 일반 하객의 사이렌 높이를 각각 조정한다.
     // 숫자가 작아지면 위로, 커지면 아래로 이동한다.
     if (this.chaseBadge) {
-      const coupleOffsetY = 4; // 신랑·신부: 기존 위치 유지
-      const guestOffsetY = -2; // 일반 하객: 기존보다 6px 위로 이동
+      const coupleOffsetY = 9; // 신랑·신부: 기존 위치 유지
+      const guestOffsetY = -9; // 일반 하객: 기존보다 6px 위로 이동
       const isCouple = this.info.id === 'groom' || this.info.id === 'bride';
       const offsetY = isCouple ? coupleOffsetY : guestOffsetY;
       this.chaseBadge.setY(this.headY() + offsetY);
