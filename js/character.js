@@ -859,7 +859,7 @@ class GuestCharacter extends Character {
 
     // 걷기·점프·사다리 등 포즈가 바뀌면 표식 높이도 맞춘다.
     if (this.chaseBadge) {
-      this.chaseBadge.setY(this.headY() - 8);
+      this.chaseBadge.setY(this.headY() - 2);
     }
   }
 
