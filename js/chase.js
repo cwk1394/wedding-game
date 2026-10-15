@@ -998,7 +998,9 @@ const Chase = (() => {
           mem.airX = e.x;
           mem.climbDir = -1;
         }
-      } else if (e.act === 'drop') {
+            } else if (e.act === 'drop') {
+        // 내려가는 도중 로프를 잡아도 위로 되돌아가지 않도록 방향을 맞춘다.
+        mem.climbDir = 1;
         input.down = true;
         input.jump = true;
         mem.airX = e.land;
