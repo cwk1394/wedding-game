@@ -7,7 +7,7 @@ const COUPLE = [
     titleStyle: 'gold',
     shortMsg: '와줘서 고마워!',
     longMsg: '저희 결혼을 축하해 주셔서 감사합니다.\n행복하게 잘 살겠습니다!',
-        // 신랑 외형만 조원기 캐릭터 이미지로 사용
+    // 신랑 외형만 조원기 캐릭터 이미지로 사용
     spriteUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/front.png',
     walkUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/walk.png',
     jumpUrl: 'img/guests/f9797a92-62e8-481a-85a6-32c458ed1244/jump.png',
@@ -23,8 +23,13 @@ const COUPLE = [
     titleStyle: 'gold',
     shortMsg: '행복하게 살게요',
     longMsg: '함께해 주셔서 감사합니다.\n따뜻한 축하 오래 간직할게요!',
-    spriteUrl: 'img/npc/bride/front.webp',
-    walkUrl: 'img/npc/bride/walk.webp',
+    // 박혜원 캐릭터에서 복사한 신부 전용 이미지 사용
+    spriteUrl: 'img/npc/bride/front.png',
+    walkUrl: 'img/npc/bride/walk.png',
+    jumpUrl: 'img/npc/bride/jump.png',
+    ladderUrl: 'img/npc/bride/ladder.png',
+    ropeUrl: 'img/npc/bride/rope.png',
+    proneUrl: 'img/npc/bride/prone.png',
     look: { type: 'bride', hair: 0x6b3e1f },
   },
 ];
