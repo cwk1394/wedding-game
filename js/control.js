@@ -111,6 +111,14 @@ class Controller {
       </button>`;
     document.body.append(pad);
     this.pad = pad;
+        // 캐릭터 조작을 시작하면 이전 지도 드래그·핀치 상태를 해제한다.
+    // 조작 패드에서 손을 떼 지도 쪽 종료 처리가 누락된 경우에도 복구한다.
+    pad.addEventListener('pointerdown', () => {
+      const view = this.scene.view;
+      if (!view) return;
+      view.drag = null;
+      view.pinch = null;
+    }, { capture: true });
 
     // Phaser가 window에서 받는 터치/마우스로 새지 않게 (지도 드래그·핀치로 오인 방지)
     for (const type of ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'mousemove']) {
