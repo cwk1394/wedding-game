@@ -867,8 +867,26 @@ const Chase = (() => {
         return Object.assign(out, input);
       }
 
-      // 대상이 매달린 로프의 상단에 도착하면 아래로 내려간다.
-      if (
+            // 현재 발판에서 대상이 매달린 줄을 직접 잡을 수 있으면 우선한다.
+      // 최근 실패한 구간은 기존 임시 제외 시간을 지킨다.
+      const directGrab = targetClimb
+        ? (graph[c.floorName] ?? []).find(
+            (edge) =>
+              edge.act === 'grab' &&
+              matchesGrab(targetClimb, edge) &&
+              (mem.blocked.get(edge.key) ?? 0) <= mem.clock
+          )
+        : null;
+
+      if (directGrab) {
+        // 같은 구간을 계속 시도할 때 제한 시간을 다시 시작하지 않는다.
+        if (mem.edge !== directGrab) {
+          clearRoute();
+          mem.airX = null;
+          mem.route = [directGrab];
+          activate(directGrab);
+        }
+      } else if (
         targetClimb &&
         c.floorName === targetClimb.top.name
       ) {
