@@ -157,9 +157,5 @@
     mine = guest;
     play();
     guest.say(guest.info.shortMsg);
-    UI.showToast(
-      touch() ? `${guest.info.name}(으)로 시작해요!\n스틱과 점프 버튼으로 움직여 보세요` : `${guest.info.name}(으)로 시작해요!\n방향키와 Space(점프)로 움직여 보세요`,
-      3000
-    );
   };
 })();
