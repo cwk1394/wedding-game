@@ -93,7 +93,7 @@ const MAP_DATA = {
     "album-studio": {"deleted":true},
     "album-jeju": {"name":"스튜디오 앨범","shortMsg":"🖼️ 앨범 보고 가세요","longMsg":"","mode":"fixed","x":668,"y":793,"album":"wonki-hyewon","def":{"desc":"둥둥 떠있는 노란색 하트 풍선에 매달려있는 사진앨범","height":90,"motions":[]}},
     "wedding-car": {"name":"웨딩카","shortMsg":"","longMsg":"분류: 탈것 (캐시)\n옵션: 이동속도 +150%, 행복 +200%\n설명: 원기와 혜원이의 새로운 출발을 위한 웨딩카\n하객 여러분의 축복으로 주유 완료 ⛽","mode":"fixed","x":500,"y":914},
-    "rps-machine": {"shortMsg":"연승 도전! 🎁나를 눌러바🎁","longMsg":"","mode":"fixed","x":824,"y":941},
+    "rps-machine": {"shortMsg":"연승 도전!🎁 나를 클릭해!☝️","longMsg":"","mode":"fixed","x":824,"y":941},
     "chase-police": {"shortMsg":"도둑잡기 도전!🚨 나를 클릭해!☝️","longMsg":"","mode":"fixed","x":226,"y":693},
   },
 };
